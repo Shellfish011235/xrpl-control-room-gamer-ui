@@ -5,16 +5,8 @@ import {
   Activity, Wallet, Database, ArrowRight, Star, Trophy, Coins,
   Image as ImageIcon, ChevronRight, Github, Twitter
 } from 'lucide-react'
-import { LineChart, Line, ResponsiveContainer, AreaChart, Area } from 'recharts'
-
-// Mock data for charts
-const tpsData = Array.from({ length: 20 }, (_, i) => ({ 
-  value: Math.floor(Math.random() * 500) + 800 
-}))
-
-const priceData = Array.from({ length: 30 }, (_, i) => ({ 
-  value: 2.15 + Math.sin(i * 0.3) * 0.2 + Math.random() * 0.1 
-}))
+import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
+import { useProfileStore } from '../store/profileStore'
 
 const pageCards = [
   {
@@ -72,6 +64,8 @@ const pageCards = [
 ]
 
 export default function Home() {
+  const { username, reputation, socialScore, skillPoints } = useProfileStore()
+
   return (
     <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -93,24 +87,23 @@ export default function Home() {
                 <ChevronRight size={14} className="text-cyber-muted ml-auto" />
               </div>
               
-              {/* Avatar Section */}
+              {/* Avatar Section - Now with upload capability */}
               <div className="relative mb-4">
-                <div className="w-full aspect-square max-w-[180px] mx-auto rounded-lg overflow-hidden border-2 border-cyber-border relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-cyber-glow/20 via-cyber-purple/20 to-cyber-navy" />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <User size={80} className="text-cyber-glow/60" />
-                  </div>
-                  {/* Cyber visor effect */}
-                  <div className="absolute top-1/3 left-0 right-0 h-8 bg-gradient-to-r from-cyber-purple/40 via-cyber-cyan/40 to-cyber-purple/40" />
-                </div>
+                <ProfilePictureUpload size="lg" />
+              </div>
+              
+              {/* Username */}
+              <div className="text-center mb-4">
+                <h2 className="font-cyber text-lg text-cyber-text">{username}</h2>
+                <p className="text-xs text-cyber-muted">Member since 2024</p>
               </div>
               
               {/* Stats Grid */}
               <div className="space-y-3 mb-4">
                 {[
-                  { label: 'Reputation', value: '820', icon: Star },
-                  { label: 'Social Score', value: '1,250', icon: Trophy },
-                  { label: 'Skill Points', value: '42', icon: Zap },
+                  { label: 'Reputation', value: reputation.toString(), icon: Star },
+                  { label: 'Social Score', value: socialScore.toLocaleString(), icon: Trophy },
+                  { label: 'Skill Points', value: skillPoints.toString(), icon: Zap },
                 ].map((stat) => (
                   <div key={stat.label} className="flex items-center justify-between p-2 rounded bg-cyber-darker/50 border border-cyber-border/50">
                     <div className="flex items-center gap-2">
