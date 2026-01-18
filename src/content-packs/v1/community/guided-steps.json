@@ -1,0 +1,57 @@
+{
+  "lens": "community",
+  "asOf": "2026-01-18",
+  "steps": [
+    {
+      "id": "comm-step-structure",
+      "title": "Understand XRPL community structure",
+      "prompt": "Who are the key groups in the XRPL ecosystem?",
+      "exampleRefs": [{ "type": "brief-item", "id": "comm-xrplcommons-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "comm-step-foundation",
+      "title": "Explain XRPL Foundation vs XRPL Commons",
+      "prompt": "What roles do the Foundation and Commons play in the ecosystem?",
+      "exampleRefs": [{ "type": "brief-item", "id": "comm-xrplcommons-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "comm-step-governance",
+      "title": "Understand XLS amendment process",
+      "prompt": "How do XLS proposals become network amendments?",
+      "exampleRefs": [{ "type": "brief-item", "id": "comm-xls-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "comm-step-grants",
+      "title": "Explore grant programs",
+      "prompt": "How can developers get funded to build on XRPL?",
+      "exampleRefs": [{ "type": "brief-item", "id": "comm-xrplcommons-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "comm-step-events",
+      "title": "Find XRPL events and hackathons",
+      "prompt": "Where can you participate in XRPL community events?",
+      "exampleRefs": [
+        { "type": "brief-item", "id": "comm-hackathon-001" },
+        { "type": "brief-item", "id": "comm-meetup-eu-001" }
+      ],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "comm-step-bootcamp",
+      "title": "Start learning XRPL development",
+      "prompt": "What resources exist for new XRPL developers?",
+      "exampleRefs": [{ "type": "brief-item", "id": "comm-bootcamp-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    }
+  ]
+}

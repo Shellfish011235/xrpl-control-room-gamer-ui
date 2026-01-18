@@ -1,0 +1,82 @@
+{
+  "claims": [
+    {
+      "id": "claim-xrp-nonsecurity",
+      "claimType": "Legal Status",
+      "claim": "XRP is not a security in secondary market sales",
+      "evidenceLevel": "high",
+      "sourceIds": ["src-sdny-ruling"],
+      "jurisdiction": "US",
+      "limitations": [
+        "Ruling applies to programmatic sales on exchanges",
+        "Does not cover institutional sales directly from Ripple",
+        "Other jurisdictions may classify differently"
+      ],
+      "asOf": "2023-07-13"
+    },
+    {
+      "id": "claim-validator-count",
+      "claimType": "Network Metric",
+      "claim": "XRPL has approximately 150 active validators",
+      "evidenceLevel": "high",
+      "sourceIds": ["src-xrplf-validators", "src-xrpl-metrics"],
+      "jurisdiction": null,
+      "limitations": [
+        "Number fluctuates as validators go online/offline",
+        "Not all validators are on recommended UNLs"
+      ],
+      "asOf": "2026-01-18"
+    },
+    {
+      "id": "claim-evm-launch",
+      "claimType": "Technical Milestone",
+      "claim": "XRPL EVM Sidechain launched on mainnet June 30, 2025",
+      "evidenceLevel": "high",
+      "sourceIds": ["src-ripple-insights", "src-xrplevm-stats"],
+      "jurisdiction": null,
+      "limitations": [
+        "Sidechain is separate from XRPL mainnet",
+        "Requires bridge for asset transfers"
+      ],
+      "asOf": "2025-06-30"
+    },
+    {
+      "id": "claim-rlusd-marketcap",
+      "claimType": "Market Data",
+      "claim": "RLUSD market cap exceeds $1.4 billion",
+      "evidenceLevel": "medium",
+      "sourceIds": ["src-ripple-rlusd"],
+      "jurisdiction": null,
+      "limitations": [
+        "Market cap fluctuates with issuance/redemption",
+        "Split across XRPL and Ethereum"
+      ],
+      "asOf": "2026-01-18"
+    },
+    {
+      "id": "claim-etf-approved",
+      "claimType": "Regulatory",
+      "claim": "SEC approved multiple spot XRP ETFs in October 2025",
+      "evidenceLevel": "high",
+      "sourceIds": ["src-sec-filings"],
+      "jurisdiction": "US",
+      "limitations": [
+        "Approval does not constitute endorsement",
+        "ETF performance may vary from XRP price"
+      ],
+      "asOf": "2025-10-15"
+    }
+  ],
+  "evidenceLevels": {
+    "high": "Multiple independent sources confirm; official documentation available",
+    "medium": "Single authoritative source or multiple secondary sources",
+    "low": "Unverified reports; speculation; single non-authoritative source"
+  },
+  "notClaiming": [
+    "Investment advice or price predictions",
+    "Legal advice or regulatory guidance",
+    "Endorsement of any project or service",
+    "Guarantee of technical performance",
+    "Completeness of regulatory coverage"
+  ]
+}

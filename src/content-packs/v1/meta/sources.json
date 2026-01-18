@@ -1,0 +1,244 @@
+{
+  "sources": [
+    {
+      "id": "src-xrplf-validators",
+      "title": "XRPL Foundation Validator Registry",
+      "publisher": "XRPL Foundation",
+      "url": "https://xrplf.org/validators",
+      "type": "registry",
+      "reliability": "high"
+    },
+    {
+      "id": "src-xrpl-academic",
+      "title": "Academic Validator Network",
+      "publisher": "XRPL Foundation",
+      "url": "https://xrpl.org/validators.html",
+      "type": "documentation",
+      "reliability": "high"
+    },
+    {
+      "id": "src-sbi-validators",
+      "title": "SBI Holdings Blockchain Infrastructure",
+      "publisher": "SBI Holdings",
+      "url": "https://www.sbigroup.co.jp/english/",
+      "type": "corporate",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-community-stats",
+      "title": "XRPL Community Statistics",
+      "publisher": "XRPL Foundation",
+      "url": "https://xrpl.org/stats.html",
+      "type": "statistics",
+      "reliability": "high"
+    },
+    {
+      "id": "src-xrpl-metrics",
+      "title": "XRPL Network Metrics",
+      "publisher": "XRPScan",
+      "url": "https://xrpscan.com/metrics",
+      "type": "analytics",
+      "reliability": "high"
+    },
+    {
+      "id": "src-ripple-insights",
+      "title": "Ripple Insights Blog",
+      "publisher": "Ripple",
+      "url": "https://ripple.com/insights",
+      "type": "blog",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-bis-remittances",
+      "title": "BIS Remittance Statistics",
+      "publisher": "Bank for International Settlements",
+      "url": "https://www.bis.org/statistics/",
+      "type": "statistics",
+      "reliability": "high"
+    },
+    {
+      "id": "src-ripple-eu",
+      "title": "Ripple Europe Updates",
+      "publisher": "Ripple",
+      "url": "https://ripple.com/insights",
+      "type": "blog",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-bsp-data",
+      "title": "Bangko Sentral ng Pilipinas Statistics",
+      "publisher": "BSP",
+      "url": "https://www.bsp.gov.ph/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-coil-webmon",
+      "title": "Web Monetization Community",
+      "publisher": "Interledger Foundation",
+      "url": "https://webmonetization.org",
+      "type": "documentation",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-mas-cbdc",
+      "title": "MAS Digital Currency Initiatives",
+      "publisher": "Monetary Authority of Singapore",
+      "url": "https://www.mas.gov.sg/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-whitehouse-eo14178",
+      "title": "Executive Order 14178",
+      "publisher": "White House",
+      "url": "https://www.whitehouse.gov/presidential-actions/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-esma-mica",
+      "title": "MiCA Implementation Guidance",
+      "publisher": "ESMA",
+      "url": "https://www.esma.europa.eu/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-jfsa-guidance",
+      "title": "JFSA Crypto-Asset Guidance",
+      "publisher": "Japan Financial Services Agency",
+      "url": "https://www.fsa.go.jp/en/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-mas-dpt",
+      "title": "MAS Digital Payment Token Framework",
+      "publisher": "Monetary Authority of Singapore",
+      "url": "https://www.mas.gov.sg/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-vara-licenses",
+      "title": "VARA Licensed Entities",
+      "publisher": "Dubai VARA",
+      "url": "https://vara.ae/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-fca-consultation",
+      "title": "FCA Crypto Consultation Papers",
+      "publisher": "UK Financial Conduct Authority",
+      "url": "https://www.fca.org.uk/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-genius-act",
+      "title": "GENIUS Act Implementation",
+      "publisher": "US Treasury",
+      "url": "https://home.treasury.gov/",
+      "type": "government",
+      "reliability": "high"
+    },
+    {
+      "id": "src-xrplcommons-grants",
+      "title": "XRPL Commons Grant Program",
+      "publisher": "XRPL Commons",
+      "url": "https://xrpl-commons.org/grants",
+      "type": "foundation",
+      "reliability": "high"
+    },
+    {
+      "id": "src-xrpl-events",
+      "title": "XRPL Community Events",
+      "publisher": "XRPL Foundation",
+      "url": "https://xrpl.org/events",
+      "type": "events",
+      "reliability": "high"
+    },
+    {
+      "id": "src-xrpl-eu-meetups",
+      "title": "XRPL European Meetups",
+      "publisher": "XRPL Community",
+      "url": "https://meetup.com/xrpl",
+      "type": "events",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-xrpl-standards",
+      "title": "XRPL Standards Repository",
+      "publisher": "XRPL Foundation",
+      "url": "https://github.com/XRPLF/XRPL-Standards",
+      "type": "repository",
+      "reliability": "high"
+    },
+    {
+      "id": "src-reddit-stats",
+      "title": "Reddit Community Statistics",
+      "publisher": "Reddit",
+      "url": "https://reddit.com/r/XRP",
+      "type": "social",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-xrpl-bootcamp",
+      "title": "XRPL Developer Bootcamp",
+      "publisher": "XRPL Foundation",
+      "url": "https://xrpl.org/bootcamp",
+      "type": "education",
+      "reliability": "high"
+    },
+    {
+      "id": "src-xrpl-labs",
+      "title": "XRPL Labs Updates",
+      "publisher": "XRPL Labs",
+      "url": "https://xrpl-labs.com",
+      "type": "corporate",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-sologenic-stats",
+      "title": "Sologenic DEX Statistics",
+      "publisher": "Sologenic",
+      "url": "https://sologenic.org",
+      "type": "analytics",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-xrplevm-stats",
+      "title": "XRPL EVM Sidechain Statistics",
+      "publisher": "XRPL EVM",
+      "url": "https://xrplevm.org",
+      "type": "analytics",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-hooks-testnet",
+      "title": "Hooks Amendment Testnet",
+      "publisher": "XRPL Labs",
+      "url": "https://hooks-testnet.xrpl-labs.com",
+      "type": "testnet",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-ripple-rlusd",
+      "title": "RLUSD Information",
+      "publisher": "Ripple",
+      "url": "https://ripple.com/rlusd",
+      "type": "corporate",
+      "reliability": "medium"
+    },
+    {
+      "id": "src-xrpl-nft-stats",
+      "title": "XRPL NFT Market Statistics",
+      "publisher": "XRPScan",
+      "url": "https://xrpscan.com/nft",
+      "type": "analytics",
+      "reliability": "medium"
+    }
+  ]
+}

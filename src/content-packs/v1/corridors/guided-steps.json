@@ -1,0 +1,52 @@
+{
+  "lens": "corridors",
+  "asOf": "2026-01-18",
+  "steps": [
+    {
+      "id": "corr-step-define",
+      "title": "Define a payment corridor",
+      "prompt": "What is a payment corridor and why do they matter for remittances?",
+      "exampleRefs": [{ "type": "corridor", "id": "corridor-us-mx" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "corr-step-xrp-role",
+      "title": "Explain XRP's role in corridors",
+      "prompt": "How does XRP provide liquidity in cross-border payment corridors?",
+      "exampleRefs": [{ "type": "brief-item", "id": "corr-us-mx-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "corr-step-remittance",
+      "title": "Identify major remittance corridors",
+      "prompt": "Which corridors handle the most XRP-facilitated remittance volume?",
+      "exampleRefs": [
+        { "type": "corridor", "id": "corridor-us-mx" },
+        { "type": "corridor", "id": "corridor-us-ph" }
+      ],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "corr-step-business",
+      "title": "Compare remittance vs business corridors",
+      "prompt": "How do remittance corridors differ from business payment corridors?",
+      "exampleRefs": [
+        { "type": "corridor", "id": "corridor-eu-uk" },
+        { "type": "brief-item", "id": "corr-eu-uk-001" }
+      ],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "corr-step-institutional",
+      "title": "Explore institutional corridor adoption",
+      "prompt": "How are banks integrating into XRP-facilitated corridors?",
+      "exampleRefs": [{ "type": "brief-item", "id": "corr-ae-pk-001" }],
+      "proofClaimIds": [],
+      "difficulty": "advanced"
+    }
+  ]
+}

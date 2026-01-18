@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "buildDate": "2026-01-18T12:00:00Z",
+  "dataFreshness": {
+    "validators": "2026-01-18",
+    "ilp": "2026-01-18",
+    "regulation": "2026-01-18",
+    "community": "2026-01-18",
+    "projects": "2026-01-18"
+  },
+  "updatePolicy": {
+    "frequency": "Weekly snapshot updates",
+    "process": "Manual curation and verification",
+    "disclaimer": "Data is point-in-time snapshot. Not real-time. Always verify with primary sources."
+  },
+  "coverage": {
+    "countries": 35,
+    "hubs": 12,
+    "corridors": 8,
+    "validators": 150,
+    "projects": 200
+  },
+  "methodology": {
+    "sources": "Combination of official documentation, public registries, and curated reporting",
+    "verification": "Cross-referenced against multiple sources where possible",
+    "limitations": [
+      "Some metrics are estimates based on available data",
+      "Private/unlisted validators not included",
+      "Regulatory status may change without notice"
+    ]
+  },
+  "contact": {
+    "feedback": "https://github.com/xrpl-control-panel/feedback",
+    "corrections": "https://github.com/xrpl-control-panel/corrections"
+  }
+}

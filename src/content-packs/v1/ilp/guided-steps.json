@@ -1,0 +1,46 @@
+{
+  "lens": "ilp",
+  "asOf": "2026-01-18",
+  "steps": [
+    {
+      "id": "ilp-step-define",
+      "title": "Define ILP in one sentence",
+      "prompt": "What problem does the Interledger Protocol solve?",
+      "exampleRefs": [{ "type": "brief-item", "id": "ilp-webmon-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "ilp-step-connectors",
+      "title": "Understand ILP connectors",
+      "prompt": "How do ILP connectors bridge different payment networks?",
+      "exampleRefs": [{ "type": "brief-item", "id": "ilp-mx-corridor-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "ilp-step-packets",
+      "title": "Explain ILP packet flow",
+      "prompt": "Describe how value moves through ILP in simple terms.",
+      "exampleRefs": [],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "ilp-step-cbdc",
+      "title": "Connect ILP to CBDC interoperability",
+      "prompt": "How might ILP help central bank digital currencies work together?",
+      "exampleRefs": [{ "type": "brief-item", "id": "ilp-cbdc-001" }],
+      "proofClaimIds": [],
+      "difficulty": "advanced"
+    },
+    {
+      "id": "ilp-step-webmon",
+      "title": "Explore Web Monetization use case",
+      "prompt": "How does Web Monetization use ILP for micropayments?",
+      "exampleRefs": [{ "type": "brief-item", "id": "ilp-webmon-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    }
+  ]
+}

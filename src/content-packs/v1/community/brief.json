@@ -1,0 +1,85 @@
+{
+  "lens": "community",
+  "asOf": "2026-01-18",
+  "globalSummary": "XRPL community spans 45K+ Discord members, active Reddit communities, and developer groups across all continents. XRPL Commons coordinates grants and events globally.",
+  "items": [
+    {
+      "id": "comm-xrplcommons-001",
+      "title": "XRPL Commons announces Q1 2026 grant recipients",
+      "summary": "12 projects across DeFi, tooling, and education receive foundation grants totaling $2.4M.",
+      "tag": "Grants",
+      "date": "2026-01-15",
+      "sourceIds": ["src-xrplcommons-grants"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "comm-hackathon-001",
+      "title": "XRPL Hackathon Tokyo draws 200+ developers",
+      "summary": "Three-day hackathon in Tokyo produces 45 project submissions focused on EVM sidechain integration.",
+      "tag": "Event",
+      "date": "2026-01-12",
+      "sourceIds": ["src-xrpl-events"],
+      "related": {
+        "countryIso2": "JP",
+        "hubId": "hub-tokyo",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "comm-meetup-eu-001",
+      "title": "European XRPL meetup series kicks off in Amsterdam",
+      "summary": "First of six European city meetups brings together developers, validators, and enthusiasts.",
+      "tag": "Meetup",
+      "date": "2026-01-10",
+      "sourceIds": ["src-xrpl-eu-meetups"],
+      "related": {
+        "countryIso2": "NL",
+        "hubId": "hub-amsterdam",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "comm-xls-001",
+      "title": "XLS-98 proposal enters final comment period",
+      "summary": "Enhanced escrow conditions proposal nearing community consensus after 60-day discussion.",
+      "tag": "Governance",
+      "date": "2026-01-14",
+      "sourceIds": ["src-xrpl-standards"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "comm-reddit-001",
+      "title": "r/XRP surpasses 1.2M subscribers",
+      "summary": "Main XRP subreddit continues growth with active daily discussions on ecosystem developments.",
+      "tag": "Social",
+      "date": "2026-01-08",
+      "sourceIds": ["src-reddit-stats"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "comm-bootcamp-001",
+      "title": "XRPL Developer Bootcamp online cohort begins",
+      "summary": "Free 8-week online program teaches XRPL development to 500 registered participants globally.",
+      "tag": "Education",
+      "date": "2026-01-16",
+      "sourceIds": ["src-xrpl-bootcamp"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    }
+  ]
+}

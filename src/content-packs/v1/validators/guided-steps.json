@@ -1,0 +1,46 @@
+{
+  "lens": "validators",
+  "asOf": "2026-01-18",
+  "steps": [
+    {
+      "id": "val-step-define",
+      "title": "Define what an XRPL validator does",
+      "prompt": "Explain in one sentence what role validators play in the XRPL consensus process.",
+      "exampleRefs": [{ "type": "brief-item", "id": "val-ripple-nodes-001" }],
+      "proofClaimIds": ["claim-validator-count"],
+      "difficulty": "basic"
+    },
+    {
+      "id": "val-step-unl",
+      "title": "Understand the Unique Node List (UNL)",
+      "prompt": "What is a UNL and why does it matter for decentralization?",
+      "exampleRefs": [{ "type": "brief-item", "id": "val-community-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "val-step-distribution",
+      "title": "Map validator geographic distribution",
+      "prompt": "Why is geographic diversity important for XRPL validators?",
+      "exampleRefs": [{ "type": "hub", "id": "hub-frankfurt" }, { "type": "hub", "id": "hub-tokyo" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "val-step-consensus",
+      "title": "Explain the consensus round timing",
+      "prompt": "How long does a typical XRPL consensus round take and why?",
+      "exampleRefs": [{ "type": "brief-item", "id": "val-latency-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "val-step-run",
+      "title": "Identify requirements to run a validator",
+      "prompt": "What does it take to run your own XRPL validator?",
+      "exampleRefs": [{ "type": "brief-item", "id": "val-university-001" }],
+      "proofClaimIds": [],
+      "difficulty": "advanced"
+    }
+  ]
+}

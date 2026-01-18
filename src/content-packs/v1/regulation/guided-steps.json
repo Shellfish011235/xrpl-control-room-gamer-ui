@@ -1,0 +1,57 @@
+{
+  "lens": "regulation",
+  "asOf": "2026-01-18",
+  "steps": [
+    {
+      "id": "reg-step-xrp-status",
+      "title": "Understand XRP's US legal status",
+      "prompt": "What did the Ripple vs SEC case establish about XRP?",
+      "exampleRefs": [{ "type": "brief-item", "id": "reg-us-eo-001" }],
+      "proofClaimIds": ["claim-xrp-nonsecurity"],
+      "difficulty": "basic"
+    },
+    {
+      "id": "reg-step-eo14178",
+      "title": "Explain Executive Order 14178",
+      "prompt": "How does EO 14178 change the US approach to crypto?",
+      "exampleRefs": [{ "type": "brief-item", "id": "reg-us-eo-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "reg-step-mica",
+      "title": "Understand MiCA in the EU",
+      "prompt": "What does MiCA compliance mean for XRPL service providers?",
+      "exampleRefs": [{ "type": "brief-item", "id": "reg-eu-mica-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "reg-step-apac",
+      "title": "Compare APAC regulatory approaches",
+      "prompt": "How do Japan and Singapore differ in crypto regulation?",
+      "exampleRefs": [
+        { "type": "brief-item", "id": "reg-jp-jfsa-001" },
+        { "type": "brief-item", "id": "reg-sg-mas-001" }
+      ],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "reg-step-stablecoin",
+      "title": "Understand stablecoin regulation (GENIUS Act)",
+      "prompt": "What reporting requirements apply to stablecoin issuers like RLUSD?",
+      "exampleRefs": [{ "type": "brief-item", "id": "reg-genius-001" }],
+      "proofClaimIds": [],
+      "difficulty": "advanced"
+    },
+    {
+      "id": "reg-step-vara",
+      "title": "Explore UAE VARA licensing",
+      "prompt": "Why is Dubai becoming a crypto hub?",
+      "exampleRefs": [{ "type": "brief-item", "id": "reg-ae-vara-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    }
+  ]
+}

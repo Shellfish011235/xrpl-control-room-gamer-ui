@@ -1,0 +1,85 @@
+{
+  "lens": "validators",
+  "asOf": "2026-01-18",
+  "globalSummary": "The XRPL is secured by ~150 validators globally, with strong concentrations in North America, Europe, and Asia Pacific. The network maintains decentralization through diverse UNL configurations.",
+  "items": [
+    {
+      "id": "val-ripple-nodes-001",
+      "title": "Ripple operates 6 validators across 3 continents",
+      "summary": "Ripple maintains validators in US, EU, and Singapore for redundancy and geographic distribution.",
+      "tag": "Infrastructure",
+      "date": "2026-01-15",
+      "sourceIds": ["src-xrplf-validators"],
+      "related": {
+        "countryIso2": "US",
+        "hubId": "hub-us-west",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "val-university-001",
+      "title": "MIT and University of Waterloo run academic validators",
+      "summary": "Academic institutions contribute to network decentralization through independent validator operation.",
+      "tag": "Academic",
+      "date": "2026-01-10",
+      "sourceIds": ["src-xrpl-academic"],
+      "related": {
+        "countryIso2": "US",
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "val-sbi-001",
+      "title": "SBI Holdings operates validators in Japan and Singapore",
+      "summary": "SBI's validator infrastructure supports APAC transaction routing and regional resilience.",
+      "tag": "Enterprise",
+      "date": "2026-01-12",
+      "sourceIds": ["src-sbi-validators"],
+      "related": {
+        "countryIso2": "JP",
+        "hubId": "hub-tokyo",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "val-xrplf-001",
+      "title": "XRPL Foundation validators distributed across EU",
+      "summary": "Foundation-operated validators in Germany, Netherlands, and UK ensure European coverage.",
+      "tag": "Foundation",
+      "date": "2026-01-08",
+      "sourceIds": ["src-xrplf-validators"],
+      "related": {
+        "countryIso2": "DE",
+        "hubId": "hub-frankfurt",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "val-community-001",
+      "title": "Community validators reach 40% of network consensus",
+      "summary": "Independent community operators now represent a significant portion of recommended UNL validators.",
+      "tag": "Community",
+      "date": "2026-01-14",
+      "sourceIds": ["src-community-stats"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "val-latency-001",
+      "title": "Average consensus round completes in 3.8 seconds",
+      "summary": "Global validator distribution maintains sub-4-second consensus despite geographic spread.",
+      "tag": "Performance",
+      "date": "2026-01-16",
+      "sourceIds": ["src-xrpl-metrics"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,210 @@
+{
+  "hubs": [
+    {
+      "id": "hub-us-west",
+      "name": "US West Coast",
+      "city": "San Francisco",
+      "countryIso2": "US",
+      "coordinates": [-122.4194, 37.7749],
+      "type": "headquarters",
+      "description": "Ripple headquarters and major validator cluster",
+      "validators": 12,
+      "projects": 45
+    },
+    {
+      "id": "hub-us-east",
+      "name": "US East Coast",
+      "city": "New York",
+      "countryIso2": "US",
+      "coordinates": [-74.006, 40.7128],
+      "type": "financial",
+      "description": "Financial institutions and ETF issuers",
+      "validators": 8,
+      "projects": 22
+    },
+    {
+      "id": "hub-london",
+      "name": "London",
+      "city": "London",
+      "countryIso2": "GB",
+      "coordinates": [-0.1276, 51.5074],
+      "type": "financial",
+      "description": "European financial hub and Ripple EU operations",
+      "validators": 6,
+      "projects": 18
+    },
+    {
+      "id": "hub-frankfurt",
+      "name": "Frankfurt",
+      "city": "Frankfurt",
+      "countryIso2": "DE",
+      "coordinates": [8.6821, 50.1109],
+      "type": "validator",
+      "description": "XRPL Foundation validators and EU infrastructure",
+      "validators": 10,
+      "projects": 12
+    },
+    {
+      "id": "hub-amsterdam",
+      "name": "Amsterdam",
+      "city": "Amsterdam",
+      "countryIso2": "NL",
+      "coordinates": [4.9041, 52.3676],
+      "type": "development",
+      "description": "XRPL Labs headquarters and Hooks development",
+      "validators": 4,
+      "projects": 25
+    },
+    {
+      "id": "hub-tokyo",
+      "name": "Tokyo",
+      "city": "Tokyo",
+      "countryIso2": "JP",
+      "coordinates": [139.6917, 35.6895],
+      "type": "partnership",
+      "description": "SBI Holdings partnership hub and APAC operations",
+      "validators": 8,
+      "projects": 30
+    },
+    {
+      "id": "hub-singapore",
+      "name": "Singapore",
+      "city": "Singapore",
+      "countryIso2": "SG",
+      "coordinates": [103.8198, 1.3521],
+      "type": "regional_hq",
+      "description": "Ripple APAC headquarters and MAS engagement",
+      "validators": 6,
+      "projects": 28
+    },
+    {
+      "id": "hub-dubai",
+      "name": "Dubai",
+      "city": "Dubai",
+      "countryIso2": "AE",
+      "coordinates": [55.2708, 25.2048],
+      "type": "emerging",
+      "description": "VARA-licensed operations and MENA expansion",
+      "validators": 3,
+      "projects": 15
+    },
+    {
+      "id": "hub-sydney",
+      "name": "Sydney",
+      "city": "Sydney",
+      "countryIso2": "AU",
+      "coordinates": [151.2093, -33.8688],
+      "type": "validator",
+      "description": "Australian validators and Pacific operations",
+      "validators": 4,
+      "projects": 8
+    },
+    {
+      "id": "hub-toronto",
+      "name": "Toronto",
+      "city": "Toronto",
+      "countryIso2": "CA",
+      "coordinates": [-79.3832, 43.6532],
+      "type": "academic",
+      "description": "University of Waterloo validators and research",
+      "validators": 3,
+      "projects": 10
+    },
+    {
+      "id": "hub-seoul",
+      "name": "Seoul",
+      "city": "Seoul",
+      "countryIso2": "KR",
+      "coordinates": [126.978, 37.5665],
+      "type": "exchange",
+      "description": "Korean exchange integrations and retail adoption",
+      "validators": 2,
+      "projects": 12
+    },
+    {
+      "id": "hub-mumbai",
+      "name": "Mumbai",
+      "city": "Mumbai",
+      "countryIso2": "IN",
+      "coordinates": [72.8777, 19.076],
+      "type": "emerging",
+      "description": "Indian remittance corridor endpoint",
+      "validators": 2,
+      "projects": 8
+    }
+  ],
+  "corridors": [
+    {
+      "id": "corridor-us-mx",
+      "name": "US → Mexico",
+      "from": "hub-us-west",
+      "to": { "countryIso2": "MX", "coordinates": [-99.1332, 19.4326] },
+      "type": "remittance",
+      "volume": "high",
+      "description": "Primary US-Mexico remittance corridor"
+    },
+    {
+      "id": "corridor-us-ph",
+      "name": "US → Philippines",
+      "from": "hub-us-west",
+      "to": { "countryIso2": "PH", "coordinates": [120.9842, 14.5995] },
+      "type": "remittance",
+      "volume": "high",
+      "description": "OFW remittance corridor"
+    },
+    {
+      "id": "corridor-eu-uk",
+      "name": "EU ↔ UK",
+      "from": "hub-frankfurt",
+      "to": "hub-london",
+      "type": "business",
+      "volume": "medium",
+      "description": "Cross-channel business payments"
+    },
+    {
+      "id": "corridor-sg-in",
+      "name": "Singapore → India",
+      "from": "hub-singapore",
+      "to": "hub-mumbai",
+      "type": "mixed",
+      "volume": "medium",
+      "description": "Tech sector and remittance flows"
+    },
+    {
+      "id": "corridor-ae-pk",
+      "name": "UAE → Pakistan",
+      "from": "hub-dubai",
+      "to": { "countryIso2": "PK", "coordinates": [67.0011, 24.8607] },
+      "type": "remittance",
+      "volume": "medium",
+      "description": "Gulf worker remittances"
+    },
+    {
+      "id": "corridor-jp-ph",
+      "name": "Japan → Philippines",
+      "from": "hub-tokyo",
+      "to": { "countryIso2": "PH", "coordinates": [120.9842, 14.5995] },
+      "type": "remittance",
+      "volume": "medium",
+      "description": "Japan-Philippines remittance route"
+    },
+    {
+      "id": "corridor-us-br",
+      "name": "US → Brazil",
+      "from": "hub-us-east",
+      "to": { "countryIso2": "BR", "coordinates": [-43.1729, -22.9068] },
+      "type": "business",
+      "volume": "low",
+      "description": "Emerging business payments corridor"
+    },
+    {
+      "id": "corridor-sg-au",
+      "name": "Singapore ↔ Australia",
+      "from": "hub-singapore",
+      "to": "hub-sydney",
+      "type": "business",
+      "volume": "low",
+      "description": "APAC business corridor"
+    }
+  ]
+}

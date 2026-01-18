@@ -1,0 +1,85 @@
+{
+  "lens": "projects",
+  "asOf": "2026-01-18",
+  "globalSummary": "The XRPL ecosystem hosts 200+ active projects spanning DeFi, NFTs, payments, and infrastructure. Major hubs include US, EU, Japan, and Singapore.",
+  "items": [
+    {
+      "id": "proj-xaman-001",
+      "title": "Xaman wallet reaches 2M active users",
+      "summary": "XRPL Labs' flagship wallet continues growth with new Hooks integration features.",
+      "tag": "Wallet",
+      "date": "2026-01-15",
+      "sourceIds": ["src-xrpl-labs"],
+      "related": {
+        "countryIso2": "NL",
+        "hubId": "hub-amsterdam",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "proj-sologenic-001",
+      "title": "Sologenic DEX processes $50M weekly volume",
+      "summary": "Leading XRPL decentralized exchange maintains strong trading activity across asset pairs.",
+      "tag": "DEX",
+      "date": "2026-01-12",
+      "sourceIds": ["src-sologenic-stats"],
+      "related": {
+        "countryIso2": "EE",
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "proj-evm-dapps-001",
+      "title": "35 new dApps deploy on XRPL EVM Sidechain",
+      "summary": "January sees continued EVM sidechain adoption with DeFi protocols and NFT platforms launching.",
+      "tag": "EVM",
+      "date": "2026-01-14",
+      "sourceIds": ["src-xrplevm-stats"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "proj-hooks-001",
+      "title": "First production Hooks smart contracts enter testing",
+      "summary": "Native XRPL smart contract functionality sees initial production deployments on testnet.",
+      "tag": "Dev",
+      "date": "2026-01-10",
+      "sourceIds": ["src-hooks-testnet"],
+      "related": {
+        "countryIso2": "NL",
+        "hubId": "hub-amsterdam",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "proj-rlusd-int-001",
+      "title": "RLUSD integrates with 5 additional exchanges",
+      "summary": "Ripple's stablecoin expands availability through new exchange partnerships in APAC and EU.",
+      "tag": "Stablecoin",
+      "date": "2026-01-16",
+      "sourceIds": ["src-ripple-rlusd"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "proj-nft-001",
+      "title": "XRPL NFT marketplace volume exceeds $10M monthly",
+      "summary": "Native XLS-20 NFT trading activity grows as creator tools and platforms mature.",
+      "tag": "NFT",
+      "date": "2026-01-08",
+      "sourceIds": ["src-xrpl-nft-stats"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    }
+  ]
+}

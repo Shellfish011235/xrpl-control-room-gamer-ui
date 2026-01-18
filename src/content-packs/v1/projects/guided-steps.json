@@ -1,0 +1,65 @@
+{
+  "lens": "projects",
+  "asOf": "2026-01-18",
+  "steps": [
+    {
+      "id": "proj-step-ecosystem",
+      "title": "Map the XRPL project ecosystem",
+      "prompt": "What categories of projects are building on XRPL?",
+      "exampleRefs": [
+        { "type": "brief-item", "id": "proj-xaman-001" },
+        { "type": "brief-item", "id": "proj-sologenic-001" }
+      ],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "proj-step-wallets",
+      "title": "Understand XRPL wallet options",
+      "prompt": "What are the main wallet choices for XRPL users?",
+      "exampleRefs": [{ "type": "brief-item", "id": "proj-xaman-001" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    },
+    {
+      "id": "proj-step-dex",
+      "title": "Explore XRPL's built-in DEX",
+      "prompt": "How does the native XRPL decentralized exchange work?",
+      "exampleRefs": [{ "type": "brief-item", "id": "proj-sologenic-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "proj-step-evm",
+      "title": "Understand EVM sidechain projects",
+      "prompt": "What new possibilities does the EVM sidechain enable?",
+      "exampleRefs": [{ "type": "brief-item", "id": "proj-evm-dapps-001" }],
+      "proofClaimIds": ["claim-evm-launch"],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "proj-step-hooks",
+      "title": "Learn about Hooks smart contracts",
+      "prompt": "How do Hooks differ from EVM smart contracts?",
+      "exampleRefs": [{ "type": "brief-item", "id": "proj-hooks-001" }],
+      "proofClaimIds": [],
+      "difficulty": "advanced"
+    },
+    {
+      "id": "proj-step-nft",
+      "title": "Explore XRPL NFT ecosystem",
+      "prompt": "What makes XRPL NFTs (XLS-20) different from other chains?",
+      "exampleRefs": [{ "type": "brief-item", "id": "proj-nft-001" }],
+      "proofClaimIds": [],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "proj-step-rlusd",
+      "title": "Understand RLUSD integrations",
+      "prompt": "How is RLUSD being adopted across platforms?",
+      "exampleRefs": [{ "type": "brief-item", "id": "proj-rlusd-int-001" }],
+      "proofClaimIds": ["claim-rlusd-marketcap"],
+      "difficulty": "intermediate"
+    }
+  ]
+}

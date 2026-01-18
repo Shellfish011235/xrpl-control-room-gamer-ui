@@ -1,0 +1,98 @@
+{
+  "lens": "regulation",
+  "asOf": "2026-01-18",
+  "globalSummary": "Global regulatory clarity improving with US pro-crypto EO 14178, EU MiCA fully active, and multiple jurisdictions establishing clear frameworks. XRP classified as non-security in US secondary markets.",
+  "items": [
+    {
+      "id": "reg-us-eo-001",
+      "title": "Presidential Working Group recommendations due Feb 2026",
+      "summary": "Working Group on Digital Assets to submit framework recommendations per EO 14178 timelines.",
+      "tag": "Policy",
+      "date": "2026-01-15",
+      "sourceIds": ["src-whitehouse-eo14178"],
+      "related": {
+        "countryIso2": "US",
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "reg-eu-mica-001",
+      "title": "MiCA full implementation now active across EU",
+      "summary": "All crypto-asset service providers must comply with MiCA licensing and operational requirements.",
+      "tag": "Compliance",
+      "date": "2026-01-02",
+      "sourceIds": ["src-esma-mica"],
+      "related": {
+        "countryIso2": "EU",
+        "hubId": "hub-frankfurt",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "reg-jp-jfsa-001",
+      "title": "Japan JFSA confirms XRP as regulated crypto-asset",
+      "summary": "JFSA classification enables continued exchange listings and institutional custody in Japan.",
+      "tag": "Classification",
+      "date": "2026-01-10",
+      "sourceIds": ["src-jfsa-guidance"],
+      "related": {
+        "countryIso2": "JP",
+        "hubId": "hub-tokyo",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "reg-sg-mas-001",
+      "title": "Singapore MAS issues updated DPT guidance",
+      "summary": "Revised Digital Payment Token framework clarifies custody and AML requirements for XRP services.",
+      "tag": "Guidance",
+      "date": "2026-01-08",
+      "sourceIds": ["src-mas-dpt"],
+      "related": {
+        "countryIso2": "SG",
+        "hubId": "hub-singapore",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "reg-ae-vara-001",
+      "title": "Dubai VARA approves three XRPL-based service providers",
+      "summary": "Virtual Assets Regulatory Authority licenses expand XRPL ecosystem presence in UAE.",
+      "tag": "Licensing",
+      "date": "2026-01-12",
+      "sourceIds": ["src-vara-licenses"],
+      "related": {
+        "countryIso2": "AE",
+        "hubId": "hub-dubai",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "reg-uk-fca-001",
+      "title": "UK FCA consults on crypto promotion rules updates",
+      "summary": "Financial Conduct Authority seeking input on revised crypto marketing and disclosure requirements.",
+      "tag": "Consultation",
+      "date": "2026-01-14",
+      "sourceIds": ["src-fca-consultation"],
+      "related": {
+        "countryIso2": "GB",
+        "hubId": "hub-london",
+        "corridorId": null
+      }
+    },
+    {
+      "id": "reg-genius-001",
+      "title": "GENIUS Act quarterly reporting requirements begin",
+      "summary": "Stablecoin issuers including RLUSD must file first quarterly compliance reports.",
+      "tag": "Compliance",
+      "date": "2026-01-16",
+      "sourceIds": ["src-genius-act"],
+      "related": {
+        "countryIso2": "US",
+        "hubId": null,
+        "corridorId": null
+      }
+    }
+  ]
+}

@@ -1,42 +1,124 @@
 import { motion } from 'framer-motion'
+import { useMemo } from 'react'
 import { 
   Globe, MapPin, Server, Users, Zap, Activity, Database,
-  ChevronRight, Filter, Search, Maximize2, Layers
+  ChevronRight, Filter, Search, Maximize2, Layers, Link2,
+  Route, Scale, Building, Eye, X
 } from 'lucide-react'
-import { AreaChart, Area, ResponsiveContainer, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from 'recharts'
+import { AreaChart, Area, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { WorldGlobe } from '../components/globe/WorldGlobe'
+import { useGlobeStore } from '../store/globeStore'
+import { 
+  lensMetadata, 
+  getHubs, 
+  getCorridors,
+  getHubById,
+  getCorridorById,
+  getBriefForLens,
+  countryRegulatoryStatus
+} from '../data/globeContent'
+import type { GlobeLens, GlobeHub } from '../types/globe'
 
-// Mock data
-const networkStats = [
-  { label: 'Active Validators', value: '150+', change: '+3', color: 'cyber-green' },
-  { label: 'Total Nodes', value: '1,247', change: '+12', color: 'cyber-glow' },
-  { label: 'Countries', value: '45', change: '+2', color: 'cyber-purple' },
-  { label: 'TPS (Current)', value: '1,500', change: '+8.3%', color: 'cyber-cyan' },
-]
+// Lens icons mapping
+const lensIcons: Record<GlobeLens, React.ReactNode> = {
+  validators: <Server size={14} />,
+  ilp: <Link2 size={14} />,
+  corridors: <Route size={14} />,
+  community: <Users size={14} />,
+  regulation: <Scale size={14} />,
+  projects: <Building size={14} />
+}
 
-const regionData = [
-  { name: 'North America', nodes: 420, validators: 52, color: '#00d4ff' },
-  { name: 'Europe', nodes: 380, validators: 48, color: '#a855f7' },
-  { name: 'Asia Pacific', nodes: 290, validators: 35, color: '#00ff88' },
-  { name: 'Latin America', nodes: 85, validators: 10, color: '#ffd700' },
-  { name: 'Other', nodes: 72, validators: 5, color: '#ff8c00' },
-]
+const lensOrder: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation', 'projects']
 
+// Hub type colors
+const hubTypeColors: Record<GlobeHub['type'], string> = {
+  headquarters: '#00d4ff',
+  financial: '#00aaff',
+  validator: '#00ff88',
+  development: '#a855f7',
+  partnership: '#ffd700',
+  regional_hq: '#00ffff',
+  emerging: '#ff00ff',
+  academic: '#6366f1',
+  exchange: '#14b8a6'
+}
+
+const hubTypeLabels: Record<GlobeHub['type'], string> = {
+  headquarters: 'Headquarters',
+  financial: 'Financial Hub',
+  validator: 'Validator Cluster',
+  development: 'Development',
+  partnership: 'Partnership',
+  regional_hq: 'Regional HQ',
+  emerging: 'Emerging',
+  academic: 'Academic',
+  exchange: 'Exchange Hub'
+}
+
+// Mock TPS data
 const tpsHistory = Array.from({ length: 24 }, (_, i) => ({
   hour: `${i}:00`,
   tps: Math.floor(800 + Math.random() * 700),
-  ledgers: Math.floor(200 + Math.random() * 100)
 }))
 
-const hotspots = [
-  { city: 'San Francisco', lat: 37.7749, lng: -122.4194, nodes: 85, type: 'hub' },
-  { city: 'London', lat: 51.5074, lng: -0.1278, nodes: 72, type: 'hub' },
-  { city: 'Singapore', lat: 1.3521, lng: 103.8198, nodes: 65, type: 'hub' },
-  { city: 'Tokyo', lat: 35.6762, lng: 139.6503, nodes: 58, type: 'validator' },
-  { city: 'Frankfurt', lat: 50.1109, lng: 8.6821, nodes: 48, type: 'validator' },
-  { city: 'Sydney', lat: -33.8688, lng: 151.2093, nodes: 42, type: 'node' },
-]
-
 export default function WorldMap() {
+  const { activeLens, setActiveLens, selection, clearSelection } = useGlobeStore()
+  const hubs = useMemo(() => getHubs(), [])
+  const corridors = useMemo(() => getCorridors(), [])
+  const brief = useMemo(() => getBriefForLens(activeLens), [activeLens])
+  const lens = lensMetadata[activeLens]
+  
+  // Get region distribution
+  const regionData = useMemo(() => {
+    const regions: Record<string, { nodes: number; color: string }> = {
+      'North America': { nodes: 0, color: '#00d4ff' },
+      'Europe': { nodes: 0, color: '#a855f7' },
+      'Asia Pacific': { nodes: 0, color: '#00ff88' },
+      'Middle East': { nodes: 0, color: '#ffd700' },
+      'Other': { nodes: 0, color: '#ff8c00' },
+    }
+    
+    hubs.forEach(hub => {
+      if (['US', 'CA'].includes(hub.countryIso2)) regions['North America'].nodes += hub.validators
+      else if (['GB', 'DE', 'FR', 'NL', 'CH'].includes(hub.countryIso2)) regions['Europe'].nodes += hub.validators
+      else if (['JP', 'SG', 'KR', 'AU', 'IN'].includes(hub.countryIso2)) regions['Asia Pacific'].nodes += hub.validators
+      else if (['AE'].includes(hub.countryIso2)) regions['Middle East'].nodes += hub.validators
+      else regions['Other'].nodes += hub.validators
+    })
+    
+    return Object.entries(regions).map(([name, data]) => ({ name, ...data }))
+  }, [hubs])
+  
+  // Selection context
+  const selectionContext = useMemo(() => {
+    if (selection.type === 'none') return null
+    
+    if (selection.type === 'hub' && selection.id) {
+      return getHubById(selection.id)
+    }
+    if (selection.type === 'corridor' && selection.id) {
+      return getCorridorById(selection.id)
+    }
+    if (selection.type === 'country' && selection.countryIso2) {
+      const status = countryRegulatoryStatus[selection.countryIso2]
+      return { 
+        name: selection.countryIso2, 
+        description: status?.label || 'Selected country',
+        type: 'country' as const
+      }
+    }
+    return null
+  }, [selection])
+  
+  // Network stats
+  const networkStats = useMemo(() => [
+    { label: 'Active Validators', value: hubs.reduce((sum, h) => sum + h.validators, 0).toString(), change: '+3', color: 'cyber-green' },
+    { label: 'Total Hubs', value: hubs.length.toString(), change: '+2', color: 'cyber-glow' },
+    { label: 'Corridors', value: corridors.length.toString(), change: '+1', color: 'cyber-purple' },
+    { label: 'TPS (Current)', value: '1,500', change: '+8.3%', color: 'cyber-cyan' },
+  ], [hubs, corridors])
+
   return (
     <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -64,7 +146,7 @@ export default function WorldMap() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {networkStats.map((stat, idx) => (
+          {networkStats.map((stat) => (
             <div key={stat.label} className="cyber-panel p-4">
               <p className="text-xs text-cyber-muted mb-1">{stat.label}</p>
               <div className="flex items-end gap-2">
@@ -75,9 +157,40 @@ export default function WorldMap() {
           ))}
         </motion.div>
         
+        {/* Lens Tabs */}
+        <motion.div 
+          className="cyber-panel p-2 mb-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+        >
+          <div className="flex items-center gap-1 flex-wrap">
+            {lensOrder.map((lensKey) => {
+              const meta = lensMetadata[lensKey]
+              const isActive = activeLens === lensKey
+              
+              return (
+                <button
+                  key={lensKey}
+                  onClick={() => setActiveLens(lensKey)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded font-cyber text-xs tracking-wider transition-all ${
+                    isActive 
+                      ? 'bg-cyber-glow/20 border border-cyber-glow/50' 
+                      : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-border/30'
+                  }`}
+                  style={isActive ? { color: meta.color } : undefined}
+                >
+                  {lensIcons[lensKey]}
+                  <span className="hidden sm:inline">{meta.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </motion.div>
+        
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sidebar - Filters */}
+          {/* Left Sidebar - Filters & Legend */}
           <motion.div 
             className="lg:col-span-2"
             initial={{ opacity: 0, x: -20 }}
@@ -86,227 +199,179 @@ export default function WorldMap() {
           >
             <div className="cyber-panel p-4 sticky top-24">
               <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <Filter size={14} className="text-cyber-glow" />
-                <span className="font-cyber text-sm text-cyber-glow">FILTERS</span>
+                <Eye size={14} className="text-cyber-glow" />
+                <span className="font-cyber text-sm text-cyber-glow">ACTIVE LENS</span>
               </div>
               
-              {/* Search */}
               <div className="mb-4">
-                <div className="relative">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted" />
-                  <input 
-                    type="text"
-                    placeholder="Search location..."
-                    className="w-full bg-cyber-darker border border-cyber-border rounded pl-9 pr-3 py-2 text-sm text-cyber-text placeholder:text-cyber-muted focus:border-cyber-glow focus:outline-none"
-                  />
+                <div 
+                  className="flex items-center gap-3 p-3 rounded bg-cyber-darker/50 border"
+                  style={{ borderColor: `${lens.color}50` }}
+                >
+                  <div 
+                    className="w-10 h-10 rounded flex items-center justify-center"
+                    style={{ backgroundColor: `${lens.color}20`, color: lens.color }}
+                  >
+                    {lensIcons[activeLens]}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-cyber-text">{lens.label}</p>
+                    <p className="text-[10px] text-cyber-muted">{brief.items.length} items</p>
+                  </div>
+                </div>
+                <p className="text-xs text-cyber-muted mt-2">{lens.description}</p>
+              </div>
+              
+              {/* Hub Legend */}
+              <div className="mb-4">
+                <p className="text-xs text-cyber-muted mb-2 font-cyber">HUB TYPES</p>
+                <div className="space-y-1">
+                  {Object.entries(hubTypeColors).slice(0, 6).map(([type, color]) => (
+                    <div key={type} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="text-[10px] text-cyber-muted">
+                        {hubTypeLabels[type as GlobeHub['type']]}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
               
-              {/* Region Filter */}
-              <div className="mb-4">
-                <p className="text-xs text-cyber-muted mb-2">REGION</p>
-                <div className="space-y-2">
-                  {['All Regions', 'North America', 'Europe', 'Asia Pacific', 'Other'].map((region) => (
-                    <label key={region} className="flex items-center gap-2 cursor-pointer group">
-                      <div className="w-4 h-4 rounded border border-cyber-border group-hover:border-cyber-glow transition-colors flex items-center justify-center">
-                        {region === 'All Regions' && <div className="w-2 h-2 rounded-sm bg-cyber-glow" />}
+              {/* Regulatory Legend (show on regulation lens) */}
+              {activeLens === 'regulation' && (
+                <div className="mb-4 pt-4 border-t border-cyber-border">
+                  <p className="text-xs text-cyber-muted mb-2 font-cyber">REGULATORY STATUS</p>
+                  <div className="space-y-1">
+                    {[
+                      { status: 'Favorable', color: 'rgba(0, 255, 136, 0.6)' },
+                      { status: 'Regulated', color: 'rgba(0, 170, 255, 0.6)' },
+                      { status: 'Developing', color: 'rgba(255, 215, 0, 0.6)' },
+                      { status: 'Restricted', color: 'rgba(255, 68, 68, 0.6)' },
+                    ].map((item) => (
+                      <div key={item.status} className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-2 rounded-sm"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-[10px] text-cyber-muted">{item.status}</span>
                       </div>
-                      <span className="text-sm text-cyber-text">{region}</span>
-                    </label>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-              
-              {/* Node Type Filter */}
-              <div className="mb-4">
-                <p className="text-xs text-cyber-muted mb-2">NODE TYPE</p>
-                <div className="space-y-2">
-                  {[
-                    { name: 'Validators', color: 'cyber-purple' },
-                    { name: 'Full Nodes', color: 'cyber-glow' },
-                    { name: 'Hubs', color: 'cyber-green' },
-                  ].map((type) => (
-                    <label key={type.name} className="flex items-center gap-2 cursor-pointer group">
-                      <div className={`w-4 h-4 rounded border border-${type.color}/50 group-hover:border-${type.color} transition-colors flex items-center justify-center`}>
-                        <div className={`w-2 h-2 rounded-sm bg-${type.color}`} />
-                      </div>
-                      <span className="text-sm text-cyber-text">{type.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Layers */}
-              <div>
-                <p className="text-xs text-cyber-muted mb-2">LAYERS</p>
-                <div className="space-y-2">
-                  {['Network Traffic', 'Validator UNLs', 'Latency Heat Map'].map((layer) => (
-                    <button key={layer} className="w-full flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-glow/30 transition-all text-left">
-                      <Layers size={14} className="text-cyber-muted" />
-                      <span className="text-xs text-cyber-text">{layer}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           </motion.div>
           
-          {/* Center - Map Visualization */}
+          {/* Center - Globe */}
           <motion.div 
             className="lg:col-span-7"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="cyber-panel p-4 h-full">
-              {/* Map Controls */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <button className="p-2 rounded bg-cyber-darker border border-cyber-border hover:border-cyber-glow transition-colors">
-                    <Maximize2 size={16} className="text-cyber-muted" />
-                  </button>
-                  <span className="font-cyber text-sm text-cyber-muted">Interactive Globe</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-cyber-muted">Zoom:</span>
-                  <input type="range" min="1" max="10" defaultValue="3" className="w-24 accent-cyber-glow" />
-                </div>
-              </div>
-              
-              {/* Map Placeholder - SVG World Map */}
-              <div className="relative aspect-[16/10] rounded-lg bg-cyber-darker overflow-hidden border border-cyber-border">
-                {/* World Map Background */}
-                <div className="absolute inset-0 opacity-30">
-                  <svg viewBox="0 0 1000 500" className="w-full h-full">
-                    {/* Simplified world continents */}
-                    <path 
-                      d="M150,150 Q200,100 280,120 L350,150 Q400,180 380,220 L300,250 Q250,280 200,250 L150,200 Z" 
-                      fill="rgba(0, 212, 255, 0.2)" 
-                      stroke="rgba(0, 212, 255, 0.5)"
-                    />
-                    <path 
-                      d="M450,100 Q500,80 580,100 L620,150 Q650,200 600,250 L520,280 Q470,260 450,200 Z" 
-                      fill="rgba(168, 85, 247, 0.2)" 
-                      stroke="rgba(168, 85, 247, 0.5)"
-                    />
-                    <path 
-                      d="M700,120 Q780,100 850,140 L880,200 Q900,280 820,320 L720,300 Q680,250 700,180 Z" 
-                      fill="rgba(0, 255, 136, 0.2)" 
-                      stroke="rgba(0, 255, 136, 0.5)"
-                    />
-                    <path 
-                      d="M200,300 Q250,280 300,320 L320,380 Q300,420 250,400 L200,350 Z" 
-                      fill="rgba(255, 215, 0, 0.2)" 
-                      stroke="rgba(255, 215, 0, 0.5)"
-                    />
-                    <path 
-                      d="M750,350 Q800,330 850,360 L870,420 Q850,450 800,440 L750,400 Z" 
-                      fill="rgba(0, 212, 255, 0.2)" 
-                      stroke="rgba(0, 212, 255, 0.5)"
-                    />
-                  </svg>
-                </div>
-                
-                {/* Node Hotspots */}
-                {hotspots.map((spot, idx) => {
-                  const x = ((spot.lng + 180) / 360) * 100
-                  const y = ((90 - spot.lat) / 180) * 100
-                  const colors = {
-                    hub: 'cyber-glow',
-                    validator: 'cyber-purple',
-                    node: 'cyber-green'
-                  }
-                  const color = colors[spot.type as keyof typeof colors]
-                  
-                  return (
-                    <motion.div
-                      key={spot.city}
-                      className="absolute"
-                      style={{ left: `${x}%`, top: `${y}%` }}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.5 + idx * 0.1 }}
-                    >
-                      <div className="relative group cursor-pointer">
-                        {/* Pulse Ring */}
-                        <div className={`absolute -inset-4 rounded-full bg-${color}/20 animate-ping`} />
-                        
-                        {/* Node Dot */}
-                        <div className={`w-3 h-3 rounded-full bg-${color} shadow-lg shadow-${color}/50`} />
-                        
-                        {/* Tooltip */}
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                          <div className="cyber-panel px-3 py-2 whitespace-nowrap">
-                            <p className="font-cyber text-sm text-cyber-text">{spot.city}</p>
-                            <p className="text-xs text-cyber-muted">{spot.nodes} nodes</p>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )
-                })}
-                
-                {/* Connection Lines */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                  <defs>
-                    <linearGradient id="connectionGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="rgba(0, 212, 255, 0.6)" />
-                      <stop offset="100%" stopColor="rgba(168, 85, 247, 0.6)" />
-                    </linearGradient>
-                  </defs>
-                  {/* Animated connection lines between hubs */}
-                  <line x1="15%" y1="35%" x2="48%" y2="28%" stroke="url(#connectionGradient)" strokeWidth="1" strokeDasharray="4,4" className="animate-pulse" />
-                  <line x1="48%" y1="28%" x2="82%" y2="32%" stroke="url(#connectionGradient)" strokeWidth="1" strokeDasharray="4,4" className="animate-pulse" />
-                  <line x1="15%" y1="35%" x2="25%" y2="60%" stroke="rgba(255, 215, 0, 0.4)" strokeWidth="1" strokeDasharray="4,4" />
-                </svg>
-                
-                {/* Grid Overlay */}
-                <div className="absolute inset-0 opacity-20"
-                  style={{
-                    backgroundImage: `
-                      linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px),
-                      linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px)
-                    `,
-                    backgroundSize: '10% 10%'
-                  }}
-                />
-              </div>
-              
-              {/* Legend */}
-              <div className="flex items-center gap-6 mt-4 pt-4 border-t border-cyber-border">
-                {[
-                  { label: 'Hub', color: 'bg-cyber-glow' },
-                  { label: 'Validator', color: 'bg-cyber-purple' },
-                  { label: 'Full Node', color: 'bg-cyber-green' },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-2">
-                    <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                    <span className="text-xs text-cyber-muted">{item.label}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="cyber-panel p-2 h-full min-h-[500px]">
+              <WorldGlobe className="h-full min-h-[480px]" />
             </div>
           </motion.div>
           
-          {/* Right Sidebar - Stats */}
+          {/* Right Sidebar - Stats & Selection */}
           <motion.div 
             className="lg:col-span-3 space-y-4"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
           >
+            {/* Selection Panel */}
+            {selectionContext && (
+              <div className="cyber-panel p-4 border-cyber-glow/30">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-cyber text-sm text-cyber-glow">SELECTED</span>
+                  <button 
+                    onClick={clearSelection}
+                    className="p-1 hover:bg-cyber-glow/10 rounded transition-colors"
+                  >
+                    <X size={14} className="text-cyber-muted" />
+                  </button>
+                </div>
+                
+                {'city' in selectionContext ? (
+                  // Hub selection
+                  <div>
+                    <h3 className="font-cyber text-lg text-cyber-text mb-1">
+                      {(selectionContext as GlobeHub).name}
+                    </h3>
+                    <p className="text-xs text-cyber-muted mb-3">
+                      {(selectionContext as GlobeHub).city}, {(selectionContext as GlobeHub).countryIso2}
+                    </p>
+                    <p className="text-sm text-cyber-text mb-3">
+                      {(selectionContext as GlobeHub).description}
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
+                        <p className="font-cyber text-lg text-cyber-green">
+                          {(selectionContext as GlobeHub).validators}
+                        </p>
+                        <p className="text-[10px] text-cyber-muted">Validators</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
+                        <p className="font-cyber text-lg text-cyber-purple">
+                          {(selectionContext as GlobeHub).projects}
+                        </p>
+                        <p className="text-[10px] text-cyber-muted">Projects</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : 'from' in selectionContext ? (
+                  // Corridor selection
+                  <div>
+                    <h3 className="font-cyber text-lg text-cyber-text mb-1">
+                      {selectionContext.name}
+                    </h3>
+                    <p className="text-sm text-cyber-text mb-2">
+                      {selectionContext.description}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-1 rounded text-xs border ${
+                        selectionContext.volume === 'high' ? 'border-cyber-green/50 text-cyber-green' :
+                        selectionContext.volume === 'medium' ? 'border-cyber-yellow/50 text-cyber-yellow' :
+                        'border-cyber-muted/50 text-cyber-muted'
+                      }`}>
+                        {selectionContext.volume} volume
+                      </span>
+                      <span className="px-2 py-1 rounded text-xs border border-cyber-purple/50 text-cyber-purple">
+                        {selectionContext.type}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  // Country selection
+                  <div>
+                    <h3 className="font-cyber text-lg text-cyber-text mb-1">
+                      {selectionContext.name}
+                    </h3>
+                    <p className="text-sm text-cyber-muted">
+                      {selectionContext.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Region Distribution */}
             <div className="cyber-panel p-4">
               <h3 className="font-cyber text-sm text-cyber-glow mb-4">REGION DISTRIBUTION</h3>
-              <div className="h-48">
+              <div className="h-40">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={regionData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={40}
-                      outerRadius={70}
+                      innerRadius={35}
+                      outerRadius={60}
                       dataKey="nodes"
                       stroke="transparent"
                     >
@@ -324,7 +389,7 @@ export default function WorldMap() {
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: region.color }} />
                       <span className="text-xs text-cyber-text">{region.name}</span>
                     </div>
-                    <span className="text-xs text-cyber-muted">{region.nodes}</span>
+                    <span className="text-xs text-cyber-muted font-cyber">{region.nodes}</span>
                   </div>
                 ))}
               </div>
@@ -332,8 +397,8 @@ export default function WorldMap() {
             
             {/* TPS Chart */}
             <div className="cyber-panel p-4">
-              <h3 className="font-cyber text-sm text-cyber-glow mb-4">NETWORK TPS (24H)</h3>
-              <div className="h-32">
+              <h3 className="font-cyber text-sm text-cyber-cyan mb-4">NETWORK TPS (24H)</h3>
+              <div className="h-28">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={tpsHistory}>
                     <defs>
@@ -354,19 +419,26 @@ export default function WorldMap() {
               </div>
             </div>
             
-            {/* Top Locations */}
+            {/* Top Hubs */}
             <div className="cyber-panel p-4">
-              <h3 className="font-cyber text-sm text-cyber-purple mb-4">TOP LOCATIONS</h3>
+              <h3 className="font-cyber text-sm text-cyber-purple mb-4">TOP HUBS</h3>
               <div className="space-y-2">
-                {hotspots.slice(0, 5).map((spot, idx) => (
-                  <div key={spot.city} className="flex items-center justify-between p-2 rounded bg-cyber-darker/50 border border-cyber-border/50">
+                {hubs.slice(0, 5).map((hub, idx) => (
+                  <button
+                    key={hub.id}
+                    onClick={() => useGlobeStore.getState().setSelection({ type: 'hub', id: hub.id, countryIso2: hub.countryIso2 })}
+                    className="w-full flex items-center justify-between p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/30 transition-colors text-left"
+                  >
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-cyber-muted w-4">{idx + 1}.</span>
-                      <MapPin size={12} className="text-cyber-glow" />
-                      <span className="text-sm text-cyber-text">{spot.city}</span>
+                      <div 
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: hubTypeColors[hub.type] }}
+                      />
+                      <span className="text-sm text-cyber-text">{hub.city}</span>
                     </div>
-                    <span className="text-xs text-cyber-glow">{spot.nodes}</span>
-                  </div>
+                    <span className="text-xs text-cyber-glow font-cyber">{hub.validators}</span>
+                  </button>
                 ))}
               </div>
             </div>

@@ -1,0 +1,72 @@
+{
+  "lens": "ilp",
+  "asOf": "2026-01-18",
+  "globalSummary": "Interledger Protocol connectors bridge XRPL to traditional payment rails and other ledgers. Active corridors span US-MX, EU-UK, and APAC remittance routes.",
+  "items": [
+    {
+      "id": "ilp-mx-corridor-001",
+      "title": "US-Mexico corridor sees $2.1B monthly volume",
+      "summary": "XRP-facilitated remittances via ILP connectors now handle significant US-Mexico payment flows.",
+      "tag": "Corridor",
+      "date": "2026-01-15",
+      "sourceIds": ["src-ripple-insights", "src-bis-remittances"],
+      "related": {
+        "countryIso2": "MX",
+        "hubId": null,
+        "corridorId": "corridor-us-mx"
+      }
+    },
+    {
+      "id": "ilp-eu-uk-001",
+      "title": "EU-UK post-Brexit payment corridor operational",
+      "summary": "ILP bridges facilitate continued cross-border payments between EU and UK financial institutions.",
+      "tag": "Corridor",
+      "date": "2026-01-12",
+      "sourceIds": ["src-ripple-eu"],
+      "related": {
+        "countryIso2": "GB",
+        "hubId": "hub-london",
+        "corridorId": "corridor-eu-uk"
+      }
+    },
+    {
+      "id": "ilp-ph-corridor-001",
+      "title": "Philippines inbound remittances grow 34% YoY",
+      "summary": "ILP-connected corridors from US, UAE, and Singapore drive remittance growth to Philippines.",
+      "tag": "Remittance",
+      "date": "2026-01-10",
+      "sourceIds": ["src-bsp-data"],
+      "related": {
+        "countryIso2": "PH",
+        "hubId": null,
+        "corridorId": "corridor-us-ph"
+      }
+    },
+    {
+      "id": "ilp-webmon-001",
+      "title": "Web Monetization pilot expands to 50K content creators",
+      "summary": "ILP-based micropayments enable streaming payments for digital content across platforms.",
+      "tag": "Ecosystem",
+      "date": "2026-01-08",
+      "sourceIds": ["src-coil-webmon"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": null
+      }
+    },
+    {
+      "id": "ilp-cbdc-001",
+      "title": "Singapore MAS explores ILP for CBDC interoperability",
+      "summary": "Monetary Authority of Singapore evaluating ILP as potential bridge protocol for Project Ubin successor.",
+      "tag": "CBDC",
+      "date": "2026-01-14",
+      "sourceIds": ["src-mas-cbdc"],
+      "related": {
+        "countryIso2": "SG",
+        "hubId": "hub-singapore",
+        "corridorId": null
+      }
+    }
+  ]
+}

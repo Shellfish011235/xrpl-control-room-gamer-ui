@@ -1,0 +1,72 @@
+{
+  "lens": "corridors",
+  "asOf": "2026-01-18",
+  "globalSummary": "Major payment corridors connect the Americas, Europe, and Asia Pacific. XRP-facilitated cross-border flows exceed $8B monthly across active corridors.",
+  "items": [
+    {
+      "id": "corr-us-mx-001",
+      "title": "US-Mexico corridor leads remittance volume",
+      "summary": "Largest XRP-facilitated corridor handles $2.1B monthly in remittance flows.",
+      "tag": "Remittance",
+      "date": "2026-01-15",
+      "sourceIds": ["src-ripple-insights", "src-bis-remittances"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": "corridor-us-mx"
+      }
+    },
+    {
+      "id": "corr-us-ph-001",
+      "title": "US-Philippines corridor grows 34% YoY",
+      "summary": "Strong OFW remittance demand drives continued growth in Pacific corridor.",
+      "tag": "Remittance",
+      "date": "2026-01-12",
+      "sourceIds": ["src-bsp-data"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": "corridor-us-ph"
+      }
+    },
+    {
+      "id": "corr-eu-uk-001",
+      "title": "EU-UK corridor stabilizes post-Brexit",
+      "summary": "Cross-channel business payments maintain steady volumes via XRPL bridges.",
+      "tag": "Business",
+      "date": "2026-01-10",
+      "sourceIds": ["src-ripple-eu"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": "corridor-eu-uk"
+      }
+    },
+    {
+      "id": "corr-sg-in-001",
+      "title": "Singapore-India corridor expands",
+      "summary": "Tech sector payments and remittances drive growth on Singapore-India route.",
+      "tag": "Mixed",
+      "date": "2026-01-08",
+      "sourceIds": ["src-mas-cbdc"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": "corridor-sg-in"
+      }
+    },
+    {
+      "id": "corr-ae-pk-001",
+      "title": "UAE-Pakistan corridor sees institutional adoption",
+      "summary": "Major UAE banks integrate XRP for Pakistan remittance settlement.",
+      "tag": "Institutional",
+      "date": "2026-01-14",
+      "sourceIds": ["src-vara-licenses"],
+      "related": {
+        "countryIso2": null,
+        "hubId": null,
+        "corridorId": "corridor-ae-pk"
+      }
+    }
+  ]
+}
