@@ -5,8 +5,12 @@ import {
   Activity, Wallet, Database, ArrowRight, Star, Trophy, Coins,
   Image as ImageIcon, ChevronRight, Github, Twitter
 } from 'lucide-react'
+import { useEffect } from 'react'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
+import { WalletConnect } from '../components/WalletConnect'
 import { useProfileStore } from '../store/profileStore'
+import { useWalletStore } from '../store/walletStore'
+import { useAssetsStore } from '../store/assetsStore'
 
 const pageCards = [
   {
@@ -65,6 +69,15 @@ const pageCards = [
 
 export default function Home() {
   const { username, reputation, socialScore, skillPoints } = useProfileStore()
+  const { wallets } = useWalletStore()
+  const { nfts, memeTokens, isLoading: assetsLoading, fetchAllAssets } = useAssetsStore()
+
+  // Fetch assets when wallets change
+  useEffect(() => {
+    if (wallets.length > 0) {
+      fetchAllAssets()
+    }
+  }, [wallets.length, fetchAllAssets])
 
   return (
     <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
@@ -115,25 +128,98 @@ export default function Home() {
                 ))}
               </div>
               
-              {/* Holdings */}
+              {/* Holdings - Real Data */}
               <div className="space-y-2 mb-4">
-                <div className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50">
+                {/* Meme Coins */}
+                <Link 
+                  to="/character"
+                  className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-yellow/50 transition-colors"
+                >
                   <ImageIcon size={14} className="text-cyber-yellow" />
                   <span className="text-sm text-cyber-muted">Memes</span>
-                  <span className="font-cyber text-cyber-yellow ml-auto">12</span>
+                  {assetsLoading ? (
+                    <span className="text-xs text-cyber-muted ml-auto">...</span>
+                  ) : (
+                    <span className="font-cyber text-cyber-yellow ml-auto">{memeTokens.length}</span>
+                  )}
                   <ChevronRight size={14} className="text-cyber-muted" />
-                </div>
-                <div className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50">
+                </Link>
+                
+                {/* Show meme token previews */}
+                {memeTokens.length > 0 && (
+                  <div className="flex flex-wrap gap-1 px-2">
+                    {memeTokens.slice(0, 4).map((token, idx) => (
+                      <div 
+                        key={`${token.currency}-${token.issuer}-${idx}`}
+                        className="px-2 py-1 rounded text-[10px] flex items-center gap-1"
+                        style={{ backgroundColor: `${token.color}20`, color: token.color }}
+                      >
+                        {token.icon && <span>{token.icon}</span>}
+                        <span>{token.symbol}</span>
+                      </div>
+                    ))}
+                    {memeTokens.length > 4 && (
+                      <span className="text-[10px] text-cyber-muted">+{memeTokens.length - 4}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* NFTs */}
+                <Link 
+                  to="/character"
+                  className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-purple/50 transition-colors"
+                >
                   <Database size={14} className="text-cyber-purple" />
                   <span className="text-sm text-cyber-muted">NFTs</span>
-                  <span className="font-cyber text-cyber-purple ml-auto">8</span>
+                  {assetsLoading ? (
+                    <span className="text-xs text-cyber-muted ml-auto">...</span>
+                  ) : (
+                    <span className="font-cyber text-cyber-purple ml-auto">{nfts.length}</span>
+                  )}
                   <ChevronRight size={14} className="text-cyber-muted" />
-                </div>
-                <div className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50">
+                </Link>
+                
+                {/* Show NFT image previews */}
+                {nfts.length > 0 && (
+                  <div className="flex gap-1 px-2 overflow-x-auto">
+                    {nfts.slice(0, 4).map((nft) => (
+                      <div 
+                        key={nft.tokenId}
+                        className="w-10 h-10 rounded bg-cyber-darker border border-cyber-purple/30 flex-shrink-0 overflow-hidden"
+                      >
+                        {nft.image ? (
+                          <img 
+                            src={nft.image} 
+                            alt={nft.name || 'NFT'} 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-cyber-purple/50 text-xs">
+                            NFT
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {nfts.length > 4 && (
+                      <div className="w-10 h-10 rounded bg-cyber-darker border border-cyber-purple/30 flex-shrink-0 flex items-center justify-center">
+                        <span className="text-[10px] text-cyber-purple">+{nfts.length - 4}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* View All link */}
+                <Link 
+                  to="/character"
+                  className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-orange/50 transition-colors"
+                >
                   <Trophy size={14} className="text-cyber-orange" />
-                  <span className="text-sm text-cyber-muted">Achievements</span>
+                  <span className="text-sm text-cyber-muted">View Collection</span>
                   <ChevronRight size={14} className="text-cyber-muted ml-auto" />
-                </div>
+                </Link>
               </div>
               
               {/* Drag Items Section */}
@@ -399,28 +485,8 @@ export default function Home() {
               </div>
             </div>
             
-            {/* Xaman Wallet Connect */}
-            <div className="cyber-panel p-4">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <span className="font-cyber text-sm text-cyber-yellow tracking-wider">SIGN WITH XAMAN</span>
-              </div>
-              
-              {/* QR Code Placeholder */}
-              <div className="bg-white rounded-lg p-4 mb-4 aspect-square max-w-[150px] mx-auto">
-                <div className="w-full h-full bg-cyber-darker rounded grid grid-cols-8 grid-rows-8 gap-0.5 p-1">
-                  {Array.from({ length: 64 }).map((_, i) => (
-                    <div 
-                      key={i} 
-                      className={`rounded-sm ${Math.random() > 0.5 ? 'bg-cyber-darker' : 'bg-white'}`}
-                    />
-                  ))}
-                </div>
-              </div>
-              
-              <button className="w-full cyber-btn">
-                Connect XAMAN Wallet
-              </button>
-            </div>
+            {/* Wallet Connect - Multiple Providers */}
+            <WalletConnect />
           </motion.div>
         </div>
         

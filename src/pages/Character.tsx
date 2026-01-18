@@ -1,21 +1,17 @@
-import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   User, Star, Trophy, Zap, Github, Twitter, Globe, 
-  ChevronRight, Code, GitBranch, Award, Users,
-  Calendar, MessageSquare, Heart, ExternalLink
+  ChevronRight, Code, GitBranch, Users,
+  Calendar, MessageSquare, Heart, ExternalLink,
+  Image as ImageIcon, Loader2, X, RefreshCw, Coins, Copy, Check
 } from 'lucide-react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { useProfileStore } from '../store/profileStore'
-
-const achievements = [
-  { id: 1, name: 'Early Adopter', icon: Star, unlocked: true, color: 'cyber-yellow' },
-  { id: 2, name: 'Code Contributor', icon: Code, unlocked: true, color: 'cyber-glow' },
-  { id: 3, name: 'Community Leader', icon: Users, unlocked: true, color: 'cyber-purple' },
-  { id: 4, name: 'Validator Champion', icon: Trophy, unlocked: false, color: 'cyber-muted' },
-  { id: 5, name: 'DEX Master', icon: Zap, unlocked: false, color: 'cyber-muted' },
-  { id: 6, name: 'Governance Guru', icon: Award, unlocked: false, color: 'cyber-muted' },
-]
+import { useWalletStore } from '../store/walletStore'
+import { useAssetsStore } from '../store/assetsStore'
+import type { NFTAsset, MemeToken } from '../store/assetsStore'
 
 const contributors = [
   {
@@ -87,9 +83,35 @@ const communityEvents = [
   { date: 'Mar 5', title: 'Validator Workshop', type: 'workshop' },
 ]
 
+// Truncate address for display
+const truncateAddress = (address: string) => {
+  if (address.length <= 16) return address;
+  return `${address.slice(0, 8)}...${address.slice(-6)}`;
+};
+
 export default function Character() {
   const { username, reputation, socialScore, skillPoints, level, xp } = useProfileStore()
+  const { wallets } = useWalletStore()
+  const { nfts, memeTokens, isLoading, fetchAllAssets, lastUpdated } = useAssetsStore()
   const nextLevel = 10000
+
+  const [selectedNFT, setSelectedNFT] = useState<NFTAsset | null>(null)
+  const [selectedMeme, setSelectedMeme] = useState<MemeToken | null>(null)
+  const [activeTab, setActiveTab] = useState<'nfts' | 'memes'>('nfts')
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null)
+
+  // Fetch assets on mount and when wallets change
+  useEffect(() => {
+    if (wallets.length > 0) {
+      fetchAllAssets()
+    }
+  }, [wallets.length, fetchAllAssets])
+
+  const copyAddress = async (address: string) => {
+    await navigator.clipboard.writeText(address)
+    setCopiedAddress(address)
+    setTimeout(() => setCopiedAddress(null), 2000)
+  }
 
   return (
     <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
@@ -180,31 +202,132 @@ export default function Character() {
               </div>
             </div>
             
-            {/* Achievements */}
+            {/* NFTs & Memes Collection */}
             <div className="cyber-panel p-4 mt-4">
+              {/* Tabs */}
               <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <Award size={16} className="text-cyber-yellow" />
-                <span className="font-cyber text-sm text-cyber-yellow">ACHIEVEMENTS</span>
+                <button
+                  onClick={() => setActiveTab('nfts')}
+                  className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-cyber transition-all ${
+                    activeTab === 'nfts'
+                      ? 'bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/50'
+                      : 'text-cyber-muted hover:text-cyber-text'
+                  }`}
+                >
+                  <ImageIcon size={14} />
+                  NFTs ({nfts.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('memes')}
+                  className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-cyber transition-all ${
+                    activeTab === 'memes'
+                      ? 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50'
+                      : 'text-cyber-muted hover:text-cyber-text'
+                  }`}
+                >
+                  <Coins size={14} />
+                  Memes ({memeTokens.length})
+                </button>
+                <button
+                  onClick={() => fetchAllAssets()}
+                  disabled={isLoading}
+                  className="ml-auto p-1 hover:bg-cyber-glow/10 rounded transition-colors"
+                  title="Refresh"
+                >
+                  <RefreshCw size={14} className={`text-cyber-muted ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
               
-              <div className="grid grid-cols-3 gap-2">
-                {achievements.map((achievement) => {
-                  const Icon = achievement.icon
-                  return (
-                    <div
-                      key={achievement.id}
-                      className={`aspect-square rounded-lg border flex flex-col items-center justify-center p-2 transition-all cursor-pointer ${
-                        achievement.unlocked 
-                          ? `border-${achievement.color}/50 bg-${achievement.color}/10 hover:border-${achievement.color}` 
-                          : 'border-cyber-border bg-cyber-darker/50 opacity-50'
-                      }`}
-                    >
-                      <Icon size={20} className={achievement.unlocked ? `text-${achievement.color}` : 'text-cyber-muted'} />
-                      <span className="text-[10px] text-center text-cyber-muted mt-1">{achievement.name}</span>
+              {/* Content */}
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 size={24} className="animate-spin text-cyber-glow" />
+                </div>
+              ) : wallets.filter(w => w.provider !== 'demo').length === 0 ? (
+                <div className="text-center py-6">
+                  <ImageIcon size={32} className="mx-auto text-cyber-muted/50 mb-2" />
+                  <p className="text-sm text-cyber-muted">Connect a wallet to see your collection</p>
+                </div>
+              ) : activeTab === 'nfts' ? (
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+                  {nfts.length === 0 ? (
+                    <div className="col-span-3 text-center py-6">
+                      <p className="text-sm text-cyber-muted">No NFTs found</p>
                     </div>
-                  )
-                })}
-              </div>
+                  ) : (
+                    nfts.map((nft) => (
+                      <motion.div
+                        key={nft.tokenId}
+                        onClick={() => setSelectedNFT(nft)}
+                        className="aspect-square rounded-lg border border-cyber-purple/30 bg-cyber-darker/50 cursor-pointer overflow-hidden hover:border-cyber-purple transition-all group"
+                        whileHover={{ scale: 1.05 }}
+                      >
+                        {nft.isLoading ? (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Loader2 size={16} className="animate-spin text-cyber-purple/50" />
+                          </div>
+                        ) : nft.image ? (
+                          <img 
+                            src={nft.image} 
+                            alt={nft.name || 'NFT'} 
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center p-1">
+                            <ImageIcon size={16} className="text-cyber-purple/50 mb-1" />
+                            <span className="text-[8px] text-cyber-muted text-center">#{nft.serial}</span>
+                          </div>
+                        )}
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {memeTokens.length === 0 ? (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-cyber-muted">No meme tokens found</p>
+                    </div>
+                  ) : (
+                    memeTokens.map((token, idx) => (
+                      <motion.div
+                        key={`${token.currency}-${token.issuer}-${idx}`}
+                        onClick={() => setSelectedMeme(token)}
+                        className="p-2 rounded-lg border border-cyber-border/50 bg-cyber-darker/50 cursor-pointer hover:border-cyber-yellow/50 transition-all"
+                        whileHover={{ x: 4 }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-lg"
+                            style={{ backgroundColor: `${token.color}20` }}
+                          >
+                            {token.icon || '🪙'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-cyber-text font-medium truncate">{token.displayName}</p>
+                            <p className="text-[10px] text-cyber-muted truncate">from {token.walletLabel}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-cyber" style={{ color: token.color }}>
+                              {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </p>
+                            <p className="text-[10px] text-cyber-muted">{token.symbol}</p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              )}
+              
+              {lastUpdated && (
+                <p className="text-[10px] text-cyber-muted/50 mt-2 text-center">
+                  Updated {new Date(lastUpdated).toLocaleTimeString()}
+                </p>
+              )}
             </div>
           </motion.div>
           
@@ -402,6 +525,221 @@ export default function Character() {
           </motion.div>
         </div>
       </div>
+
+      {/* NFT Detail Modal */}
+      <AnimatePresence>
+        {selectedNFT && (
+          <motion.div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedNFT(null)}
+          >
+            <motion.div
+              className="cyber-panel cyber-glow w-full max-w-md p-6"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-cyber text-lg text-cyber-purple">NFT DETAILS</h3>
+                <button 
+                  onClick={() => setSelectedNFT(null)}
+                  className="p-2 hover:bg-cyber-purple/10 rounded transition-colors"
+                >
+                  <X size={20} className="text-cyber-muted" />
+                </button>
+              </div>
+
+              {/* NFT Image */}
+              <div className="w-full aspect-square rounded-lg overflow-hidden border border-cyber-purple/30 bg-cyber-darker mb-4">
+                {selectedNFT.image ? (
+                  <img 
+                    src={selectedNFT.image} 
+                    alt={selectedNFT.name || 'NFT'} 
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon size={48} className="text-cyber-purple/30" />
+                  </div>
+                )}
+              </div>
+
+              {/* NFT Info */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-cyber-muted">Name</p>
+                  <p className="text-cyber-text font-cyber">{selectedNFT.name || `NFT #${selectedNFT.serial}`}</p>
+                </div>
+                
+                {selectedNFT.description && (
+                  <div>
+                    <p className="text-xs text-cyber-muted">Description</p>
+                    <p className="text-sm text-cyber-text">{selectedNFT.description}</p>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-cyber-muted">Serial</p>
+                    <p className="text-sm text-cyber-purple font-cyber">#{selectedNFT.serial}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-cyber-muted">Taxon</p>
+                    <p className="text-sm text-cyber-text">{selectedNFT.taxon}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-cyber-muted">Issuer</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-cyber-text font-mono">{truncateAddress(selectedNFT.issuer)}</p>
+                    <button 
+                      onClick={() => copyAddress(selectedNFT.issuer)}
+                      className="p-1 hover:bg-cyber-glow/10 rounded"
+                    >
+                      {copiedAddress === selectedNFT.issuer ? (
+                        <Check size={12} className="text-cyber-green" />
+                      ) : (
+                        <Copy size={12} className="text-cyber-muted" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-cyber-muted">Token ID</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] text-cyber-text font-mono break-all">{selectedNFT.tokenId}</p>
+                    <button 
+                      onClick={() => copyAddress(selectedNFT.tokenId)}
+                      className="p-1 hover:bg-cyber-glow/10 rounded shrink-0"
+                    >
+                      {copiedAddress === selectedNFT.tokenId ? (
+                        <Check size={12} className="text-cyber-green" />
+                      ) : (
+                        <Copy size={12} className="text-cyber-muted" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-cyber-muted">Wallet</p>
+                  <p className="text-sm text-cyber-glow">{selectedNFT.walletLabel}</p>
+                </div>
+              </div>
+
+              {/* View on Explorer */}
+              <a
+                href={`https://xrpscan.com/nft/${selectedNFT.tokenId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-4 py-2 flex items-center justify-center gap-2 rounded border border-cyber-purple/50 text-cyber-purple hover:bg-cyber-purple/10 transition-colors text-sm"
+              >
+                <ExternalLink size={14} />
+                View on XRPScan
+              </a>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Meme Token Detail Modal */}
+      <AnimatePresence>
+        {selectedMeme && (
+          <motion.div
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedMeme(null)}
+          >
+            <motion.div
+              className="cyber-panel cyber-glow w-full max-w-md p-6"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-cyber text-lg text-cyber-yellow">MEME TOKEN</h3>
+                <button 
+                  onClick={() => setSelectedMeme(null)}
+                  className="p-2 hover:bg-cyber-yellow/10 rounded transition-colors"
+                >
+                  <X size={20} className="text-cyber-muted" />
+                </button>
+              </div>
+
+              {/* Token Icon & Balance */}
+              <div className="text-center mb-6">
+                <div 
+                  className="w-24 h-24 rounded-full flex items-center justify-center text-5xl mx-auto mb-4"
+                  style={{ backgroundColor: `${selectedMeme.color}20` }}
+                >
+                  {selectedMeme.icon || '🪙'}
+                </div>
+                <h2 className="font-cyber text-2xl text-cyber-text">{selectedMeme.displayName}</h2>
+                <p className="text-cyber-muted text-sm">{selectedMeme.symbol}</p>
+              </div>
+
+              {/* Balance */}
+              <div className="p-4 rounded-lg bg-cyber-darker/50 border border-cyber-border mb-4">
+                <p className="text-xs text-cyber-muted mb-1">Your Balance</p>
+                <p className="font-cyber text-3xl" style={{ color: selectedMeme.color }}>
+                  {selectedMeme.balance.toLocaleString(undefined, { maximumFractionDigits: 6 })}
+                </p>
+                <p className="text-sm text-cyber-muted">{selectedMeme.symbol}</p>
+              </div>
+
+              {/* Token Info */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-cyber-muted">Currency Code</p>
+                  <p className="text-sm text-cyber-text font-mono">{selectedMeme.currency}</p>
+                </div>
+
+                <div>
+                  <p className="text-xs text-cyber-muted">Issuer</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs text-cyber-text font-mono">{truncateAddress(selectedMeme.issuer)}</p>
+                    <button 
+                      onClick={() => copyAddress(selectedMeme.issuer)}
+                      className="p-1 hover:bg-cyber-glow/10 rounded"
+                    >
+                      {copiedAddress === selectedMeme.issuer ? (
+                        <Check size={12} className="text-cyber-green" />
+                      ) : (
+                        <Copy size={12} className="text-cyber-muted" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-cyber-muted">Wallet</p>
+                  <p className="text-sm text-cyber-glow">{selectedMeme.walletLabel}</p>
+                </div>
+              </div>
+
+              {/* View on Explorer */}
+              <a
+                href={`https://xrpscan.com/account/${selectedMeme.walletAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full mt-4 py-2 flex items-center justify-center gap-2 rounded border border-cyber-yellow/50 text-cyber-yellow hover:bg-cyber-yellow/10 transition-colors text-sm"
+              >
+                <ExternalLink size={14} />
+                View Wallet on XRPScan
+              </a>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
