@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion'
 import { 
-  HeartPulse, TrendingUp, TrendingDown, DollarSign, 
+  HeartPulse, TrendingUp, DollarSign, 
   Activity, PieChart as PieChartIcon, BarChart3, LineChart as LineChartIcon,
   ChevronRight, ExternalLink, BookOpen, Code, Video,
-  FileText, Github, Wrench, Calculator, RefreshCw
+  Wrench, Calculator, RefreshCw
 } from 'lucide-react'
 import { 
-  LineChart, Line, AreaChart, Area, BarChart, Bar,
+  AreaChart, Area, BarChart, Bar,
   ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, 
   PieChart, Pie, Cell
 } from 'recharts'

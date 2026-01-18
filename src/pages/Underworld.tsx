@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { 
   Skull, Shield, AlertTriangle, Scale, FileText, Clock,
-  ChevronRight, TrendingUp, TrendingDown, Globe, Gavel,
-  Eye, Bell, MapPin, Calendar
+  ChevronRight, Globe, Gavel,
+  Eye, Bell, MapPin
 } from 'lucide-react'
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Cell } from 'recharts'
 

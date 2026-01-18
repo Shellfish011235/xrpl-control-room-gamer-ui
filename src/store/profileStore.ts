@@ -15,7 +15,8 @@ interface ProfileState {
 }
 
 // Default profile image - ethereal blue-haired character
-const DEFAULT_PROFILE_IMAGE = 'https://i.imgur.com/YqQHhPx.png';
+// Users can upload their own via the ProfilePictureUpload component
+const DEFAULT_PROFILE_IMAGE = '/profile-default.png';
 
 export const useProfileStore = create<ProfileState>()(
   persist(

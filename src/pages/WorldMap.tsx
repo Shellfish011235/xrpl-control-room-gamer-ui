@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion'
 import { useMemo } from 'react'
 import { 
-  Globe, MapPin, Server, Users, Zap, Activity, Database,
-  ChevronRight, Filter, Search, Maximize2, Layers, Link2,
+  Globe, Server, Users, Link2,
   Route, Scale, Building, Eye, X
 } from 'lucide-react'
 import { AreaChart, Area, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'

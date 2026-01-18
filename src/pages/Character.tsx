@@ -4,17 +4,9 @@ import {
   ChevronRight, Code, GitBranch, Award, Users,
   Calendar, MessageSquare, Heart, ExternalLink
 } from 'lucide-react'
-import { AreaChart, Area, ResponsiveContainer, XAxis, Tooltip } from 'recharts'
-
-// Mock data
-const profileStats = {
-  reputation: 820,
-  socialScore: 1250,
-  skillPoints: 42,
-  level: 15,
-  xp: 7850,
-  nextLevel: 10000
-}
+import { AreaChart, Area, ResponsiveContainer } from 'recharts'
+import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
+import { useProfileStore } from '../store/profileStore'
 
 const achievements = [
   { id: 1, name: 'Early Adopter', icon: Star, unlocked: true, color: 'cyber-yellow' },
@@ -96,6 +88,9 @@ const communityEvents = [
 ]
 
 export default function Character() {
+  const { username, reputation, socialScore, skillPoints, level, xp } = useProfileStore()
+  const nextLevel = 10000
+
   return (
     <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -125,32 +120,31 @@ export default function Character() {
               {/* Profile Header */}
               <div className="text-center mb-4">
                 <div className="relative w-24 h-24 mx-auto mb-3">
+                  {/* Profile Picture with Upload */}
                   <div className="w-full h-full rounded-full bg-gradient-to-br from-cyber-glow via-cyber-purple to-cyber-cyan p-1">
-                    <div className="w-full h-full rounded-full bg-cyber-darker flex items-center justify-center">
-                      <User size={40} className="text-cyber-glow" />
-                    </div>
+                    <ProfilePictureUpload size="md" className="!w-full !h-full !max-w-none !rounded-full" />
                   </div>
                   {/* Level Badge */}
                   <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-cyber-purple flex items-center justify-center border-2 border-cyber-darker">
-                    <span className="font-cyber text-xs text-white">{profileStats.level}</span>
+                    <span className="font-cyber text-xs text-white">{level}</span>
                   </div>
                 </div>
                 
-                <h2 className="font-cyber text-lg text-cyber-text">XRPL_Explorer</h2>
+                <h2 className="font-cyber text-lg text-cyber-text">{username}</h2>
                 <p className="text-xs text-cyber-muted">Member since 2024</p>
               </div>
               
               {/* XP Bar */}
               <div className="mb-4">
                 <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-cyber-muted">Level {profileStats.level}</span>
-                  <span className="text-cyber-glow">{profileStats.xp} / {profileStats.nextLevel} XP</span>
+                  <span className="text-cyber-muted">Level {level}</span>
+                  <span className="text-cyber-glow">{xp.toLocaleString()} / {nextLevel.toLocaleString()} XP</span>
                 </div>
                 <div className="cyber-progress h-2">
                   <motion.div 
                     className="cyber-progress-bar"
                     initial={{ width: 0 }}
-                    animate={{ width: `${(profileStats.xp / profileStats.nextLevel) * 100}%` }}
+                    animate={{ width: `${(xp / nextLevel) * 100}%` }}
                     transition={{ delay: 0.3, duration: 1 }}
                   />
                 </div>
@@ -159,9 +153,9 @@ export default function Character() {
               {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {[
-                  { label: 'Reputation', value: profileStats.reputation, icon: Star, color: 'cyber-yellow' },
-                  { label: 'Social Score', value: profileStats.socialScore, icon: Heart, color: 'cyber-red' },
-                  { label: 'Skill Points', value: profileStats.skillPoints, icon: Zap, color: 'cyber-glow' },
+                  { label: 'Reputation', value: reputation, icon: Star, color: 'cyber-yellow' },
+                  { label: 'Social Score', value: socialScore, icon: Heart, color: 'cyber-red' },
+                  { label: 'Skill Points', value: skillPoints, icon: Zap, color: 'cyber-glow' },
                   { label: 'Rank', value: '#247', icon: Trophy, color: 'cyber-purple' },
                 ].map((stat) => (
                   <div key={stat.label} className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
