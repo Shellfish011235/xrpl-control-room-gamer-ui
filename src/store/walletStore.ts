@@ -1,15 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { getWalletData, isValidXRPLAddress } from '../services/xrplService';
+import { getWalletData, isValidXRPLAddress, getAccountCreationYear } from '../services/xrplService';
+import { useProfileStore } from './profileStore';
 
 export type WalletProvider = 
   | 'xaman' 
   | 'joey' 
+  | 'bifrost'
+  | 'metamask'
+  | 'trust'
   | 'binance' 
+  | 'binanceus'
   | 'coinbase' 
   | 'kraken' 
   | 'bitstamp'
   | 'uphold'
+  | 'robinhood'
   | 'bank'
   | 'ledger'
   | 'demo';
@@ -34,6 +40,7 @@ export interface ConnectedWallet {
   exists?: boolean;
   isLoading?: boolean;
   error?: string;
+  creationYear?: number | null; // Year the account was created on XRPL
 }
 
 interface WalletState {
@@ -166,23 +173,46 @@ export const useWalletStore = create<WalletState>()(
 
         // Fetch real data from XRPL
         try {
+          console.log(`[WalletStore] Fetching data for wallet: ${wallet.address}`);
+          
           if (isValidXRPLAddress(wallet.address)) {
-            const data = await getWalletData(wallet.address);
-            set((state) => ({
-              wallets: state.wallets.map(w =>
-                w.id === id ? {
-                  ...w,
-                  balance: data.balance,
-                  tokens: data.tokens,
-                  nftCount: data.nftCount,
-                  exists: data.exists,
-                  isLoading: false,
-                  lastUpdated: Date.now(),
-                  error: data.exists ? undefined : 'Account not found on ledger',
-                } : w
-              ),
-            }));
+            // Fetch wallet data and creation year in parallel
+            const [data, creationYear] = await Promise.all([
+              getWalletData(wallet.address),
+              getAccountCreationYear(wallet.address),
+            ]);
+            console.log(`[WalletStore] Got wallet data:`, data);
+            console.log(`[WalletStore] Balance specifically: ${data.balance} (type: ${typeof data.balance})`);
+            console.log(`[WalletStore] Creation year: ${creationYear}`);
+            
+            set((state) => {
+              console.log(`[WalletStore] Setting wallet ${id} balance to: ${data.balance}`);
+              return {
+                wallets: state.wallets.map(w =>
+                  w.id === id ? {
+                    ...w,
+                    balance: data.balance,
+                    tokens: data.tokens,
+                    nftCount: data.nftCount,
+                    exists: data.exists,
+                    isLoading: false,
+                    lastUpdated: Date.now(),
+                    creationYear: creationYear,
+                    error: data.exists ? undefined : 'Account not found on ledger',
+                  } : w
+                ),
+              };
+            });
+
+            // Update profile's memberSinceYear if this is the oldest wallet
+            if (creationYear) {
+              const currentMemberSince = useProfileStore.getState().memberSinceYear;
+              if (!currentMemberSince || creationYear < currentMemberSince) {
+                useProfileStore.getState().setMemberSinceYear(creationYear);
+              }
+            }
           } else {
+            console.log(`[WalletStore] Invalid address format: ${wallet.address}`);
             set((state) => ({
               wallets: state.wallets.map(w =>
                 w.id === id ? { ...w, isLoading: false, error: 'Invalid XRPL address' } : w
@@ -190,12 +220,13 @@ export const useWalletStore = create<WalletState>()(
             }));
           }
         } catch (error) {
+          console.error(`[WalletStore] Error fetching wallet data:`, error);
           set((state) => ({
             wallets: state.wallets.map(w =>
               w.id === id ? { 
                 ...w, 
                 isLoading: false, 
-                error: error instanceof Error ? error.message : 'Failed to fetch data' 
+                error: error instanceof Error ? error.message : 'Failed to fetch data. Check console for details.' 
               } : w
             ),
           }));
@@ -206,6 +237,8 @@ export const useWalletStore = create<WalletState>()(
         const wallet = get().wallets.find(w => w.id === id);
         if (!wallet || wallet.provider === 'demo') return;
 
+        console.log(`[WalletStore] Refreshing wallet: ${wallet.address}`);
+
         set((state) => ({
           wallets: state.wallets.map(w =>
             w.id === id ? { ...w, isLoading: true, error: undefined } : w
@@ -215,6 +248,8 @@ export const useWalletStore = create<WalletState>()(
         try {
           if (isValidXRPLAddress(wallet.address)) {
             const data = await getWalletData(wallet.address);
+            console.log(`[WalletStore] Refresh complete:`, data);
+            
             set((state) => ({
               wallets: state.wallets.map(w =>
                 w.id === id ? {
@@ -231,12 +266,13 @@ export const useWalletStore = create<WalletState>()(
             }));
           }
         } catch (error) {
+          console.error(`[WalletStore] Refresh error:`, error);
           set((state) => ({
             wallets: state.wallets.map(w =>
               w.id === id ? { 
                 ...w, 
                 isLoading: false, 
-                error: error instanceof Error ? error.message : 'Failed to fetch data' 
+                error: error instanceof Error ? error.message : 'Failed to fetch data. Check console.' 
               } : w
             ),
           }));
@@ -285,12 +321,40 @@ export const walletProviders: Record<WalletProvider, {
     category: 'wallet',
     description: 'Connect with Joey wallet',
   },
+  bifrost: {
+    name: 'Bifrost',
+    icon: '🌈',
+    color: '#7B3FE4',
+    category: 'wallet',
+    description: 'Connect with Bifrost wallet',
+  },
+  metamask: {
+    name: 'MetaMask',
+    icon: '🦊',
+    color: '#F6851B',
+    category: 'wallet',
+    description: 'Connect via MetaMask (EVM sidechain)',
+  },
+  trust: {
+    name: 'Trust Wallet',
+    icon: '🛡️',
+    color: '#3375BB',
+    category: 'wallet',
+    description: 'Connect with Trust Wallet',
+  },
   binance: {
     name: 'Binance',
     icon: '🔶',
     color: '#F0B90B',
     category: 'exchange',
     description: 'Import from Binance',
+  },
+  binanceus: {
+    name: 'Binance.US',
+    icon: '🔷',
+    color: '#F0B90B',
+    category: 'exchange',
+    description: 'Import from Binance.US',
   },
   coinbase: {
     name: 'Coinbase',
@@ -319,6 +383,13 @@ export const walletProviders: Record<WalletProvider, {
     color: '#49CC68',
     category: 'exchange',
     description: 'Import from Uphold',
+  },
+  robinhood: {
+    name: 'Robinhood',
+    icon: '🪶',
+    color: '#00C805',
+    category: 'exchange',
+    description: 'Import from Robinhood',
   },
   bank: {
     name: 'Bank Account',

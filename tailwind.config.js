@@ -27,8 +27,17 @@ export default {
         'ripple-dark': '#006097',
       },
       fontFamily: {
-        'cyber': ['Orbitron', 'Rajdhani', 'system-ui', 'sans-serif'],
-        'display': ['Rajdhani', 'Inter', 'system-ui', 'sans-serif'],
+        'cyber': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        'display': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        'sans': ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+      fontSize: {
+        'xs': ['0.8125rem', { lineHeight: '1.5' }],    /* 13px - slightly larger */
+        'sm': ['0.9375rem', { lineHeight: '1.5' }],    /* 15px - more readable */
+        'base': ['1rem', { lineHeight: '1.6' }],       /* 16px */
+        'lg': ['1.125rem', { lineHeight: '1.5' }],     /* 18px */
+        'xl': ['1.25rem', { lineHeight: '1.4' }],      /* 20px */
+        '2xl': ['1.5rem', { lineHeight: '1.35' }],     /* 24px */
       },
       animation: {
         'pulse-glow': 'pulse-glow 2s ease-in-out infinite',

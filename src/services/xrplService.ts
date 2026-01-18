@@ -1,16 +1,25 @@
 // XRPL Service - Fetches real data from the XRP Ledger
 
-// XRPL Public Servers
-// Mainnet: https://xrplcluster.com or https://s1.ripple.com
-// Testnet: https://s.altnet.rippletest.net:51234
-const XRPL_URL = 'https://xrplcluster.com';
+// XRPL Public JSON-RPC Servers (with CORS support)
+const XRPL_ENDPOINTS = [
+  'https://s1.ripple.com:51234',
+  'https://s2.ripple.com:51234',
+  'https://xrplcluster.com',
+];
 
-interface XRPLResponse<T> {
-  result: T;
-  status?: string;
-  error?: string;
-  error_message?: string;
+// Current endpoint index for fallback
+let currentEndpointIndex = 0;
+
+function getXRPLUrl(): string {
+  return XRPL_ENDPOINTS[currentEndpointIndex];
 }
+
+function switchToNextEndpoint(): void {
+  currentEndpointIndex = (currentEndpointIndex + 1) % XRPL_ENDPOINTS.length;
+  console.log(`[XRPL] Switching to endpoint: ${getXRPLUrl()}`);
+}
+
+// Response structure varies by endpoint, handled dynamically in xrplRequest
 
 interface AccountInfoResult {
   account_data: {
@@ -97,35 +106,89 @@ interface AccountTxResult {
   }>;
 }
 
-// Helper to make JSON-RPC calls to XRPL
-async function xrplRequest<T>(method: string, params: Record<string, unknown>[] = [{}]): Promise<T> {
-  const response = await fetch(XRPL_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      method,
-      params,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`XRPL request failed: ${response.statusText}`);
-  }
-
-  const data: XRPLResponse<T> = await response.json();
+// Helper to make JSON-RPC calls to XRPL with timeout and retry
+async function xrplRequest<T>(method: string, params: Record<string, unknown>[] = [{}], retryCount = 0): Promise<T> {
+  const url = getXRPLUrl();
+  console.log(`[XRPL] Request: ${method} to ${url}`, params);
   
-  if (data.error) {
-    throw new Error(data.error_message || data.error);
-  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        method,
+        params,
+      }),
+      signal: controller.signal,
+    });
 
-  return data.result;
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`XRPL request failed: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(`[XRPL] Raw response for ${method}:`, JSON.stringify(data, null, 2));
+    console.log(`[XRPL] Data keys:`, Object.keys(data));
+    
+    // Handle different response structures
+    // Some endpoints return { result: { ... } }, others might return differently
+    const result = data.result || data;
+    console.log(`[XRPL] Extracted result for ${method}:`, JSON.stringify(result, null, 2));
+    console.log(`[XRPL] Result keys:`, result ? Object.keys(result) : 'null');
+    
+    // Check for errors in the response
+    if (result.error || data.error) {
+      const errorMsg = result.error_message || result.error || data.error_message || data.error;
+      throw new Error(errorMsg);
+    }
+    
+    // Check for status errors
+    if (result.status === 'error') {
+      throw new Error(result.error_message || 'Unknown XRPL error');
+    }
+
+    return result as T;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    console.error(`[XRPL] Error for ${method}:`, error);
+    
+    // If it's an abort error (timeout), try next endpoint
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.log(`[XRPL] Request timed out, trying next endpoint...`);
+    }
+    
+    // If we haven't tried all endpoints, switch and retry
+    if (retryCount < XRPL_ENDPOINTS.length - 1) {
+      switchToNextEndpoint();
+      return xrplRequest<T>(method, params, retryCount + 1);
+    }
+    
+    throw error;
+  }
 }
 
 // Convert drops to XRP (1 XRP = 1,000,000 drops)
-export function dropsToXRP(drops: string | number): number {
-  return Number(drops) / 1_000_000;
+export function dropsToXRP(drops: string | number | undefined | null): number {
+  if (drops === undefined || drops === null) {
+    console.warn('[XRPL] dropsToXRP received undefined/null, returning 0');
+    return 0;
+  }
+  const numDrops = Number(drops);
+  if (isNaN(numDrops)) {
+    console.warn(`[XRPL] dropsToXRP received invalid value: ${drops}, returning 0`);
+    return 0;
+  }
+  const xrp = numDrops / 1_000_000;
+  console.log(`[XRPL] dropsToXRP: ${drops} drops = ${xrp} XRP`);
+  return xrp;
 }
 
 // Convert XRP to drops
@@ -147,6 +210,8 @@ export async function getAccountInfo(address: string): Promise<{
   sequence: number;
   exists: boolean;
 }> {
+  console.log(`[XRPL] Getting account info for: ${address}`);
+  
   try {
     const result = await xrplRequest<AccountInfoResult>('account_info', [
       {
@@ -155,15 +220,48 @@ export async function getAccountInfo(address: string): Promise<{
       },
     ]);
 
+    console.log(`[XRPL] Account info result:`, JSON.stringify(result, null, 2));
+    console.log(`[XRPL] Result type:`, typeof result);
+    console.log(`[XRPL] Result keys:`, result ? Object.keys(result) : 'null');
+
+    // Check if account_data exists in the response
+    // XRPL may return account_data directly or nested
+    const accountData = result?.account_data || (result as unknown as AccountInfoResult['account_data']);
+    
+    if (!accountData || !accountData.Balance) {
+      console.log(`[XRPL] No account_data.Balance in response`);
+      console.log(`[XRPL] accountData:`, JSON.stringify(accountData, null, 2));
+      return {
+        balance: 0,
+        ownerCount: 0,
+        sequence: 0,
+        exists: false,
+      };
+    }
+
+    // Log the raw balance for debugging
+    const rawBalance = accountData.Balance;
+    console.log(`[XRPL] Raw balance (drops): ${rawBalance}`);
+    console.log(`[XRPL] Raw balance type: ${typeof rawBalance}`);
+    
+    const balanceXRP = dropsToXRP(rawBalance);
+    console.log(`[XRPL] Converted balance (XRP): ${balanceXRP}`);
+
     return {
-      balance: dropsToXRP(result.account_data.Balance),
-      ownerCount: result.account_data.OwnerCount,
-      sequence: result.account_data.Sequence,
+      balance: balanceXRP,
+      ownerCount: accountData.OwnerCount || 0,
+      sequence: accountData.Sequence || 0,
       exists: true,
     };
   } catch (error) {
+    console.error(`[XRPL] Error getting account info:`, error);
+    
     // Account not found or other error
-    if (error instanceof Error && error.message.includes('actNotFound')) {
+    if (error instanceof Error && (
+      error.message.includes('actNotFound') || 
+      error.message.includes('Account not found') ||
+      error.message.includes('account_data')
+    )) {
       return {
         balance: 0,
         ownerCount: 0,
@@ -172,6 +270,44 @@ export async function getAccountInfo(address: string): Promise<{
       };
     }
     throw error;
+  }
+}
+
+// Get account creation year by fetching the earliest transaction
+export async function getAccountCreationYear(address: string): Promise<number | null> {
+  try {
+    // Fetch the first transaction for this account to determine creation date
+    const result = await xrplRequest<{
+      transactions: Array<{
+        tx: { date?: number };
+        meta: { TransactionResult: string };
+      }>;
+      marker?: unknown;
+    }>('account_tx', [
+      {
+        account: address,
+        ledger_index_min: -1,
+        ledger_index_max: -1,
+        limit: 1,
+        forward: true, // Start from the earliest
+      },
+    ]);
+
+    if (result.transactions && result.transactions.length > 0) {
+      const firstTx = result.transactions[0];
+      if (firstTx.tx?.date) {
+        // XRPL dates are seconds since Ripple Epoch (Jan 1, 2000)
+        // Convert to Unix timestamp by adding Ripple Epoch offset
+        const rippleEpoch = 946684800; // Jan 1, 2000 in Unix time
+        const unixTimestamp = (firstTx.tx.date + rippleEpoch) * 1000;
+        const date = new Date(unixTimestamp);
+        return date.getFullYear();
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('[XRPL] Error fetching account creation year:', error);
+    return null;
   }
 }
 
@@ -439,12 +575,72 @@ export async function getWalletData(address: string): Promise<{
   nftCount: number;
   recentTxCount: number;
 }> {
-  const [accountInfo, tokens, nfts, transactions] = await Promise.all([
-    getAccountInfo(address),
-    getAccountLines(address),
-    getAccountNFTs(address),
-    getAccountTransactions(address, 5),
-  ]);
+  console.log(`[XRPL] Getting full wallet data for: ${address}`);
+  
+  // Get account info first - this is required
+  let accountInfo;
+  try {
+    accountInfo = await getAccountInfo(address);
+    console.log(`[XRPL] Account info result:`, JSON.stringify(accountInfo, null, 2));
+    console.log(`[XRPL] Balance from accountInfo: ${accountInfo.balance} (type: ${typeof accountInfo.balance})`);
+    console.log(`[XRPL] Exists from accountInfo: ${accountInfo.exists}`);
+  } catch (error) {
+    console.error(`[XRPL] Failed to get account info:`, error);
+    return {
+      balance: 0,
+      exists: false,
+      tokens: [],
+      nftCount: 0,
+      recentTxCount: 0,
+    };
+  }
+
+  // If account doesn't exist, return early
+  if (!accountInfo.exists) {
+    return {
+      balance: accountInfo.balance,
+      exists: false,
+      tokens: [],
+      nftCount: 0,
+      recentTxCount: 0,
+    };
+  }
+
+  // Fetch additional data in parallel, but don't fail if they error
+  let tokens: Array<{ currency: string; balance: number; issuer: string; limit: number }> = [];
+  let nfts: Array<{ tokenId: string; issuer: string; taxon: number; uri?: string; serial: number; flags: number }> = [];
+  let transactions: Array<{ hash: string; type: string; amount?: number; currency?: string; destination?: string; timestamp: number; success: boolean }> = [];
+
+  try {
+    const results = await Promise.allSettled([
+      getAccountLines(address),
+      getAccountNFTs(address),
+      getAccountTransactions(address, 5),
+    ]);
+
+    if (results[0].status === 'fulfilled') {
+      tokens = results[0].value;
+      console.log(`[XRPL] Got ${tokens.length} tokens`);
+    } else {
+      console.warn(`[XRPL] Failed to get tokens:`, results[0].reason);
+    }
+
+    if (results[1].status === 'fulfilled') {
+      nfts = results[1].value;
+      console.log(`[XRPL] Got ${nfts.length} NFTs`);
+    } else {
+      console.warn(`[XRPL] Failed to get NFTs:`, results[1].reason);
+    }
+
+    if (results[2].status === 'fulfilled') {
+      transactions = results[2].value;
+      console.log(`[XRPL] Got ${transactions.length} transactions`);
+    } else {
+      console.warn(`[XRPL] Failed to get transactions:`, results[2].reason);
+    }
+  } catch (error) {
+    console.error(`[XRPL] Error fetching additional data:`, error);
+  }
 
   return {
     balance: accountInfo.balance,

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -12,33 +12,60 @@
 
 html {
   scroll-behavior: smooth;
+  font-size: 16px; /* Base size for better readability */
 }
 
 body {
-  font-family: 'Rajdhani', 'Inter', system-ui, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.6;
   background: linear-gradient(135deg, #050810 0%, #0a0f1a 50%, #0d1526 100%);
   color: #e0e7ff;
   min-height: 100vh;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Scrollbar Styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #050810;
+  background: #0a0f1a;
+  border-radius: 5px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #00aaff, #00d4ff);
-  border-radius: 4px;
+  background: linear-gradient(180deg, #1e3a5f, #2d4a6f);
+  border-radius: 5px;
+  border: 2px solid #0a0f1a;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #00ffff;
+  background: linear-gradient(180deg, #00aaff, #00d4ff);
+}
+
+/* Custom scrollbar for regulation sections */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(10, 15, 26, 0.5);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 170, 255, 0.3);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 212, 255, 0.5);
 }
 
 /* Cyber Panel Base Styles */
@@ -180,11 +207,12 @@ body {
   background: linear-gradient(135deg, #1e3a5f 0%, #0d1526 100%);
   border: 1px solid #00d4ff;
   color: #e0e7ff;
-  padding: 0.5rem 1.5rem;
-  font-family: 'Orbitron', 'Rajdhani', system-ui, sans-serif;
+  padding: 0.625rem 1.5rem;
+  font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.875rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   cursor: pointer;
   transition: all 0.3s ease;
   position: relative;
@@ -283,4 +311,46 @@ body {
   .drop-shadow-cyber-glow {
     filter: drop-shadow(0 0 8px #00d4ff);
   }
+}
+
+/* Enhanced Readability Styles */
+.font-cyber {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Make small text more readable */
+.text-\[10px\], .text-\[9px\] {
+  font-size: 0.75rem !important; /* Bump up tiny text to 12px */
+  font-weight: 500;
+}
+
+.text-xs {
+  font-weight: 500;
+}
+
+/* Better contrast for muted text */
+.text-cyber-muted {
+  color: #8b9dc3 !important; /* Lighter than before for better contrast */
+}
+
+/* Improve label readability */
+label, .label {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+/* Better number readability */
+.font-mono, [class*="font-cyber"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focus states for accessibility */
+button:focus-visible, 
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #00d4ff;
+  outline-offset: 2px;
 }

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   X, Plus, Wallet, ChevronRight, Check, Trash2, Star,
   Smartphone, Building2, Landmark, FileText, Copy, RefreshCw,
-  AlertCircle, Loader2, Coins
+  AlertCircle, Loader2, Coins, Eye, EyeOff, ChevronDown, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { useWalletStore, walletProviders, DEMO_WALLETS } from '../store/walletStore';
 import type { WalletProvider } from '../store/walletStore';
@@ -14,6 +14,58 @@ const truncateAddress = (address: string) => {
   if (address.length <= 16) return address;
   return `${address.slice(0, 8)}...${address.slice(-6)}`;
 };
+
+// Supported currencies with their symbols and names
+const SUPPORTED_CURRENCIES = [
+  { code: 'usd', symbol: '$', name: 'US Dollar' },
+  { code: 'eur', symbol: '€', name: 'Euro' },
+  { code: 'gbp', symbol: '£', name: 'British Pound' },
+  { code: 'jpy', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'cad', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'aud', symbol: 'A$', name: 'Australian Dollar' },
+  { code: 'chf', symbol: 'Fr', name: 'Swiss Franc' },
+  { code: 'cny', symbol: '¥', name: 'Chinese Yuan' },
+  { code: 'inr', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'krw', symbol: '₩', name: 'Korean Won' },
+  { code: 'mxn', symbol: 'Mex$', name: 'Mexican Peso' },
+  { code: 'brl', symbol: 'R$', name: 'Brazilian Real' },
+  { code: 'sgd', symbol: 'S$', name: 'Singapore Dollar' },
+  { code: 'hkd', symbol: 'HK$', name: 'Hong Kong Dollar' },
+  { code: 'php', symbol: '₱', name: 'Philippine Peso' },
+] as const;
+
+type CurrencyCode = typeof SUPPORTED_CURRENCIES[number]['code'];
+
+// Hook to fetch XRP price in multiple currencies
+function useXRPPrice(currency: CurrencyCode) {
+  const [price, setPrice] = useState<number | null>(null);
+  const [change24h, setChange24h] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPrice = async () => {
+      try {
+        const response = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=${currency}&include_24hr_change=true`
+        );
+        if (!response.ok) throw new Error('Failed to fetch price');
+        const data = await response.json();
+        setPrice(data.ripple[currency]);
+        setChange24h(data.ripple[`${currency}_24h_change`]);
+      } catch (err) {
+        console.error('[Price] Error fetching XRP price:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 30000);
+    return () => clearInterval(interval);
+  }, [currency]);
+
+  return { price, change24h, loading };
+}
 
 // Category groupings
 const providerCategories = {
@@ -31,9 +83,69 @@ export function WalletConnect() {
   const [manualAddress, setManualAddress] = useState('');
   const [walletLabel, setWalletLabel] = useState('');
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  
+  // Privacy toggle - persisted in localStorage
+  const [hideAmounts, setHideAmounts] = useState(() => {
+    const saved = localStorage.getItem('xrpl-hide-amounts');
+    return saved === 'true';
+  });
+
+  // Currency preference - persisted in localStorage
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>(() => {
+    const saved = localStorage.getItem('xrpl-currency');
+    return (saved as CurrencyCode) || 'usd';
+  });
+  const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
+
+  const { price: xrpPrice, change24h, loading: priceLoading } = useXRPPrice(selectedCurrency);
+
+  const toggleHideAmounts = () => {
+    setHideAmounts(prev => {
+      const newValue = !prev;
+      localStorage.setItem('xrpl-hide-amounts', String(newValue));
+      return newValue;
+    });
+  };
+
+  const handleCurrencyChange = (currency: CurrencyCode) => {
+    setSelectedCurrency(currency);
+    localStorage.setItem('xrpl-currency', currency);
+    setShowCurrencyDropdown(false);
+  };
 
   const activeWallet = wallets.find(w => w.id === activeWalletId);
   const hasDemoWallets = wallets.some(w => w.provider === 'demo');
+
+  // Calculate total XRP balance across all wallets (excluding demo)
+  const totalXRP = useMemo(() => {
+    return wallets
+      .filter(w => w.provider !== 'demo' && typeof w.balance === 'number')
+      .reduce((sum, w) => sum + (w.balance || 0), 0);
+  }, [wallets]);
+
+  // Calculate total fiat value
+  const totalFiatValue = useMemo(() => {
+    if (!xrpPrice || totalXRP === 0) return null;
+    return totalXRP * xrpPrice;
+  }, [totalXRP, xrpPrice]);
+
+  // Get currency info
+  const currencyInfo = SUPPORTED_CURRENCIES.find(c => c.code === selectedCurrency)!;
+
+  // Debug: Log wallet state changes
+  useEffect(() => {
+    console.log('[WalletConnect] Wallets updated:', wallets.map(w => ({
+      id: w.id,
+      address: w.address,
+      balance: w.balance,
+      balanceType: typeof w.balance,
+      isLoading: w.isLoading,
+      exists: w.exists,
+      error: w.error,
+      tokens: w.tokens?.length,
+      nftCount: w.nftCount,
+    })));
+  }, [wallets]);
 
   const loadDemoWallets = () => {
     // Clear existing wallets and load demo ones
@@ -104,6 +216,17 @@ export function WalletConnect() {
               </span>
             )}
           </div>
+          <button
+            onClick={toggleHideAmounts}
+            className={`p-1.5 rounded transition-all ${
+              hideAmounts 
+                ? 'bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/30' 
+                : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-border/20'
+            }`}
+            title={hideAmounts ? 'Show amounts' : 'Hide amounts'}
+          >
+            {hideAmounts ? <EyeOff size={14} /> : <Eye size={14} />}
+          </button>
           <div className="flex items-center gap-2">
             {wallets.length > 0 && wallets.some(w => w.provider !== 'demo') && (
               <button
@@ -117,6 +240,93 @@ export function WalletConnect() {
             <span className="text-xs text-cyber-muted">{wallets.length}</span>
           </div>
         </div>
+
+        {/* Total Balance Section */}
+        {wallets.filter(w => w.provider !== 'demo').length > 0 && (
+          <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-cyber-glow/10 to-cyber-blue/5 border border-cyber-glow/30">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-cyber-muted">Total Balance</span>
+              {/* Currency Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowCurrencyDropdown(!showCurrencyDropdown)}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/50 transition-colors text-xs"
+                >
+                  <span className="text-cyber-muted">{currencyInfo.code.toUpperCase()}</span>
+                  <ChevronDown size={12} className={`text-cyber-muted transition-transform ${showCurrencyDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {/* Currency Dropdown */}
+                <AnimatePresence>
+                  {showCurrencyDropdown && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      className="absolute right-0 top-full mt-1 w-44 max-h-48 overflow-y-auto cyber-panel border border-cyber-border/50 rounded-lg shadow-xl z-50"
+                    >
+                      {SUPPORTED_CURRENCIES.map((currency) => (
+                        <button
+                          key={currency.code}
+                          onClick={() => handleCurrencyChange(currency.code)}
+                          className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-cyber-glow/10 transition-colors ${
+                            selectedCurrency === currency.code ? 'bg-cyber-glow/20 text-cyber-glow' : 'text-cyber-text'
+                          }`}
+                        >
+                          <span>{currency.name}</span>
+                          <span className="text-cyber-muted">{currency.symbol}</span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+            
+            {/* XRP Amount */}
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="font-cyber text-2xl text-cyber-glow">
+                {hideAmounts ? '••••••' : totalXRP.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })}
+              </span>
+              <span className="text-sm text-cyber-muted">XRP</span>
+            </div>
+            
+            {/* Fiat Value */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {priceLoading ? (
+                  <span className="text-sm text-cyber-muted animate-pulse">Loading...</span>
+                ) : totalFiatValue !== null ? (
+                  <span className="text-sm text-cyber-text">
+                    {hideAmounts ? '••••••' : `${currencyInfo.symbol}${totalFiatValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  </span>
+                ) : (
+                  <span className="text-sm text-cyber-muted">--</span>
+                )}
+              </div>
+              
+              {/* 24h Change */}
+              {!priceLoading && change24h !== null && (
+                <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-cyber ${
+                  change24h >= 0 
+                    ? 'bg-cyber-green/20 text-cyber-green' 
+                    : 'bg-cyber-red/20 text-cyber-red'
+                }`}>
+                  {change24h >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                  <span>{Math.abs(change24h).toFixed(2)}%</span>
+                </div>
+              )}
+            </div>
+            
+            {/* XRP Price */}
+            {!priceLoading && xrpPrice !== null && (
+              <div className="mt-2 pt-2 border-t border-cyber-border/30 flex items-center justify-between text-[10px]">
+                <span className="text-cyber-muted">XRP Price</span>
+                <span className="text-cyber-text">{currencyInfo.symbol}{xrpPrice.toFixed(4)}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Connected Wallets List */}
         {wallets.length > 0 ? (
@@ -135,9 +345,10 @@ export function WalletConnect() {
                       : 'border-cyber-border/50 bg-cyber-darker/50 hover:border-cyber-glow/30'
                   } ${wallet.error ? 'border-cyber-red/30' : ''}`}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-start gap-3">
+                    {/* Provider Icon */}
                     <div 
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-lg relative"
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0"
                       style={{ backgroundColor: `${provider.color}20` }}
                     >
                       {wallet.isLoading ? (
@@ -146,25 +357,27 @@ export function WalletConnect() {
                         provider.icon
                       )}
                     </div>
+                    
+                    {/* Wallet Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-cyber-text font-medium truncate">
                           {wallet.label}
                         </span>
                         {wallet.isDefault && (
-                          <Star size={12} className="text-cyber-yellow fill-cyber-yellow" />
+                          <Star size={12} className="text-cyber-yellow fill-cyber-yellow shrink-0" />
                         )}
                         {wallet.error && (
-                          <AlertCircle size={12} className="text-cyber-red" />
+                          <AlertCircle size={12} className="text-cyber-red shrink-0" />
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-cyber-muted font-mono">
+                        <span className="text-[11px] text-cyber-muted font-mono">
                           {truncateAddress(wallet.address)}
                         </span>
                         <button 
                           onClick={(e) => { e.stopPropagation(); copyAddress(wallet.address); }}
-                          className="p-0.5 hover:text-cyber-glow transition-colors"
+                          className="p-0.5 hover:text-cyber-glow transition-colors shrink-0"
                         >
                           {copiedAddress === wallet.address ? (
                             <Check size={10} className="text-cyber-green" />
@@ -173,36 +386,49 @@ export function WalletConnect() {
                           )}
                         </button>
                       </div>
-                      {/* Error message */}
-                      {wallet.error && (
-                        <p className="text-[10px] text-cyber-red mt-1">{wallet.error}</p>
-                      )}
                       {/* Tokens count */}
                       {wallet.tokens && wallet.tokens.length > 0 && (
                         <div className="flex items-center gap-1 mt-1">
                           <Coins size={10} className="text-cyber-purple" />
                           <span className="text-[10px] text-cyber-purple">
-                            {wallet.tokens.length} token{wallet.tokens.length !== 1 ? 's' : ''}
+                            {hideAmounts ? '••' : wallet.tokens.length} token{wallet.tokens.length !== 1 ? 's' : ''}
                           </span>
                         </div>
                       )}
                     </div>
+                  </div>
+                  
+                  {/* Balance Section - Separate Row */}
+                  <div className="mt-2 pt-2 border-t border-cyber-border/30 flex items-center justify-between">
+                    <div className="text-[10px] text-cyber-muted">
+                      <span>{provider.name}</span>
+                      {wallet.lastUpdated && (
+                        <span className="ml-2 opacity-50">
+                          {new Date(wallet.lastUpdated).toLocaleTimeString()}
+                        </span>
+                      )}
+                    </div>
                     <div className="text-right">
                       {wallet.isLoading ? (
-                        <p className="text-xs text-cyber-muted">Loading...</p>
-                      ) : wallet.balance !== undefined ? (
-                        <p className="text-sm text-cyber-glow font-cyber">
-                          {wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} XRP
-                        </p>
-                      ) : null}
-                      <p className="text-[10px] text-cyber-muted">{provider.name}</p>
-                      {wallet.lastUpdated && (
-                        <p className="text-[9px] text-cyber-muted/50">
-                          {new Date(wallet.lastUpdated).toLocaleTimeString()}
-                        </p>
+                        <span className="text-xs text-cyber-muted animate-pulse">Loading...</span>
+                      ) : wallet.balance !== undefined && wallet.balance !== null ? (
+                        <span className="font-cyber text-cyber-glow font-bold tracking-wide">
+                          {hideAmounts 
+                            ? '••••••' 
+                            : typeof wallet.balance === 'number' 
+                              ? wallet.balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
+                              : String(wallet.balance)} <span className="text-xs opacity-70">XRP</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-cyber-muted">--</span>
                       )}
                     </div>
                   </div>
+                  
+                  {/* Error message */}
+                  {wallet.error && (
+                    <p className="text-[10px] text-cyber-red mt-2 pt-2 border-t border-cyber-red/20">{wallet.error}</p>
+                  )}
                 </div>
               );
             })}

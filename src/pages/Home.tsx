@@ -1,13 +1,15 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { 
   Globe, Skull, User, HeartPulse, Zap, TrendingUp, TrendingDown, 
   Activity, Wallet, Database, ArrowRight, Star, Trophy, Coins,
-  Image as ImageIcon, ChevronRight, Github, Twitter
+  Image as ImageIcon, ChevronRight, Github, Twitter, Edit2, Check, X,
+  Users, FileText
 } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { WalletConnect } from '../components/WalletConnect'
+import { LedgerImpactTool } from '../components/LedgerImpactTool'
 import { useProfileStore } from '../store/profileStore'
 import { useWalletStore } from '../store/walletStore'
 import { useAssetsStore } from '../store/assetsStore'
@@ -68,9 +70,38 @@ const pageCards = [
 ]
 
 export default function Home() {
-  const { username, reputation, socialScore, skillPoints } = useProfileStore()
+  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, setDisplayName, setXHandle } = useProfileStore()
   const { wallets } = useWalletStore()
   const { nfts, memeTokens, isLoading: assetsLoading, fetchAllAssets } = useAssetsStore()
+
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [editName, setEditName] = useState(displayName)
+  const [editXHandle, setEditXHandle] = useState(xHandle)
+  
+  // Center panel tab state
+  const [activeTab, setActiveTab] = useState<'regulations' | 'governance' | 'impact'>('impact')
+  
+  // Regulatory filter state
+  const [regFilter, setRegFilter] = useState<string>('all')
+
+  // Sync edit fields when store changes
+  useEffect(() => {
+    setEditName(displayName)
+    setEditXHandle(xHandle)
+  }, [displayName, xHandle])
+
+  const handleSaveProfile = () => {
+    setDisplayName(editName)
+    setXHandle(editXHandle)
+    setIsEditingProfile(false)
+  }
+
+  const handleCancelEdit = () => {
+    setEditName(displayName)
+    setEditXHandle(xHandle)
+    setIsEditingProfile(false)
+  }
 
   // Fetch assets when wallets change
   useEffect(() => {
@@ -97,7 +128,32 @@ export default function Home() {
               <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
                 <div className="w-2 h-2 rounded-full bg-cyber-glow animate-pulse" />
                 <span className="font-cyber text-sm text-cyber-glow tracking-wider">DIGITAL PROFILE</span>
-                <ChevronRight size={14} className="text-cyber-muted ml-auto" />
+                {!isEditingProfile ? (
+                  <button 
+                    onClick={() => setIsEditingProfile(true)}
+                    className="ml-auto p-1 hover:bg-cyber-glow/10 rounded transition-colors"
+                    title="Edit profile"
+                  >
+                    <Edit2 size={14} className="text-cyber-muted hover:text-cyber-glow" />
+                  </button>
+                ) : (
+                  <div className="ml-auto flex items-center gap-1">
+                    <button 
+                      onClick={handleSaveProfile}
+                      className="p-1 hover:bg-cyber-green/10 rounded transition-colors"
+                      title="Save"
+                    >
+                      <Check size={14} className="text-cyber-green" />
+                    </button>
+                    <button 
+                      onClick={handleCancelEdit}
+                      className="p-1 hover:bg-cyber-red/10 rounded transition-colors"
+                      title="Cancel"
+                    >
+                      <X size={14} className="text-cyber-red" />
+                    </button>
+                  </div>
+                )}
               </div>
               
               {/* Avatar Section - Now with upload capability */}
@@ -105,10 +161,54 @@ export default function Home() {
                 <ProfilePictureUpload size="lg" />
               </div>
               
-              {/* Username */}
+              {/* Name & Handle */}
               <div className="text-center mb-4">
-                <h2 className="font-cyber text-lg text-cyber-text">{username}</h2>
-                <p className="text-xs text-cyber-muted">Member since 2024</p>
+                {isEditingProfile ? (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[10px] text-cyber-muted block mb-1">Display Name</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Your name"
+                        className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-sm text-cyber-text text-center placeholder:text-cyber-muted/50 focus:border-cyber-glow focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-cyber-muted block mb-1">X Handle</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted text-sm">@</span>
+                        <input
+                          type="text"
+                          value={editXHandle}
+                          onChange={(e) => setEditXHandle(e.target.value.replace(/^@/, ''))}
+                          placeholder="username"
+                          className="w-full bg-cyber-darker border border-cyber-border rounded pl-7 pr-3 py-1.5 text-sm text-cyber-text text-center placeholder:text-cyber-muted/50 focus:border-cyber-glow focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="font-cyber text-lg text-cyber-text">
+                      {displayName || 'Set Your Name'}
+                    </h2>
+                    {xHandle && (
+                      <a 
+                        href={`https://x.com/${xHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-cyber-blue hover:text-cyber-glow transition-colors"
+                      >
+                        @{xHandle}
+                      </a>
+                    )}
+                    <p className="text-xs text-cyber-muted mt-1">
+                      {memberSinceYear ? `Member since ${memberSinceYear}` : 'Connect wallet to see history'}
+                    </p>
+                  </>
+                )}
               </div>
               
               {/* Stats Grid */}
@@ -257,166 +357,488 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {/* Top Navigation Tabs */}
-            <div className="cyber-panel p-2 mb-4">
-              <div className="flex items-center gap-2">
-                {['Scenarios', 'Governance', 'Impact Tool'].map((tab, idx) => (
-                  <button 
-                    key={tab}
-                    className={`px-4 py-2 rounded font-cyber text-sm tracking-wider transition-all ${
-                      idx === 2 
-                        ? 'bg-cyber-glow/20 text-cyber-glow border border-cyber-glow/50' 
-                        : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-border/30'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-                <div className="ml-auto flex items-center gap-1">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className="w-1 h-3 bg-cyber-glow/50 rounded" />
-                  ))}
-                </div>
-              </div>
-            </div>
-            
-            {/* Dropple Simulator Header */}
-            <div className="cyber-panel p-4 mb-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="font-cyber text-xl tracking-wider">
-                  <span className="text-cyber-text">DROPPLE</span>
-                  <span className="text-cyber-muted ml-2">TO</span>
-                  <span className="text-cyber-glow ml-2">SIMULATE</span>
-                </h2>
-                <div className="flex items-center gap-1">
-                  {[1,2,3,4,5].map(i => (
-                    <div key={i} className="w-1 h-1 rounded-full bg-cyber-muted" />
-                  ))}
-                </div>
-              </div>
-              
-              {/* Proposed Amendment Forecast */}
-              <div className="bg-cyber-darker/50 rounded-lg p-4 border border-cyber-border">
-                <p className="text-xs text-cyber-muted mb-3 tracking-wider">Proposed Amendment Forecast</p>
-                <div className="flex items-center gap-6 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp size={20} className="text-cyber-green" />
-                    <span className="font-cyber text-lg text-cyber-green">+8.4%</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Database size={20} className="text-cyber-glow" />
-                    <span className="font-cyber text-lg text-cyber-glow">+115k</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <TrendingDown size={20} className="text-cyber-red" />
-                    <span className="font-cyber text-lg text-cyber-red">-250 XRP</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            {/* 3D City Visualization Placeholder */}
-            <div className="cyber-panel p-4 mb-4 relative overflow-hidden min-h-[300px]">
-              {/* Isometric City Background */}
-              <div className="absolute inset-0 bg-gradient-to-b from-cyber-navy/50 to-cyber-darker">
-                {/* Grid lines */}
-                <div className="absolute inset-0 opacity-30"
-                  style={{
-                    backgroundImage: `
-                      linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px),
-                      linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px)
-                    `,
-                    backgroundSize: '30px 30px',
-                    transform: 'perspective(500px) rotateX(60deg)',
-                    transformOrigin: 'center bottom'
-                  }}
-                />
-              </div>
-              
-              {/* Floating Labels */}
-              <div className="relative z-10 h-full flex items-center justify-center gap-8">
-                {/* VOTE Node */}
-                <motion.div 
-                  className="relative"
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            {/* Tab Content */}
+            <AnimatePresence mode="wait">
+              {activeTab === 'regulations' && (
+                <motion.div
+                  key="regulations"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="px-4 py-2 rounded-lg bg-cyber-yellow/20 border border-cyber-yellow text-cyber-yellow font-cyber text-sm">
-                    VOTE
+                  {/* Regulations Header */}
+                  <div className="cyber-panel p-4 mb-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="font-cyber text-xl tracking-wider">
+                        <span className="text-cyber-text">REGULATORY</span>
+                        <span className="text-cyber-orange ml-2">INTEL</span>
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-cyber-orange animate-pulse" />
+                        <span className="text-xs text-cyber-orange font-cyber">MONITORING</span>
+                      </div>
+                    </div>
+                    
+                    {/* Quick Stats */}
+                    <div className="grid grid-cols-4 gap-2">
+                      <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-red/30 text-center">
+                        <p className="text-lg font-cyber text-cyber-red">12</p>
+                        <p className="text-[9px] text-cyber-muted">CRITICAL</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-orange/30 text-center">
+                        <p className="text-lg font-cyber text-cyber-orange">34</p>
+                        <p className="text-[9px] text-cyber-muted">PENDING</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-yellow/30 text-center">
+                        <p className="text-lg font-cyber text-cyber-yellow">89</p>
+                        <p className="text-[9px] text-cyber-muted">TRACKING</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-green/30 text-center">
+                        <p className="text-lg font-cyber text-cyber-green">156</p>
+                        <p className="text-[9px] text-cyber-muted">RESOLVED</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="absolute top-full left-1/2 w-px h-16 bg-gradient-to-b from-cyber-yellow to-transparent" />
+                  
+                  {/* Category Filters */}
+                  <div className="cyber-panel p-3 mb-4">
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: 'all', label: 'All', icon: '' },
+                        { id: 'crypto', label: 'Crypto', icon: '₿' },
+                        { id: 'dlt', label: 'DLT', icon: '⛓️' },
+                        { id: 'ai', label: 'AI/AGI', icon: '🤖' },
+                        { id: 'banking', label: 'Banking', icon: '🏦' },
+                        { id: 'sec', label: 'SEC/ETF', icon: '📊' },
+                        { id: 'irs', label: 'IRS', icon: '📋' },
+                        { id: 'global', label: 'Global', icon: '🌍' },
+                      ].map((cat) => (
+                        <button 
+                          key={cat.id}
+                          onClick={() => setRegFilter(cat.id)}
+                          className={`px-3 py-1.5 rounded text-xs font-cyber transition-all ${
+                            regFilter === cat.id 
+                              ? 'bg-cyber-orange/20 text-cyber-orange border border-cyber-orange/50' 
+                              : 'bg-cyber-darker/50 text-cyber-muted border border-cyber-border hover:border-cyber-orange/30'
+                          }`}
+                        >
+                          {cat.icon && <span className="mr-1">{cat.icon}</span>}
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Regulatory Items by Status */}
+                  {(() => {
+                    // passLikelihood: 0-100 (for non-active items)
+                    // xrplImpact: 'positive' | 'negative' | 'neutral' | 'mixed'
+                    // industryImpact: 'positive' | 'negative' | 'neutral' | 'mixed'
+                    const allItems = [
+                      // ACTIVE Items (already passed, so passLikelihood = 100)
+                      { id: 1, type: 'SEC RULE', typeColor: 'cyber-green', jurisdiction: 'US', status: 'active', title: 'Spot Bitcoin & Ethereum ETF Framework', desc: 'Guidelines for cryptocurrency ETF listings and trading on US exchanges', categories: ['sec', 'crypto'], url: 'https://www.sec.gov/rules/proposed.shtml', passLikelihood: 100, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 2, type: 'MiCA', typeColor: 'cyber-green', jurisdiction: 'EU', status: 'active', title: 'Markets in Crypto-Assets Regulation', desc: 'Comprehensive EU framework for crypto asset service providers', categories: ['crypto', 'dlt', 'banking', 'global'], url: 'https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/markets-crypto-assets-regulation-mica', passLikelihood: 100, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 3, type: 'AI ACT', typeColor: 'cyber-green', jurisdiction: 'EU', status: 'active', title: 'EU AI Act - Risk-Based Framework', desc: 'Comprehensive regulations for AI, AGI, and ASI development and deployment', categories: ['ai', 'global'], url: 'https://artificialintelligenceact.eu/', passLikelihood: 100, xrplImpact: 'neutral', industryImpact: 'mixed' },
+                      { id: 4, type: 'OCC', typeColor: 'cyber-green', jurisdiction: 'US', status: 'active', title: 'Bank Crypto Custody Guidelines', desc: 'Office of the Comptroller guidelines for banks holding digital assets', categories: ['banking', 'crypto'], url: 'https://www.occ.gov/topics/supervision-and-examination/bank-management/financial-technology/index-financial-technology.html', passLikelihood: 100, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 5, type: 'IRS', typeColor: 'cyber-green', jurisdiction: 'US', status: 'active', title: 'Digital Asset Reporting (Form 1099-DA)', desc: 'Mandatory reporting for crypto transactions, staking rewards, and DeFi income', categories: ['irs', 'crypto', 'dlt'], url: 'https://www.irs.gov/businesses/small-businesses-self-employed/digital-assets', passLikelihood: 100, xrplImpact: 'neutral', industryImpact: 'mixed' },
+                      { id: 6, type: 'FATF', typeColor: 'cyber-green', jurisdiction: 'GLOBAL', status: 'active', title: 'Travel Rule for Virtual Assets', desc: 'Financial Action Task Force guidelines for crypto transaction reporting', categories: ['crypto', 'banking', 'global'], url: 'https://www.fatf-gafi.org/en/topics/virtual-assets.html', passLikelihood: 100, xrplImpact: 'neutral', industryImpact: 'mixed' },
+                      { id: 7, type: 'BIS', typeColor: 'cyber-green', jurisdiction: 'GLOBAL', status: 'active', title: 'CBDC Interoperability Standards', desc: 'Bank for International Settlements guidelines for central bank digital currencies', categories: ['banking', 'dlt', 'global'], url: 'https://www.bis.org/topics/cbdc.htm', passLikelihood: 100, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 8, type: 'DTCC', typeColor: 'cyber-green', jurisdiction: 'US', status: 'active', title: 'T+1 Settlement & DLT Integration', desc: 'Blockchain-based settlement infrastructure for securities clearing', categories: ['dlt', 'sec', 'banking'], url: 'https://www.dtcc.com/news/2024', passLikelihood: 100, xrplImpact: 'positive', industryImpact: 'positive' },
+                      
+                      // PENDING Items
+                      { id: 9, type: 'EXEC ORDER', typeColor: 'cyber-yellow', jurisdiction: 'US', status: 'pending', title: 'Executive Order on Digital Assets', desc: 'Framework for responsible development of digital assets and blockchain technology', categories: ['crypto', 'dlt', 'banking'], url: 'https://www.whitehouse.gov/briefing-room/presidential-actions/', passLikelihood: 85, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 10, type: 'FIT21', typeColor: 'cyber-yellow', jurisdiction: 'US', status: 'pending', title: 'Financial Innovation & Technology Act', desc: 'Comprehensive crypto regulatory framework defining SEC vs CFTC jurisdiction', categories: ['crypto', 'sec', 'dlt'], url: 'https://www.congress.gov/bill/118th-congress/house-bill/4763', passLikelihood: 72, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 11, type: 'STABLE', typeColor: 'cyber-yellow', jurisdiction: 'US', status: 'pending', title: 'Stablecoin TRUST Act', desc: 'Federal framework for stablecoin issuance and reserve requirements', categories: ['crypto', 'banking'], url: 'https://www.congress.gov/search?q=%7B%22search%22%3A%22stablecoin%22%7D', passLikelihood: 68, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 12, type: 'WEF', typeColor: 'cyber-yellow', jurisdiction: 'GLOBAL', status: 'pending', title: 'Global Digital Asset Governance', desc: 'World Economic Forum recommendations for international crypto standards', categories: ['crypto', 'dlt', 'banking', 'global'], url: 'https://www.weforum.org/topics/blockchain-and-digital-assets/', passLikelihood: 55, xrplImpact: 'mixed', industryImpact: 'mixed' },
+                      { id: 13, type: 'FED', typeColor: 'cyber-yellow', jurisdiction: 'US', status: 'pending', title: 'FedNow & Digital Dollar Study', desc: 'Federal Reserve research on instant payments and potential CBDC', categories: ['banking', 'dlt', 'global'], url: 'https://www.federalreserve.gov/paymentsystems/fednow_about.htm', passLikelihood: 40, xrplImpact: 'mixed', industryImpact: 'mixed' },
+                      { id: 14, type: 'USPTO', typeColor: 'cyber-yellow', jurisdiction: 'US', status: 'pending', title: 'AI-Generated Inventions Policy', desc: 'Patent office guidance on AI and AGI as inventors or tools', categories: ['ai'], url: 'https://www.uspto.gov/initiatives/artificial-intelligence', passLikelihood: 78, xrplImpact: 'neutral', industryImpact: 'positive' },
+                      
+                      // PROPOSED Items
+                      { id: 15, type: 'FINCEN', typeColor: 'cyber-orange', jurisdiction: 'US', status: 'proposed', title: 'AML/KYC Requirements for DeFi', desc: 'New reporting requirements for decentralized finance protocols', categories: ['dlt', 'banking', 'crypto'], url: 'https://www.fincen.gov/news-room', passLikelihood: 62, xrplImpact: 'negative', industryImpact: 'negative' },
+                      { id: 16, type: 'CFTC', typeColor: 'cyber-orange', jurisdiction: 'US', status: 'proposed', title: 'Digital Commodity Classification', desc: 'Framework for tokenized commodities and agricultural assets on blockchain', categories: ['crypto', 'dlt'], url: 'https://www.cftc.gov/LawRegulation/index.htm', passLikelihood: 58, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 17, type: 'SEC', typeColor: 'cyber-orange', jurisdiction: 'US', status: 'proposed', title: 'Crypto Exchange Registration Rules', desc: 'Proposed requirements for crypto trading platforms to register as exchanges', categories: ['sec', 'crypto'], url: 'https://www.sec.gov/rules/proposed.shtml', passLikelihood: 45, xrplImpact: 'mixed', industryImpact: 'negative' },
+                      { id: 18, type: 'TREASURY', typeColor: 'cyber-orange', jurisdiction: 'US', status: 'proposed', title: 'Digital Asset Sanctions Framework', desc: 'OFAC guidance on crypto sanctions compliance and reporting', categories: ['crypto', 'banking', 'global'], url: 'https://home.treasury.gov/policy-issues/financial-sanctions/recent-actions', passLikelihood: 75, xrplImpact: 'neutral', industryImpact: 'mixed' },
+                      { id: 19, type: 'EU', typeColor: 'cyber-orange', jurisdiction: 'EU', status: 'proposed', title: 'Digital Euro Framework', desc: 'European Central Bank proposal for retail CBDC implementation', categories: ['banking', 'dlt', 'global'], url: 'https://www.ecb.europa.eu/paym/digital_euro/html/index.en.html', passLikelihood: 70, xrplImpact: 'mixed', industryImpact: 'mixed' },
+                      { id: 20, type: 'G20', typeColor: 'cyber-orange', jurisdiction: 'GLOBAL', status: 'proposed', title: 'Cross-Border Crypto Tax Framework', desc: 'International coordination on crypto taxation and information sharing', categories: ['irs', 'crypto', 'global'], url: 'https://www.oecd.org/tax/crypto-asset-reporting-framework-and-amendments-to-the-common-reporting-standard.htm', passLikelihood: 65, xrplImpact: 'neutral', industryImpact: 'mixed' },
+                      
+                      // WATCH Items - Patents & IP (no pass likelihood, just impact)
+                      { id: 21, type: 'USPTO', typeColor: 'cyber-purple', jurisdiction: 'US', status: 'watch', title: 'US Patent Office - Blockchain Patents', desc: 'USPTO database for cryptocurrency, DLT, and blockchain technology patents', categories: ['dlt', 'crypto'], url: 'https://www.uspto.gov/patents', passLikelihood: null, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 22, type: 'USPTO', typeColor: 'cyber-purple', jurisdiction: 'US', status: 'watch', title: 'USPTO - AI/ML Patent Search', desc: 'US patents related to artificial intelligence and machine learning inventions', categories: ['ai'], url: 'https://www.uspto.gov/initiatives/artificial-intelligence', passLikelihood: null, xrplImpact: 'neutral', industryImpact: 'positive' },
+                      { id: 23, type: 'WIPO', typeColor: 'cyber-purple', jurisdiction: 'GLOBAL', status: 'watch', title: 'WIPO Global Patent Database', desc: 'World Intellectual Property Organization - search international blockchain & AI patents', categories: ['dlt', 'crypto', 'ai', 'global'], url: 'https://patentscope.wipo.int/search/en/search.jsf', passLikelihood: null, xrplImpact: 'neutral', industryImpact: 'positive' },
+                      { id: 24, type: 'EPO', typeColor: 'cyber-purple', jurisdiction: 'EU', status: 'watch', title: 'European Patent Office - DLT Patents', desc: 'EPO Espacenet database for European blockchain and crypto patents', categories: ['dlt', 'crypto', 'global'], url: 'https://worldwide.espacenet.com/', passLikelihood: null, xrplImpact: 'neutral', industryImpact: 'positive' },
+                      { id: 25, type: 'COPYRIGHT', typeColor: 'cyber-purple', jurisdiction: 'US', status: 'watch', title: 'US Copyright Office - Digital Works', desc: 'Copyright registration for NFTs, digital art, and blockchain-based creative works', categories: ['dlt', 'crypto'], url: 'https://www.copyright.gov/', passLikelihood: null, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 26, type: 'PATENT', typeColor: 'cyber-purple', jurisdiction: 'GLOBAL', status: 'watch', title: 'Ripple Labs Patent Portfolio', desc: 'Key patents related to XRP Ledger technology and cross-border payments', categories: ['dlt', 'crypto', 'global'], url: 'https://patents.google.com/?assignee=Ripple+Labs&oq=Ripple+Labs', passLikelihood: null, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 27, type: 'PATENT', typeColor: 'cyber-purple', jurisdiction: 'US', status: 'watch', title: 'Blockchain Patent Tracker', desc: 'Major tech company blockchain patents (IBM, Mastercard, Bank of America)', categories: ['dlt', 'crypto', 'banking'], url: 'https://patents.google.com/?q=blockchain&oq=blockchain', passLikelihood: null, xrplImpact: 'neutral', industryImpact: 'positive' },
+                      
+                      // WATCH Items - Legal Cases
+                      { id: 28, type: 'CASE', typeColor: 'cyber-cyan', jurisdiction: 'US', status: 'watch', title: 'SEC vs Coinbase Litigation', desc: 'Landmark case defining crypto securities classification', categories: ['sec', 'crypto'], url: 'https://www.sec.gov/litigation/litreleases.htm', passLikelihood: 55, xrplImpact: 'positive', industryImpact: 'positive' },
+                      { id: 29, type: 'CASE', typeColor: 'cyber-cyan', jurisdiction: 'US', status: 'watch', title: 'Tornado Cash Sanctions Appeal', desc: 'Constitutional challenge to OFAC crypto sanctions', categories: ['crypto', 'dlt'], url: 'https://www.coincenter.org/', passLikelihood: 45, xrplImpact: 'positive', industryImpact: 'positive' },
+                    ];
+                    
+                    const filteredItems = allItems.filter(item => regFilter === 'all' || item.categories.includes(regFilter));
+                    const activeItems = filteredItems.filter(i => i.status === 'active');
+                    const pendingItems = filteredItems.filter(i => i.status === 'pending');
+                    const proposedItems = filteredItems.filter(i => i.status === 'proposed');
+                    const watchItems = filteredItems.filter(i => i.status === 'watch');
+                    
+                    const getImpactColor = (impact: string) => {
+                      switch(impact) {
+                        case 'positive': return 'text-cyber-green';
+                        case 'negative': return 'text-cyber-red';
+                        case 'mixed': return 'text-cyber-yellow';
+                        default: return 'text-cyber-muted';
+                      }
+                    };
+                    
+                    const getImpactIcon = (impact: string) => {
+                      switch(impact) {
+                        case 'positive': return '▲';
+                        case 'negative': return '▼';
+                        case 'mixed': return '◆';
+                        default: return '●';
+                      }
+                    };
+                    
+                    const getPassColor = (likelihood: number | null) => {
+                      if (likelihood === null) return 'bg-cyber-muted';
+                      if (likelihood >= 75) return 'bg-cyber-green';
+                      if (likelihood >= 50) return 'bg-cyber-yellow';
+                      if (likelihood >= 25) return 'bg-cyber-orange';
+                      return 'bg-cyber-red';
+                    };
+                    
+                    const renderItem = (item: typeof allItems[0]) => (
+                      <a 
+                        key={item.id}
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`block p-3 rounded bg-cyber-darker/50 border-l-4 border-${item.typeColor} hover:bg-cyber-darker/80 transition-all cursor-pointer group`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 text-xs rounded bg-${item.typeColor}/20 text-${item.typeColor} font-medium`}>{item.type}</span>
+                            <span className={`px-2 py-0.5 text-xs rounded ${item.jurisdiction === 'US' ? 'bg-cyber-blue/20 text-cyber-blue' : item.jurisdiction === 'EU' ? 'bg-cyber-cyan/20 text-cyber-cyan' : 'bg-cyber-purple/20 text-cyber-purple'}`}>{item.jurisdiction}</span>
+                          </div>
+                          <ArrowRight size={14} className="text-cyber-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <p className="text-sm text-cyber-text mb-1 group-hover:text-cyber-orange transition-colors font-medium">{item.title}</p>
+                        <p className="text-xs text-cyber-muted leading-relaxed mb-3">{item.desc}</p>
+                        
+                        {/* Predictive Analytics Section */}
+                        <div className="bg-cyber-dark/50 rounded p-2 space-y-2">
+                          {/* Pass Likelihood Bar */}
+                          {item.passLikelihood !== null && item.status !== 'active' && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-cyber-muted w-16">Pass %</span>
+                              <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
+                                <div 
+                                  className={`h-full ${getPassColor(item.passLikelihood)} transition-all`}
+                                  style={{ width: `${item.passLikelihood}%` }}
+                                />
+                              </div>
+                              <span className={`text-xs font-medium w-10 text-right ${getPassColor(item.passLikelihood).replace('bg-', 'text-')}`}>
+                                {item.passLikelihood}%
+                              </span>
+                            </div>
+                          )}
+                          
+                          {/* Impact Indicators */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-cyber-muted">XRPL:</span>
+                                <span className={`text-xs font-medium ${getImpactColor(item.xrplImpact)}`}>
+                                  {getImpactIcon(item.xrplImpact)} {item.xrplImpact.toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-cyber-muted">Industry:</span>
+                                <span className={`text-xs font-medium ${getImpactColor(item.industryImpact)}`}>
+                                  {getImpactIcon(item.industryImpact)} {item.industryImpact.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-cyber-orange">{item.categories.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' • ')}</span>
+                        </div>
+                      </a>
+                    );
+                    
+                    return (
+                      <div className="space-y-4 mb-4">
+                        {/* ACTIVE Section */}
+                        {activeItems.length > 0 && (
+                          <div className="cyber-panel p-4">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-cyber-green/30">
+                              <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
+                              <span className="font-cyber text-sm text-cyber-green">ACTIVE ({activeItems.length})</span>
+                              <span className="text-xs text-cyber-muted ml-auto">Currently in effect</span>
+                            </div>
+                            <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                              {activeItems.map(renderItem)}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* PENDING Section */}
+                        {pendingItems.length > 0 && (
+                          <div className="cyber-panel p-4">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-cyber-yellow/30">
+                              <div className="w-2 h-2 rounded-full bg-cyber-yellow animate-pulse" />
+                              <span className="font-cyber text-sm text-cyber-yellow">PENDING ({pendingItems.length})</span>
+                              <span className="text-xs text-cyber-muted ml-auto">Awaiting vote/approval</span>
+                            </div>
+                            <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                              {pendingItems.map(renderItem)}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* PROPOSED Section */}
+                        {proposedItems.length > 0 && (
+                          <div className="cyber-panel p-4">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-cyber-orange/30">
+                              <div className="w-2 h-2 rounded-full bg-cyber-orange animate-pulse" />
+                              <span className="font-cyber text-sm text-cyber-orange">PROPOSED ({proposedItems.length})</span>
+                              <span className="text-xs text-cyber-muted ml-auto">Under consideration</span>
+                            </div>
+                            <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                              {proposedItems.map(renderItem)}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* WATCH Section */}
+                        {watchItems.length > 0 && (
+                          <div className="cyber-panel p-4">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-cyber-purple/30">
+                              <div className="w-2 h-2 rounded-full bg-cyber-purple animate-pulse" />
+                              <span className="font-cyber text-sm text-cyber-purple">WATCH ({watchItems.length})</span>
+                              <span className="text-xs text-cyber-muted ml-auto">Patents & Legal cases</span>
+                            </div>
+                            <div className="max-h-[200px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+                              {watchItems.map(renderItem)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  
+                  {/* Bottom Actions - Direct Links */}
+                  <div className="cyber-panel p-3">
+                    <p className="text-xs text-cyber-muted mb-2 text-center">Regulatory Agencies</p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
+                      <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=&company=&dateb=&owner=include&count=40&search_text=crypto" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-orange/50 hover:bg-cyber-orange/5 transition-all group">
+                        <Activity size={14} className="text-cyber-muted group-hover:text-cyber-orange transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">SEC</span>
+                      </a>
+                      <a href="https://www.cftc.gov/digitalassets/index.htm" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-orange/50 hover:bg-cyber-orange/5 transition-all group">
+                        <TrendingUp size={14} className="text-cyber-muted group-hover:text-cyber-orange transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">CFTC</span>
+                      </a>
+                      <a href="https://www.fincen.gov/resources/advisoriesbulletinsfact-sheets" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-orange/50 hover:bg-cyber-orange/5 transition-all group">
+                        <Database size={14} className="text-cyber-muted group-hover:text-cyber-orange transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">FinCEN</span>
+                      </a>
+                      <a href="https://www.irs.gov/businesses/small-businesses-self-employed/virtual-currencies" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-orange/50 hover:bg-cyber-orange/5 transition-all group">
+                        <Wallet size={14} className="text-cyber-muted group-hover:text-cyber-orange transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">IRS</span>
+                      </a>
+                      <a href="https://www.congress.gov/search?q=%7B%22source%22%3A%22legislation%22%2C%22search%22%3A%22cryptocurrency%22%7D" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-orange/50 hover:bg-cyber-orange/5 transition-all group">
+                        <FileText size={14} className="text-cyber-muted group-hover:text-cyber-orange transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">Congress</span>
+                      </a>
+                      <a href="https://www.bis.org/topics/cbdc.htm" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-orange/50 hover:bg-cyber-orange/5 transition-all group">
+                        <Globe size={14} className="text-cyber-muted group-hover:text-cyber-orange transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">BIS</span>
+                      </a>
+                    </div>
+                    <p className="text-xs text-cyber-muted mb-2 text-center">Patent & Copyright Offices</p>
+                    <div className="flex items-center justify-center gap-2 flex-wrap">
+                      <a href="https://www.uspto.gov/patents" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-purple/30 hover:border-cyber-purple/50 hover:bg-cyber-purple/5 transition-all group">
+                        <Star size={14} className="text-cyber-purple group-hover:text-cyber-purple transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">USPTO</span>
+                      </a>
+                      <a href="https://www.copyright.gov/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-purple/30 hover:border-cyber-purple/50 hover:bg-cyber-purple/5 transition-all group">
+                        <FileText size={14} className="text-cyber-purple group-hover:text-cyber-purple transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">Copyright</span>
+                      </a>
+                      <a href="https://patentscope.wipo.int/search/en/search.jsf" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-purple/30 hover:border-cyber-purple/50 hover:bg-cyber-purple/5 transition-all group">
+                        <Globe size={14} className="text-cyber-purple group-hover:text-cyber-purple transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">WIPO</span>
+                      </a>
+                      <a href="https://worldwide.espacenet.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-purple/30 hover:border-cyber-purple/50 hover:bg-cyber-purple/5 transition-all group">
+                        <Database size={14} className="text-cyber-purple group-hover:text-cyber-purple transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">EPO</span>
+                      </a>
+                      <a href="https://patents.google.com/?q=blockchain+OR+cryptocurrency" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded bg-cyber-darker/50 border border-cyber-purple/30 hover:border-cyber-purple/50 hover:bg-cyber-purple/5 transition-all group">
+                        <Zap size={14} className="text-cyber-purple group-hover:text-cyber-purple transition-colors" />
+                        <span className="font-cyber text-xs text-cyber-text">Google Patents</span>
+                      </a>
+                    </div>
+                  </div>
                 </motion.div>
-                
-                {/* DEX Node */}
-                <motion.div 
-                  className="relative"
-                  animate={{ y: [0, -15, 0] }}
-                  transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              )}
+
+              {activeTab === 'governance' && (
+                <motion.div
+                  key="governance"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="px-4 py-2 rounded-lg bg-cyber-purple/20 border border-cyber-purple text-cyber-purple font-cyber text-sm">
-                    DEX
+                  {/* Governance Header */}
+                  <div className="cyber-panel p-4 mb-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="font-cyber text-xl tracking-wider">
+                        <span className="text-cyber-text">XRPL</span>
+                        <span className="text-cyber-purple ml-2">GOVERNANCE</span>
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-cyber-purple animate-pulse" />
+                        <span className="text-xs text-cyber-purple font-cyber">LIVE</span>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-purple/30 text-center">
+                        <p className="text-2xl font-cyber text-cyber-purple">35</p>
+                        <p className="text-[10px] text-cyber-muted">Active Amendments</p>
+                      </div>
+                      <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-green/30 text-center">
+                        <p className="text-2xl font-cyber text-cyber-green">150+</p>
+                        <p className="text-[10px] text-cyber-muted">Validators</p>
+                      </div>
+                      <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-yellow/30 text-center">
+                        <p className="text-2xl font-cyber text-cyber-yellow">80%</p>
+                        <p className="text-[10px] text-cyber-muted">Threshold</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="absolute top-full left-1/2 w-px h-20 bg-gradient-to-b from-cyber-purple to-transparent" />
+                  
+                  {/* Voting Power & Proposals */}
+                  <div className="cyber-panel p-4 mb-4">
+                    <h3 className="font-cyber text-sm text-cyber-purple mb-4 flex items-center gap-2">
+                      <Users size={16} />
+                      VALIDATOR VOTING STATUS
+                    </h3>
+                    
+                    <div className="space-y-3">
+                      {[
+                        { name: 'fixNFTokenDirV1', support: 80, status: 'Gaining' },
+                        { name: 'Clawback', support: 91, status: 'Near Threshold' },
+                        { name: 'PriceOracle', support: 71, status: 'Building' },
+                        { name: 'DID', support: 57, status: 'Early Stage' },
+                      ].map((item) => (
+                        <div key={item.name} className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-cyber-text">{item.name}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              item.support >= 80 ? 'bg-cyber-green/20 text-cyber-green' : 
+                              item.support >= 70 ? 'bg-cyber-yellow/20 text-cyber-yellow' : 
+                              'bg-cyber-muted/20 text-cyber-muted'
+                            }`}>{item.status}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
+                              <motion.div 
+                                className={`h-full ${item.support >= 80 ? 'bg-cyber-green' : item.support >= 70 ? 'bg-cyber-yellow' : 'bg-cyber-purple'}`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${item.support}%` }}
+                                transition={{ duration: 0.5 }}
+                              />
+                            </div>
+                            <span className="text-xs text-cyber-muted w-10 text-right">{item.support}%</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="cyber-panel p-3">
+                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                      <a href="https://xrpl.org/amendments.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-purple/50 hover:bg-cyber-purple/5 transition-all group">
+                        <FileText size={16} className="text-cyber-muted group-hover:text-cyber-purple transition-colors" />
+                        <span className="font-cyber text-sm text-cyber-text">Amendments Docs</span>
+                      </a>
+                      <a href="https://livenet.xrpl.org/amendments" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-purple/50 hover:bg-cyber-purple/5 transition-all group">
+                        <Globe size={16} className="text-cyber-muted group-hover:text-cyber-purple transition-colors" />
+                        <span className="font-cyber text-sm text-cyber-text">Live Explorer</span>
+                      </a>
+                    </div>
+                  </div>
                 </motion.div>
-                
-                {/* AMM Node */}
-                <motion.div 
-                  className="relative"
-                  animate={{ y: [0, -12, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+              )}
+
+              {activeTab === 'impact' && (
+                <motion.div
+                  key="impact"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
                 >
-                  <div className="px-4 py-2 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan text-cyber-cyan font-cyber text-sm">
-                    AMM
+                  {/* Impact Tool Header */}
+                  <div className="cyber-panel p-4 mb-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="font-cyber text-xl tracking-wider">
+                        <span className="text-cyber-text">LEDGER</span>
+                        <span className="text-cyber-glow ml-2">IMPACT</span>
+                        <span className="text-cyber-muted ml-2">ANALYZER</span>
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        <Zap size={16} className="text-cyber-glow" />
+                      </div>
+                    </div>
+                    
+                    {/* Amendment Impact Forecast */}
+                    <div className="bg-cyber-darker/50 rounded-lg p-4 border border-cyber-glow/30">
+                      <p className="text-xs text-cyber-muted mb-3 tracking-wider">Proposed Amendment Forecast</p>
+                      <div className="flex items-center gap-6 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp size={20} className="text-cyber-green" />
+                          <span className="font-cyber text-lg text-cyber-green">+8.4%</span>
+                          <span className="text-xs text-cyber-muted">efficiency</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Database size={20} className="text-cyber-glow" />
+                          <span className="font-cyber text-lg text-cyber-glow">+115k</span>
+                          <span className="text-xs text-cyber-muted">TPS capacity</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Activity size={20} className="text-cyber-cyan" />
+                          <span className="font-cyber text-lg text-cyber-cyan">-12%</span>
+                          <span className="text-xs text-cyber-muted">latency</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="absolute top-full left-1/2 w-px h-14 bg-gradient-to-b from-cyber-cyan to-transparent" />
+                  
+                  {/* Expanded Impact Tool */}
+                  <div className="cyber-panel p-4 mb-4">
+                    <LedgerImpactTool />
+                  </div>
+                  
+                  <div className="cyber-panel p-3">
+                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                      {[{ icon: Wallet, label: 'Portfolio Impact' }, { icon: Database, label: 'Historic Data' }, { icon: Activity, label: 'Benchmarks' }].map((item) => (
+                        <button key={item.label} className="flex items-center gap-2 px-4 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-glow/50 hover:bg-cyber-glow/5 transition-all group">
+                          <item.icon size={16} className="text-cyber-muted group-hover:text-cyber-glow transition-colors" />
+                          <span className="font-cyber text-sm text-cyber-text">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </motion.div>
-              </div>
-              
-              {/* Connecting Lines */}
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-5">
-                <defs>
-                  <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="rgba(0, 212, 255, 0.5)" />
-                    <stop offset="50%" stopColor="rgba(168, 85, 247, 0.5)" />
-                    <stop offset="100%" stopColor="rgba(0, 255, 136, 0.5)" />
-                  </linearGradient>
-                </defs>
-                <path 
-                  d="M100,150 Q200,100 300,150 T500,150" 
-                  fill="none" 
-                  stroke="url(#lineGradient)" 
-                  strokeWidth="2"
-                  strokeDasharray="5,5"
-                  className="animate-pulse"
-                />
-              </svg>
-              
-              {/* Bottom Label */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-center">
-                <p className="font-cyber text-sm text-cyber-muted tracking-wider">
-                  Drag & Drop Your Assets to Simulate Outcomes
-                </p>
-              </div>
-            </div>
-            
-            {/* Bottom Action Bar */}
-            <div className="cyber-panel p-3">
-              <div className="flex items-center justify-center gap-4 flex-wrap">
-                {[
-                  { icon: Wallet, label: 'Portfolio' },
-                  { icon: Database, label: 'Treasury Models' },
-                  { icon: Activity, label: 'My Proposals' },
-                ].map((item) => (
-                  <button 
-                    key={item.label}
-                    className="flex items-center gap-2 px-4 py-2 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-glow/50 hover:bg-cyber-glow/5 transition-all group"
-                  >
-                    <item.icon size={16} className="text-cyber-muted group-hover:text-cyber-glow transition-colors" />
-                    <span className="font-cyber text-sm text-cyber-text">{item.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+              )}
+            </AnimatePresence>
           </motion.div>
           
           {/* Right Panel - Tools & Wallet */}
@@ -426,62 +848,55 @@ export default function Home() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3 }}
           >
-            {/* Ledger Impact Tool */}
+            {/* Quick Access Tools */}
             <div className="cyber-panel p-4">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <div className="w-2 h-2 rounded-full bg-cyber-cyan animate-pulse" />
-                <span className="font-cyber text-sm text-cyber-cyan tracking-wider">LEDGER IMPACT TOOL</span>
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-cyber-border">
+                <Zap size={16} className="text-cyber-cyan" />
+                <span className="font-cyber text-sm text-cyber-cyan tracking-wider">QUICK ACCESS</span>
               </div>
-              
-              {/* Risk Analysis Bars */}
-              <div className="mb-4">
-                <p className="text-xs text-cyber-muted mb-2">Risk Analysis</p>
-                <div className="space-y-2">
-                  {[
-                    { color: 'bg-cyber-green', width: '70%' },
-                    { color: 'bg-cyber-yellow', width: '45%' },
-                    { color: 'bg-cyber-red', width: '25%' },
-                  ].map((bar, idx) => (
-                    <div key={idx} className="cyber-progress h-2">
-                      <motion.div 
-                        className={`cyber-progress-bar ${bar.color}`}
-                        initial={{ width: 0 }}
-                        animate={{ width: bar.width }}
-                        transition={{ delay: 0.5 + idx * 0.1, duration: 0.8 }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Drag & Drop Zone */}
-              <div className="bg-cyber-darker/50 rounded-lg p-3 border border-dashed border-cyber-border mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="font-cyber text-sm text-cyber-glow">Drag & Drop</span>
-                  <div className="flex gap-1">
-                    {[1,2,3,4,5].map(i => (
-                      <ChevronRight key={i} size={12} className="text-cyber-glow/50" />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Quick Links */}
               <div className="space-y-2">
-                {[
-                  { icon: Database, label: 'Historic Data', color: 'text-cyber-glow' },
-                  { icon: Wallet, label: 'Wallet API', color: 'text-cyber-purple' },
-                  { icon: TrendingUp, label: 'Market Trends', color: 'text-cyber-green' },
-                ].map((link) => (
-                  <button 
-                    key={link.label}
-                    className="w-full flex items-center gap-3 p-3 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-glow/30 transition-all group"
-                  >
-                    <link.icon size={16} className={link.color} />
-                    <span className="text-sm text-cyber-text">{link.label}</span>
-                    <ChevronRight size={14} className="text-cyber-muted ml-auto group-hover:text-cyber-glow transition-colors" />
-                  </button>
-                ))}
+                <button 
+                  onClick={() => setActiveTab('impact')}
+                  className={`w-full flex items-center gap-3 p-3 rounded transition-all ${
+                    activeTab === 'impact' 
+                      ? 'bg-cyber-glow/20 border border-cyber-glow/50 text-cyber-glow' 
+                      : 'bg-cyber-darker/50 border border-cyber-border hover:border-cyber-glow/30 text-cyber-text'
+                  }`}
+                >
+                  <Activity size={18} />
+                  <div className="text-left">
+                    <p className="font-cyber text-sm">Impact Tool</p>
+                    <p className="text-[10px] text-cyber-muted">Analyze amendments</p>
+                  </div>
+                </button>
+                <button 
+                  onClick={() => setActiveTab('governance')}
+                  className={`w-full flex items-center gap-3 p-3 rounded transition-all ${
+                    activeTab === 'governance' 
+                      ? 'bg-cyber-purple/20 border border-cyber-purple/50 text-cyber-purple' 
+                      : 'bg-cyber-darker/50 border border-cyber-border hover:border-cyber-purple/30 text-cyber-text'
+                  }`}
+                >
+                  <Users size={18} />
+                  <div className="text-left">
+                    <p className="font-cyber text-sm">Governance</p>
+                    <p className="text-[10px] text-cyber-muted">Voting status</p>
+                  </div>
+                </button>
+                <button 
+                  onClick={() => setActiveTab('regulations')}
+                  className={`w-full flex items-center gap-3 p-3 rounded transition-all ${
+                    activeTab === 'regulations' 
+                      ? 'bg-cyber-orange/20 border border-cyber-orange/50 text-cyber-orange' 
+                      : 'bg-cyber-darker/50 border border-cyber-border hover:border-cyber-orange/30 text-cyber-text'
+                  }`}
+                >
+                  <FileText size={18} />
+                  <div className="text-left">
+                    <p className="font-cyber text-sm">Regulations</p>
+                    <p className="text-[10px] text-cyber-muted">Laws & compliance</p>
+                  </div>
+                </button>
               </div>
             </div>
             

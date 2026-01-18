@@ -4,10 +4,11 @@ import {
   User, Star, Trophy, Zap, Github, Twitter, Globe, 
   ChevronRight, Code, GitBranch, Users,
   Calendar, MessageSquare, Heart, ExternalLink,
-  Image as ImageIcon, Loader2, X, RefreshCw, Coins, Copy, Check
+  Image as ImageIcon, Loader2, X as XIcon, RefreshCw, Coins, Copy, Check, Edit2
 } from 'lucide-react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
+import { WalletConnect } from '../components/WalletConnect'
 import { useProfileStore } from '../store/profileStore'
 import { useWalletStore } from '../store/walletStore'
 import { useAssetsStore } from '../store/assetsStore'
@@ -90,7 +91,7 @@ const truncateAddress = (address: string) => {
 };
 
 export default function Character() {
-  const { username, reputation, socialScore, skillPoints, level, xp } = useProfileStore()
+  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle } = useProfileStore()
   const { wallets } = useWalletStore()
   const { nfts, memeTokens, isLoading, fetchAllAssets, lastUpdated } = useAssetsStore()
   const nextLevel = 10000
@@ -99,6 +100,29 @@ export default function Character() {
   const [selectedMeme, setSelectedMeme] = useState<MemeToken | null>(null)
   const [activeTab, setActiveTab] = useState<'nfts' | 'memes'>('nfts')
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null)
+  
+  // Profile editing state
+  const [isEditingProfile, setIsEditingProfile] = useState(false)
+  const [editName, setEditName] = useState(displayName)
+  const [editXHandle, setEditXHandle] = useState(xHandle)
+
+  // Sync edit fields when store changes
+  useEffect(() => {
+    setEditName(displayName)
+    setEditXHandle(xHandle)
+  }, [displayName, xHandle])
+
+  const handleSaveProfile = () => {
+    setDisplayName(editName)
+    setXHandle(editXHandle)
+    setIsEditingProfile(false)
+  }
+
+  const handleCancelEdit = () => {
+    setEditName(displayName)
+    setEditXHandle(xHandle)
+    setIsEditingProfile(false)
+  }
 
   // Fetch assets on mount and when wallets change
   useEffect(() => {
@@ -140,6 +164,35 @@ export default function Character() {
           >
             <div className="cyber-panel p-4 cyber-glow">
               {/* Profile Header */}
+              <div className="flex items-center justify-end mb-2">
+                {!isEditingProfile ? (
+                  <button 
+                    onClick={() => setIsEditingProfile(true)}
+                    className="p-1 hover:bg-cyber-glow/10 rounded transition-colors"
+                    title="Edit profile"
+                  >
+                    <Edit2 size={14} className="text-cyber-muted hover:text-cyber-glow" />
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={handleSaveProfile}
+                      className="p-1 hover:bg-cyber-green/10 rounded transition-colors"
+                      title="Save"
+                    >
+                      <Check size={14} className="text-cyber-green" />
+                    </button>
+                    <button 
+                      onClick={handleCancelEdit}
+                      className="p-1 hover:bg-cyber-red/10 rounded transition-colors"
+                      title="Cancel"
+                    >
+                      <XIcon size={14} className="text-cyber-red" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              
               <div className="text-center mb-4">
                 <div className="relative w-24 h-24 mx-auto mb-3">
                   {/* Profile Picture with Upload */}
@@ -152,8 +205,52 @@ export default function Character() {
                   </div>
                 </div>
                 
-                <h2 className="font-cyber text-lg text-cyber-text">{username}</h2>
-                <p className="text-xs text-cyber-muted">Member since 2024</p>
+                {isEditingProfile ? (
+                  <div className="space-y-2">
+                    <div>
+                      <label className="text-[10px] text-cyber-muted block mb-1">Display Name</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Your name"
+                        className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-sm text-cyber-text text-center placeholder:text-cyber-muted/50 focus:border-cyber-glow focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-cyber-muted block mb-1">X Handle</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-cyber-muted text-sm">@</span>
+                        <input
+                          type="text"
+                          value={editXHandle}
+                          onChange={(e) => setEditXHandle(e.target.value.replace(/^@/, ''))}
+                          placeholder="username"
+                          className="w-full bg-cyber-darker border border-cyber-border rounded pl-7 pr-3 py-1.5 text-sm text-cyber-text text-center placeholder:text-cyber-muted/50 focus:border-cyber-glow focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <h2 className="font-cyber text-lg text-cyber-text">
+                      {displayName || 'Set Your Name'}
+                    </h2>
+                    {xHandle && (
+                      <a 
+                        href={`https://x.com/${xHandle}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-cyber-blue hover:text-cyber-glow transition-colors"
+                      >
+                        @{xHandle}
+                      </a>
+                    )}
+                    <p className="text-xs text-cyber-muted mt-1">
+                      {memberSinceYear ? `Member since ${memberSinceYear}` : 'Connect wallet to see history'}
+                    </p>
+                  </>
+                )}
               </div>
               
               {/* XP Bar */}
@@ -201,6 +298,16 @@ export default function Character() {
                 ))}
               </div>
             </div>
+            
+            {/* Wallet Connect Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="mt-4"
+            >
+              <WalletConnect />
+            </motion.div>
             
             {/* NFTs & Memes Collection */}
             <div className="cyber-panel p-4 mt-4">
@@ -549,7 +656,7 @@ export default function Character() {
                   onClick={() => setSelectedNFT(null)}
                   className="p-2 hover:bg-cyber-purple/10 rounded transition-colors"
                 >
-                  <X size={20} className="text-cyber-muted" />
+                  <XIcon size={20} className="text-cyber-muted" />
                 </button>
               </div>
 
@@ -671,7 +778,7 @@ export default function Character() {
                   onClick={() => setSelectedMeme(null)}
                   className="p-2 hover:bg-cyber-yellow/10 rounded transition-colors"
                 >
-                  <X size={20} className="text-cyber-muted" />
+                  <XIcon size={20} className="text-cyber-muted" />
                 </button>
               </div>
 
