@@ -1,10 +1,11 @@
 // XRPL Service - Fetches real data from the XRP Ledger
 
 // XRPL Public JSON-RPC Servers (with CORS support)
+// Ordered by reliability - xrplcluster.com is most reliable
 const XRPL_ENDPOINTS = [
-  'https://s1.ripple.com:51234',
-  'https://s2.ripple.com:51234',
   'https://xrplcluster.com',
+  'https://s2.ripple.com:51234',
+  'https://s1.ripple.com:51234',
 ];
 
 // Current endpoint index for fallback

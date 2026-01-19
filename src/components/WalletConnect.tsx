@@ -77,7 +77,7 @@ const providerCategories = {
 };
 
 export function WalletConnect() {
-  const { wallets, activeWalletId, addWallet, addWalletAndFetch, removeWallet, setActiveWallet, setDefaultWallet, refreshWallet, refreshAllWallets } = useWalletStore();
+  const { wallets, activeWalletId, addWallet, addWalletAndFetch, removeWallet, setActiveWallet, setDefaultWallet, refreshWallet, refreshAllWallets, clearAllWallets } = useWalletStore();
   const [showModal, setShowModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<WalletProvider | null>(null);
   const [manualAddress, setManualAddress] = useState('');
@@ -501,16 +501,30 @@ export function WalletConnect() {
           </div>
         )}
 
-        {/* Clear Demo Wallets */}
-        {hasDemoWallets && (
-          <button 
-            onClick={() => {
-              wallets.filter(w => w.provider === 'demo').forEach(w => removeWallet(w.id));
-            }}
-            className="w-full mt-2 py-1.5 text-xs rounded border border-cyber-magenta/30 text-cyber-magenta/70 hover:border-cyber-magenta/50 hover:text-cyber-magenta hover:bg-cyber-magenta/10 transition-colors"
-          >
-            Clear Demo Wallets
-          </button>
+        {/* Clear Wallets Options */}
+        {wallets.length > 0 && (
+          <div className="mt-2 flex gap-2">
+            {hasDemoWallets && (
+              <button 
+                onClick={() => {
+                  wallets.filter(w => w.provider === 'demo').forEach(w => removeWallet(w.id));
+                }}
+                className="flex-1 py-1.5 text-xs rounded border border-cyber-magenta/30 text-cyber-magenta/70 hover:border-cyber-magenta/50 hover:text-cyber-magenta hover:bg-cyber-magenta/10 transition-colors"
+              >
+                Clear Demo
+              </button>
+            )}
+            <button 
+              onClick={() => {
+                if (window.confirm('Are you sure you want to clear all wallets? This cannot be undone.')) {
+                  clearAllWallets();
+                }
+              }}
+              className="flex-1 py-1.5 text-xs rounded border border-cyber-red/30 text-cyber-red/70 hover:border-cyber-red/50 hover:text-cyber-red hover:bg-cyber-red/10 transition-colors"
+            >
+              Clear All Wallets
+            </button>
+          </div>
         )}
       </div>
 
