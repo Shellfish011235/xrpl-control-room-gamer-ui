@@ -16,8 +16,31 @@ import {
   lensMetadata,
   countryRegulatoryStatus 
 } from '../../data/globeContent';
+import { 
+  countryRegulatoryProfiles,
+  getCountryProfile,
+  type CountryRegulatoryProfile 
+} from '../../data/regulatoryData';
+import {
+  ilpConnectorInstances,
+  ilpCorridors,
+  getTypeColor as getILPTypeColor,
+  getStatusColor as getILPConnectorStatusColor,
+  type ILPConnectorInstance,
+  type ILPCorridor,
+} from '../../data/ilpData';
+import {
+  paymentCorridors,
+  odlPartners,
+  xrplConnectedChains,
+  getVolumeColor,
+  type PaymentCorridor,
+  type ODLPartner,
+  type XRPLConnectedChain,
+} from '../../data/corridorData';
 import { clsx } from 'clsx';
-import type { GlobeHub, GlobeCorridor } from '../../types/globe';
+import type { GlobeHub, GlobeCorridor, LiveValidatorMarker, LiveNodeMarker } from '../../types/globe';
+import { getValidatorStatusColor, getNodeStatusColor } from '../../services/xrpScanService';
 
 // Geography type from react-simple-maps
 interface GeoFeature {
@@ -39,7 +62,8 @@ const hubTypeColors: Record<GlobeHub['type'], string> = {
   regional_hq: '#00ffff',   // cyber-cyan
   emerging: '#ff00ff',      // cyber-magenta
   academic: '#6366f1',      // indigo
-  exchange: '#14b8a6'       // teal
+  exchange: '#14b8a6',      // teal
+  regulatory: '#f97316'     // orange
 };
 
 // Corridor volume line widths
@@ -63,11 +87,24 @@ interface WorldGlobeProps {
 }
 
 export function WorldGlobe({ className }: WorldGlobeProps) {
-  const { activeLens, selection, setSelection, clearSelection } = useGlobeStore();
+  const { 
+    activeLens, 
+    selection, 
+    setSelection, 
+    clearSelection,
+    liveValidators,
+    liveNodes,
+    showLiveData,
+  } = useGlobeStore();
   const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
     coordinates: [0, 20],
     zoom: 1
   });
+  const [hoveredValidator, setHoveredValidator] = useState<LiveValidatorMarker | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<LiveNodeMarker | null>(null);
+  const [hoveredConnector, setHoveredConnector] = useState<ILPConnectorInstance | null>(null);
+  const [hoveredPaymentCorridor, setHoveredPaymentCorridor] = useState<PaymentCorridor | null>(null);
+  const [hoveredODLPartner, setHoveredODLPartner] = useState<ODLPartner | null>(null);
   
   const hubs = useMemo(() => getHubs(), []);
   const corridors = useMemo(() => getCorridors(), []);
@@ -147,11 +184,28 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
       return 'rgba(0, 212, 255, 0.6)';
     }
     
-    // Show regulatory status on regulation lens
+    // Show regulatory status on regulation lens - use enhanced profiles
     if (activeLens === 'regulation' && iso2) {
+      // First check our enhanced profiles
+      const profile = getCountryProfile(iso2);
+      if (profile) {
+        switch (profile.overallStatus) {
+          case 'favorable': return 'rgba(0, 255, 136, 0.5)';  // cyber-green
+          case 'regulated': return 'rgba(0, 170, 255, 0.5)';  // cyber-blue
+          case 'developing': return 'rgba(255, 215, 0, 0.4)'; // cyber-yellow
+          case 'restricted': return 'rgba(255, 68, 68, 0.5)'; // cyber-red
+          case 'unclear': return 'rgba(168, 85, 247, 0.3)';   // cyber-purple
+        }
+      }
+      // Fallback to old status
       const status = countryRegulatoryStatus[iso2];
       if (status) {
         return regulatoryColors[status.status];
+      }
+      // EU member states inherit EU profile
+      const euCountries = ['DE', 'FR', 'NL', 'IT', 'ES', 'PT', 'BE', 'AT', 'IE', 'LU', 'FI', 'SE', 'DK', 'PL', 'CZ', 'SK', 'HU', 'RO', 'BG', 'HR', 'SI', 'EE', 'LV', 'LT', 'CY', 'MT', 'GR'];
+      if (euCountries.includes(iso2)) {
+        return 'rgba(0, 170, 255, 0.4)'; // regulated
       }
     }
     
@@ -335,6 +389,282 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
               </Marker>
             );
           })}
+          
+          {/* Live Validators from XRPScan - shown on validators and community lenses */}
+          {showLiveData && (activeLens === 'validators' || activeLens === 'community') && liveValidators.map((validator) => {
+            const statusColor = getValidatorStatusColor(validator.agreement24h);
+            const isHovered = hoveredValidator?.id === validator.id;
+            
+            return (
+              <Marker
+                key={`validator-${validator.id}`}
+                coordinates={validator.coordinates}
+              >
+                <g 
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredValidator(validator)}
+                  onMouseLeave={() => setHoveredValidator(null)}
+                >
+                  {/* Outer glow for UNL validators */}
+                  {validator.isUNL && (
+                    <circle
+                      r={8}
+                      fill="none"
+                      stroke="#00ff88"
+                      strokeWidth={1}
+                      opacity={0.5}
+                      className="animate-pulse"
+                    />
+                  )}
+                  
+                  {/* Hover glow */}
+                  {isHovered && (
+                    <circle
+                      r={12}
+                      fill="none"
+                      stroke={statusColor}
+                      strokeWidth={2}
+                      opacity={0.6}
+                    />
+                  )}
+                  
+                  {/* Main dot */}
+                  <circle
+                    r={isHovered ? 5 : 3}
+                    fill={statusColor}
+                    stroke="#050810"
+                    strokeWidth={1}
+                    opacity={0.9}
+                  />
+                  
+                  {/* UNL indicator */}
+                  {validator.isUNL && (
+                    <circle r={1.5} fill="#fff" opacity={0.8} />
+                  )}
+                </g>
+              </Marker>
+            );
+          })}
+          
+          {/* Live Nodes from XRPScan - shown on validators, community, and corridors lenses */}
+          {showLiveData && (activeLens === 'validators' || activeLens === 'community' || activeLens === 'corridors') && liveNodes.map((node) => {
+            const statusColor = getNodeStatusColor(node.lastSeen);
+            const isHovered = hoveredNode?.id === node.id;
+            
+            return (
+              <Marker
+                key={`node-${node.id}`}
+                coordinates={node.coordinates}
+              >
+                <g 
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredNode(node)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                >
+                  {/* Hover glow */}
+                  {isHovered && (
+                    <circle
+                      r={8}
+                      fill="none"
+                      stroke={statusColor}
+                      strokeWidth={1.5}
+                      opacity={0.5}
+                    />
+                  )}
+                  
+                  {/* Node marker (smaller than validators) */}
+                  <circle
+                    r={isHovered ? 3 : 2}
+                    fill={statusColor}
+                    stroke="#050810"
+                    strokeWidth={0.5}
+                    opacity={0.7}
+                  />
+                </g>
+              </Marker>
+            );
+          })}
+          
+          {/* ILP Corridors (shown on ILP lens) */}
+          {activeLens === 'ilp' && ilpCorridors.map((corridor) => {
+            const corridorColor = getILPTypeColor(corridor.type);
+            const lineWidth = corridor.volume === 'high' ? 3 : corridor.volume === 'medium' ? 2 : 1;
+            
+            return (
+              <Line
+                key={`ilp-corridor-${corridor.id}`}
+                from={corridor.from.coordinates}
+                to={corridor.to.coordinates}
+                stroke={corridorColor}
+                strokeWidth={lineWidth}
+                strokeOpacity={0.7}
+                strokeLinecap="round"
+                strokeDasharray={corridor.volume === 'pilot' ? '4,4' : undefined}
+              />
+            );
+          })}
+          
+          {/* ILP Connectors (shown on ILP lens) */}
+          {activeLens === 'ilp' && ilpConnectorInstances.filter(c => c.location).map((connector) => {
+            const statusColor = getILPConnectorStatusColor(connector.status);
+            const isHovered = hoveredConnector?.id === connector.id;
+            const isProduction = connector.type === 'production';
+            
+            return (
+              <Marker
+                key={`ilp-connector-${connector.id}`}
+                coordinates={connector.location!.coordinates}
+              >
+                <g 
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredConnector(connector)}
+                  onMouseLeave={() => setHoveredConnector(null)}
+                >
+                  {/* Outer ring for production connectors */}
+                  {isProduction && (
+                    <circle
+                      r={10}
+                      fill="none"
+                      stroke="#a855f7"
+                      strokeWidth={1}
+                      opacity={0.3}
+                      className="animate-pulse"
+                    />
+                  )}
+                  
+                  {/* Hover glow */}
+                  {isHovered && (
+                    <circle
+                      r={14}
+                      fill="none"
+                      stroke={statusColor}
+                      strokeWidth={2}
+                      opacity={0.6}
+                    />
+                  )}
+                  
+                  {/* Main connector marker */}
+                  <circle
+                    r={isHovered ? 7 : 5}
+                    fill={statusColor}
+                    stroke="#050810"
+                    strokeWidth={2}
+                  />
+                  
+                  {/* Inner indicator */}
+                  <circle
+                    r={2}
+                    fill={isProduction ? '#fff' : '#a855f7'}
+                    opacity={0.8}
+                  />
+                </g>
+              </Marker>
+            );
+          })}
+          
+          {/* Payment Corridors (shown on corridors lens) */}
+          {activeLens === 'corridors' && paymentCorridors.map((corridor) => {
+            const volumeColor = getVolumeColor(corridor.volume);
+            const lineWidth = corridor.volume === 'high' ? 3 : corridor.volume === 'medium' ? 2 : 1;
+            const isHovered = hoveredPaymentCorridor?.id === corridor.id;
+            
+            return (
+              <Line
+                key={`payment-corridor-${corridor.id}`}
+                from={corridor.from.coordinates}
+                to={corridor.to.coordinates}
+                stroke={volumeColor}
+                strokeWidth={isHovered ? lineWidth + 2 : lineWidth}
+                strokeOpacity={isHovered ? 1 : 0.7}
+                strokeLinecap="round"
+                strokeDasharray={corridor.volume === 'emerging' ? '4,4' : undefined}
+                onMouseEnter={() => setHoveredPaymentCorridor(corridor)}
+                onMouseLeave={() => setHoveredPaymentCorridor(null)}
+                style={{ cursor: 'pointer' }}
+              />
+            );
+          })}
+          
+          {/* Corridor Endpoints (shown on corridors lens) */}
+          {activeLens === 'corridors' && paymentCorridors.flatMap((corridor) => {
+            return [
+              { key: `${corridor.id}-from`, coords: corridor.from.coordinates, label: corridor.from.countryCode },
+              { key: `${corridor.id}-to`, coords: corridor.to.coordinates, label: corridor.to.countryCode },
+            ];
+          }).filter((item, index, self) => 
+            self.findIndex(i => i.coords[0] === item.coords[0] && i.coords[1] === item.coords[1]) === index
+          ).map((endpoint) => (
+            <Marker key={endpoint.key} coordinates={endpoint.coords}>
+              <circle
+                r={3}
+                fill="#00ff88"
+                stroke="#050810"
+                strokeWidth={1}
+                opacity={0.8}
+              />
+            </Marker>
+          ))}
+          
+          {/* ODL Partners (shown on corridors lens) */}
+          {activeLens === 'corridors' && odlPartners.filter(p => p.status === 'active').map((partner) => {
+            const isHovered = hoveredODLPartner?.id === partner.id;
+            const integrationColor = partner.xrpIntegration === 'full' ? '#00ff88' : partner.xrpIntegration === 'partial' ? '#ffd700' : '#64748b';
+            
+            return (
+              <Marker
+                key={`odl-partner-${partner.id}`}
+                coordinates={partner.headquarters.coordinates}
+              >
+                <g 
+                  style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHoveredODLPartner(partner)}
+                  onMouseLeave={() => setHoveredODLPartner(null)}
+                >
+                  {/* Outer ring for full integration */}
+                  {partner.xrpIntegration === 'full' && (
+                    <circle
+                      r={12}
+                      fill="none"
+                      stroke="#00ff88"
+                      strokeWidth={1}
+                      opacity={0.4}
+                      className="animate-pulse"
+                    />
+                  )}
+                  
+                  {/* Hover glow */}
+                  {isHovered && (
+                    <circle
+                      r={16}
+                      fill="none"
+                      stroke={integrationColor}
+                      strokeWidth={2}
+                      opacity={0.6}
+                    />
+                  )}
+                  
+                  {/* Main marker - square for partners */}
+                  <rect
+                    x={isHovered ? -6 : -4}
+                    y={isHovered ? -6 : -4}
+                    width={isHovered ? 12 : 8}
+                    height={isHovered ? 12 : 8}
+                    rx={2}
+                    fill={integrationColor}
+                    stroke="#050810"
+                    strokeWidth={2}
+                  />
+                  
+                  {/* Inner indicator */}
+                  <circle
+                    r={1.5}
+                    fill="#fff"
+                    opacity={0.8}
+                  />
+                </g>
+              </Marker>
+            );
+          })}
         </ZoomableGroup>
       </ComposableMap>
       
@@ -384,6 +714,296 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
       
       {/* Scan lines effect */}
       <div className="absolute inset-0 pointer-events-none scanlines opacity-20" />
+      
+      {/* Validator Tooltip */}
+      {hoveredValidator && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-16 right-4 z-20 cyber-panel p-3 min-w-[200px]"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: getValidatorStatusColor(hoveredValidator.agreement24h) }}
+            />
+            <span className="font-cyber text-sm text-cyber-glow">
+              {hoveredValidator.isUNL ? 'UNL VALIDATOR' : 'VALIDATOR'}
+            </span>
+          </div>
+          {hoveredValidator.domain && (
+            <p className="text-xs text-cyber-text mb-1 truncate">
+              {hoveredValidator.domain}
+            </p>
+          )}
+          <p className="text-[10px] text-cyber-muted font-mono truncate">
+            {hoveredValidator.masterKey.slice(0, 20)}...
+          </p>
+          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-cyber-border/50">
+            <div>
+              <p className="text-[9px] text-cyber-muted">Agreement</p>
+              <p className="text-xs font-cyber" style={{ color: getValidatorStatusColor(hoveredValidator.agreement24h) }}>
+                {(hoveredValidator.agreement24h * 100).toFixed(1)}%
+              </p>
+            </div>
+            {hoveredValidator.city && (
+              <div>
+                <p className="text-[9px] text-cyber-muted">Location</p>
+                <p className="text-xs text-cyber-text truncate">
+                  {hoveredValidator.city}
+                </p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+      
+      {/* Node Tooltip */}
+      {hoveredNode && !hoveredValidator && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-16 right-4 z-20 cyber-panel p-3 min-w-[180px]"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div 
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: getNodeStatusColor(hoveredNode.lastSeen) }}
+            />
+            <span className="font-cyber text-xs text-cyber-purple">NODE</span>
+          </div>
+          <p className="text-[10px] text-cyber-muted font-mono truncate">
+            {hoveredNode.publicKey.slice(0, 20)}...
+          </p>
+          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-cyber-border/50">
+            {hoveredNode.version && (
+              <div>
+                <p className="text-[9px] text-cyber-muted">Version</p>
+                <p className="text-xs text-cyber-text truncate">{hoveredNode.version}</p>
+              </div>
+            )}
+            {hoveredNode.city && (
+              <div>
+                <p className="text-[9px] text-cyber-muted">Location</p>
+                <p className="text-xs text-cyber-text truncate">{hoveredNode.city}</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+      
+      {/* ILP Connector Tooltip */}
+      {hoveredConnector && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-16 right-4 z-20 cyber-panel p-3 min-w-[220px]"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div 
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: getILPConnectorStatusColor(hoveredConnector.status) }}
+            />
+            <span className="font-cyber text-sm text-cyber-purple">
+              {hoveredConnector.type === 'production' ? 'ILP CONNECTOR' : 'TESTNET CONNECTOR'}
+            </span>
+          </div>
+          <h3 className="text-sm text-cyber-text font-medium mb-1">
+            {hoveredConnector.name}
+          </h3>
+          <p className="text-[10px] text-cyber-muted mb-2">
+            {hoveredConnector.operator} • {hoveredConnector.location?.city}
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <p className="text-[9px] text-cyber-muted">Implementation</p>
+              <p className="text-xs text-cyber-glow">{hoveredConnector.implementation}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-cyber-muted">Status</p>
+              <p className="text-xs capitalize" style={{ color: getILPConnectorStatusColor(hoveredConnector.status) }}>
+                {hoveredConnector.status}
+              </p>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-cyber-border/50">
+            <p className="text-[9px] text-cyber-muted mb-1">Supported Assets</p>
+            <div className="flex flex-wrap gap-1">
+              {hoveredConnector.supportedAssets.map((asset) => (
+                <span 
+                  key={asset}
+                  className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-glow/20 text-cyber-glow"
+                >
+                  {asset}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="pt-2 mt-2 border-t border-cyber-border/50">
+            <p className="text-[9px] text-cyber-muted mb-1">Features</p>
+            <div className="flex flex-wrap gap-1">
+              {hoveredConnector.features.slice(0, 4).map((feature) => (
+                <span 
+                  key={feature}
+                  className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-purple/20 text-cyber-purple"
+                >
+                  {feature}
+                </span>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
+      {/* Payment Corridor Tooltip */}
+      {hoveredPaymentCorridor && !hoveredConnector && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-16 right-4 z-20 cyber-panel p-3 min-w-[240px]"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div 
+              className="w-6 h-1 rounded"
+              style={{ backgroundColor: getVolumeColor(hoveredPaymentCorridor.volume) }}
+            />
+            <span className="font-cyber text-sm text-cyber-green">PAYMENT CORRIDOR</span>
+          </div>
+          <h3 className="text-sm text-cyber-text font-medium mb-1">
+            {hoveredPaymentCorridor.name}
+          </h3>
+          <p className="text-[10px] text-cyber-muted mb-2">
+            {hoveredPaymentCorridor.description}
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <p className="text-[9px] text-cyber-muted">Type</p>
+              <p className="text-xs text-cyber-text capitalize">{hoveredPaymentCorridor.type}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-cyber-muted">Volume</p>
+              <p className="text-xs capitalize" style={{ color: getVolumeColor(hoveredPaymentCorridor.volume) }}>
+                {hoveredPaymentCorridor.volume}
+              </p>
+            </div>
+            {hoveredPaymentCorridor.monthlyVolume && (
+              <div>
+                <p className="text-[9px] text-cyber-muted">Monthly Volume</p>
+                <p className="text-xs text-cyber-green font-cyber">{hoveredPaymentCorridor.monthlyVolume}</p>
+              </div>
+            )}
+            {hoveredPaymentCorridor.growthYoY && (
+              <div>
+                <p className="text-[9px] text-cyber-muted">Growth YoY</p>
+                <p className="text-xs text-cyber-cyan">{hoveredPaymentCorridor.growthYoY}</p>
+              </div>
+            )}
+          </div>
+          <div className="pt-2 border-t border-cyber-border/50 flex items-center gap-2">
+            {hoveredPaymentCorridor.odlEnabled && (
+              <span className="px-2 py-0.5 rounded text-[9px] bg-cyber-green/20 text-cyber-green">
+                ODL Enabled
+              </span>
+            )}
+            {hoveredPaymentCorridor.xrpSettlement && (
+              <span className="px-2 py-0.5 rounded text-[9px] bg-cyber-glow/20 text-cyber-glow">
+                XRP Settlement
+              </span>
+            )}
+          </div>
+          {hoveredPaymentCorridor.partners.length > 0 && (
+            <div className="pt-2 mt-2 border-t border-cyber-border/50">
+              <p className="text-[9px] text-cyber-muted mb-1">Partners</p>
+              <div className="flex flex-wrap gap-1">
+                {hoveredPaymentCorridor.partners.map((partnerId) => {
+                  const partner = odlPartners.find(p => p.id === partnerId);
+                  return partner ? (
+                    <span 
+                      key={partnerId}
+                      className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-purple/20 text-cyber-purple"
+                    >
+                      {partner.name}
+                    </span>
+                  ) : null;
+                })}
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )}
+      
+      {/* ODL Partner Tooltip */}
+      {hoveredODLPartner && !hoveredPaymentCorridor && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-16 right-4 z-20 cyber-panel p-3 min-w-[220px]"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div 
+              className="w-3 h-3 rounded"
+              style={{ 
+                backgroundColor: hoveredODLPartner.xrpIntegration === 'full' ? '#00ff88' : 
+                                 hoveredODLPartner.xrpIntegration === 'partial' ? '#ffd700' : '#64748b' 
+              }}
+            />
+            <span className="font-cyber text-sm text-cyber-glow">ODL PARTNER</span>
+          </div>
+          <h3 className="text-sm text-cyber-text font-medium mb-1">
+            {hoveredODLPartner.name}
+          </h3>
+          <p className="text-[10px] text-cyber-muted mb-2">
+            {hoveredODLPartner.headquarters.city}, {hoveredODLPartner.headquarters.country}
+          </p>
+          <p className="text-[10px] text-cyber-text mb-2">
+            {hoveredODLPartner.description}
+          </p>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <p className="text-[9px] text-cyber-muted">Type</p>
+              <p className="text-xs text-cyber-text capitalize">{hoveredODLPartner.type.replace('-', ' ')}</p>
+            </div>
+            <div>
+              <p className="text-[9px] text-cyber-muted">XRP Integration</p>
+              <p className="text-xs capitalize" style={{ 
+                color: hoveredODLPartner.xrpIntegration === 'full' ? '#00ff88' : 
+                       hoveredODLPartner.xrpIntegration === 'partial' ? '#ffd700' : '#64748b' 
+              }}>
+                {hoveredODLPartner.xrpIntegration}
+              </p>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-cyber-border/50">
+            <p className="text-[9px] text-cyber-muted mb-1">Services</p>
+            <div className="flex flex-wrap gap-1">
+              {hoveredODLPartner.services.map((service) => (
+                <span 
+                  key={service}
+                  className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-glow/20 text-cyber-glow"
+                >
+                  {service}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="pt-2 mt-2 border-t border-cyber-border/50">
+            <p className="text-[9px] text-cyber-muted mb-1">Active Corridors ({hoveredODLPartner.corridors.length})</p>
+            <div className="flex flex-wrap gap-1">
+              {hoveredODLPartner.corridors.slice(0, 4).map((corridor) => (
+                <span 
+                  key={corridor}
+                  className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-green/20 text-cyber-green"
+                >
+                  {corridor}
+                </span>
+              ))}
+              {hoveredODLPartner.corridors.length > 4 && (
+                <span className="text-[9px] text-cyber-muted">+{hoveredODLPartner.corridors.length - 4} more</span>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

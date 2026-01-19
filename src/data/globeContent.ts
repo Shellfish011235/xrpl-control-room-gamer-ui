@@ -221,20 +221,84 @@ export const countryRegulatoryStatus: Record<string, {
   status: 'favorable' | 'regulated' | 'developing' | 'restricted' | 'unclear';
   label: string;
 }> = {
+  // North America
   US: { status: 'favorable', label: 'Favorable (post-EO 14178)' },
-  JP: { status: 'regulated', label: 'Regulated (JFSA)' },
-  SG: { status: 'favorable', label: 'Favorable (MAS)' },
-  AE: { status: 'favorable', label: 'Very Favorable (VARA)' },
+  CA: { status: 'developing', label: 'Developing' },
+  MX: { status: 'developing', label: 'Developing' },
+  
+  // Central America
+  PA: { status: 'favorable', label: 'Favorable (Crypto-friendly)' },
+  CR: { status: 'developing', label: 'Developing' },
+  SV: { status: 'favorable', label: 'Favorable (Bitcoin Law)' },
+  GT: { status: 'developing', label: 'Developing' },
+  HN: { status: 'unclear', label: 'Unclear' },
+  NI: { status: 'unclear', label: 'Unclear' },
+  BZ: { status: 'developing', label: 'Developing' },
+  
+  // South America
+  BR: { status: 'developing', label: 'Developing (CVM)' },
+  AR: { status: 'developing', label: 'Developing (High adoption)' },
+  CL: { status: 'regulated', label: 'Regulated (CMF)' },
+  CO: { status: 'developing', label: 'Developing' },
+  PE: { status: 'developing', label: 'Developing' },
+  VE: { status: 'restricted', label: 'Restricted' },
+  EC: { status: 'unclear', label: 'Unclear' },
+  UY: { status: 'developing', label: 'Developing' },
+  PY: { status: 'developing', label: 'Developing' },
+  BO: { status: 'restricted', label: 'Restricted' },
+  
+  // Europe
   GB: { status: 'developing', label: 'Developing (FCA)' },
   DE: { status: 'regulated', label: 'Regulated (MiCA)' },
   FR: { status: 'regulated', label: 'Regulated (MiCA)' },
   NL: { status: 'regulated', label: 'Regulated (MiCA)' },
   CH: { status: 'favorable', label: 'Favorable (FINMA)' },
-  AU: { status: 'developing', label: 'Developing' },
-  CA: { status: 'developing', label: 'Developing' },
-  KR: { status: 'regulated', label: 'Regulated' },
-  IN: { status: 'unclear', label: 'Unclear' },
-  BR: { status: 'developing', label: 'Developing' },
-  MX: { status: 'developing', label: 'Developing' },
-  PH: { status: 'developing', label: 'Developing (BSP)' }
+  
+  // Russia & CIS
+  RU: { status: 'restricted', label: 'Restricted (CBR Ban)' },
+  UA: { status: 'developing', label: 'Developing' },
+  KZ: { status: 'developing', label: 'Developing (AIFC)' },
+  BY: { status: 'developing', label: 'Developing (HTP)' },
+  GE: { status: 'favorable', label: 'Favorable' },
+  AM: { status: 'developing', label: 'Developing' },
+  AZ: { status: 'unclear', label: 'Unclear' },
+  
+  // Middle East
+  AE: { status: 'favorable', label: 'Very Favorable (VARA)' },
+  SA: { status: 'developing', label: 'Developing (Vision 2030)' },
+  QA: { status: 'developing', label: 'Developing (QFC)' },
+  BH: { status: 'favorable', label: 'Favorable (CBB)' },
+  IL: { status: 'regulated', label: 'Regulated (ISA)' },
+  TR: { status: 'developing', label: 'Developing (CMB)' },
+  KW: { status: 'restricted', label: 'Restricted' },
+  OM: { status: 'developing', label: 'Developing' },
+  JO: { status: 'unclear', label: 'Unclear' },
+  LB: { status: 'restricted', label: 'Restricted' },
+  EG: { status: 'restricted', label: 'Restricted (CBE Ban)' },
+  
+  // Asia Pacific
+  JP: { status: 'regulated', label: 'Regulated (JFSA)' },
+  SG: { status: 'favorable', label: 'Favorable (MAS)' },
+  KR: { status: 'regulated', label: 'Regulated (FSC)' },
+  AU: { status: 'developing', label: 'Developing (ASIC)' },
+  IN: { status: 'developing', label: 'Developing (30% tax)' },
+  HK: { status: 'favorable', label: 'Favorable (SFC)' },
+  CN: { status: 'restricted', label: 'Restricted (PBOC Ban)' },
+  TW: { status: 'developing', label: 'Developing (FSC)' },
+  PH: { status: 'developing', label: 'Developing (BSP)' },
+  ID: { status: 'developing', label: 'Developing (Bappebti)' },
+  TH: { status: 'regulated', label: 'Regulated (SEC)' },
+  MY: { status: 'regulated', label: 'Regulated (SC)' },
+  VN: { status: 'developing', label: 'Developing' },
+  NZ: { status: 'favorable', label: 'Favorable' },
+  
+  // Africa
+  ZA: { status: 'developing', label: 'Developing (FSCA)' },
+  NG: { status: 'developing', label: 'Developing (SEC)' },
+  KE: { status: 'developing', label: 'Developing' },
+  GH: { status: 'developing', label: 'Developing' },
+  MA: { status: 'restricted', label: 'Restricted' },
+  TZ: { status: 'unclear', label: 'Unclear' },
+  RW: { status: 'developing', label: 'Developing' },
+  MU: { status: 'favorable', label: 'Favorable' }
 };

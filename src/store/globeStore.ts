@@ -5,7 +5,10 @@ import type {
   GlobeSelection, 
   GlobeState, 
   PinnedItemRef, 
-  GuidedStepCompletion 
+  GuidedStepCompletion,
+  LiveValidatorMarker,
+  LiveNodeMarker,
+  LiveNetworkStats
 } from '../types/globe';
 
 interface GlobeStore extends GlobeState {
@@ -30,6 +33,20 @@ interface GlobeStore extends GlobeState {
   setTeachBackResponse: (stepId: string, response: string) => void;
   getStepCompletion: (stepId: string) => GuidedStepCompletion | undefined;
   getCompletedStepsCount: (lens: GlobeLens, stepIds: string[]) => number;
+  
+  // Live network data (from XRPScan)
+  liveValidators: LiveValidatorMarker[];
+  liveNodes: LiveNodeMarker[];
+  liveNetworkStats: LiveNetworkStats | null;
+  isLoadingLiveData: boolean;
+  liveDataError: string | null;
+  showLiveData: boolean;
+  setLiveValidators: (validators: LiveValidatorMarker[]) => void;
+  setLiveNodes: (nodes: LiveNodeMarker[]) => void;
+  setLiveNetworkStats: (stats: LiveNetworkStats) => void;
+  setIsLoadingLiveData: (loading: boolean) => void;
+  setLiveDataError: (error: string | null) => void;
+  toggleShowLiveData: () => void;
 }
 
 const initialState: GlobeState = {
@@ -63,6 +80,21 @@ export const useGlobeStore = create<GlobeStore>()(
       })),
       
       setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
+      
+      // Live network data
+      liveValidators: [],
+      liveNodes: [],
+      liveNetworkStats: null,
+      isLoadingLiveData: false,
+      liveDataError: null,
+      showLiveData: true,
+      
+      setLiveValidators: (validators) => set({ liveValidators: validators }),
+      setLiveNodes: (nodes) => set({ liveNodes: nodes }),
+      setLiveNetworkStats: (stats) => set({ liveNetworkStats: stats }),
+      setIsLoadingLiveData: (loading) => set({ isLoadingLiveData: loading }),
+      setLiveDataError: (error) => set({ liveDataError: error }),
+      toggleShowLiveData: () => set((state) => ({ showLiveData: !state.showLiveData })),
       
       // Pinned items
       pinnedItems: [],
@@ -149,7 +181,8 @@ export const useGlobeStore = create<GlobeStore>()(
         activeLens: state.activeLens,
         sidebarExpanded: state.sidebarExpanded,
         pinnedItems: state.pinnedItems,
-        stepCompletions: state.stepCompletions
+        stepCompletions: state.stepCompletions,
+        showLiveData: state.showLiveData
       })
     }
   )

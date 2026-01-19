@@ -14,7 +14,7 @@ export interface GlobeHub {
   city: string;
   countryIso2: string;
   coordinates: [number, number]; // [lng, lat]
-  type: 'headquarters' | 'financial' | 'validator' | 'development' | 'partnership' | 'regional_hq' | 'emerging' | 'academic' | 'exchange';
+  type: 'headquarters' | 'financial' | 'validator' | 'development' | 'partnership' | 'regional_hq' | 'emerging' | 'academic' | 'exchange' | 'regulatory';
   description: string;
   validators: number;
   projects: number;
@@ -149,4 +149,38 @@ export interface GuidedStepCompletion {
   completed: boolean;
   teachBackResponse?: string;
   completedAt?: string;
+}
+
+// Live network data types (from XRPScan)
+export interface LiveValidatorMarker {
+  id: string;
+  masterKey: string;
+  domain?: string;
+  isUNL: boolean;
+  agreement24h: number;
+  coordinates: [number, number];
+  city?: string;
+  countryCode?: string;
+  lastSeen?: Date;
+}
+
+export interface LiveNodeMarker {
+  id: string;
+  publicKey: string;
+  coordinates: [number, number];
+  city?: string;
+  countryCode?: string;
+  version?: string;
+  lastSeen?: Date;
+}
+
+export interface LiveNetworkStats {
+  totalValidators: number;
+  unlValidators: number;
+  activeValidators: number;
+  totalNodes: number;
+  activeNodes: number;
+  averageAgreement: number;
+  topCountries: Array<{ code: string; count: number }>;
+  lastUpdated?: Date;
 }
