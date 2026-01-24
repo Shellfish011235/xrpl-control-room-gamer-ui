@@ -4,9 +4,8 @@ export type GlobeLens =
   | 'validators'
   | 'ilp'
   | 'corridors'
-  | 'community'
-  | 'regulation'
-  | 'projects';
+  | 'community'  // Combined Community/Projects lens
+  | 'regulation';
 
 export interface GlobeHub {
   id: string;

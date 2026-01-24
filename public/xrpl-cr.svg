@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f1a"/>
+      <stop offset="100%" stop-color="#1a1f2e"/>
+    </linearGradient>
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="50%" stop-color="#00ff9d"/>
+      <stop offset="100%" stop-color="#00f0ff"/>
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#00ff9d"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect x="2" y="2" width="60" height="60" rx="8" fill="url(#bgGrad)"/>
+  
+  <!-- Border glow -->
+  <rect x="2" y="2" width="60" height="60" rx="8" fill="none" stroke="url(#borderGrad)" stroke-width="2" filter="url(#glow)"/>
+  
+  <!-- XRPL text -->
+  <text x="32" y="28" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="14" font-weight="900" fill="url(#textGrad)" filter="url(#glow)">XRPL</text>
+  
+  <!-- CR text -->
+  <text x="32" y="46" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-size="16" font-weight="900" fill="#00ff9d" filter="url(#glow)">CR</text>
+  
+  <!-- Accent line -->
+  <line x1="16" y1="32" x2="48" y2="32" stroke="url(#borderGrad)" stroke-width="1" opacity="0.5"/>
+</svg>

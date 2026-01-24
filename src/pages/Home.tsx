@@ -10,6 +10,8 @@ import { useEffect, useState } from 'react'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { WalletConnect } from '../components/WalletConnect'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
+import { PathfindingTool } from '../components/PathfindingTool'
+import { PaperTradingPanel } from '../components/PaperTradingPanel'
 import { useProfileStore } from '../store/profileStore'
 import { useWalletStore } from '../store/walletStore'
 import { useAssetsStore } from '../store/assetsStore'
@@ -824,6 +826,16 @@ export default function Home() {
                   {/* Expanded Impact Tool */}
                   <div className="cyber-panel p-4 mb-4">
                     <LedgerImpactTool />
+                  </div>
+                  
+                  {/* Pathfinding Tool */}
+                  <div className="cyber-panel p-4 mb-4">
+                    <PathfindingTool />
+                  </div>
+                  
+                  {/* Paper Trading Simulator */}
+                  <div className="cyber-panel p-4 mb-4">
+                    <PaperTradingPanel compact />
                   </div>
                   
                   <div className="cyber-panel p-3">

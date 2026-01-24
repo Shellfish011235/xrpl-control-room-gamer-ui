@@ -36,9 +36,8 @@ const briefsByLens: Record<GlobeLens, LensBrief> = {
   validators: validatorsBrief as LensBrief,
   ilp: ilpBrief as LensBrief,
   corridors: corridorsBrief as LensBrief,
-  community: communityBrief as LensBrief,
+  community: communityBrief as LensBrief,  // Combined Community/Projects
   regulation: regulationBrief as LensBrief,
-  projects: projectsBrief as LensBrief
 };
 
 // Guided steps by lens
@@ -46,9 +45,8 @@ const guidedStepsByLens: Record<GlobeLens, GuidedStepsData> = {
   validators: validatorsGuidedSteps as GuidedStepsData,
   ilp: ilpGuidedSteps as GuidedStepsData,
   corridors: corridorsGuidedSteps as GuidedStepsData,
-  community: communityGuidedSteps as GuidedStepsData,
+  community: communityGuidedSteps as GuidedStepsData,  // Combined Community/Projects
   regulation: regulationGuidedSteps as GuidedStepsData,
-  projects: projectsGuidedSteps as GuidedStepsData
 };
 
 // Lens metadata - CYBERPUNK THEMED
@@ -77,10 +75,10 @@ export const lensMetadata: Record<GlobeLens, {
     color: '#00ff88' // cyber-green
   },
   community: {
-    label: 'Community',
-    description: 'Developer communities, meetups, and ecosystem events',
+    label: 'Community/Projects',
+    description: 'XRPL ecosystem: marketplaces, wallets, events, NFTs, memes, and education',
     icon: 'users',
-    color: '#ffd700' // cyber-yellow
+    color: '#00ffff' // cyber-cyan
   },
   regulation: {
     label: 'Regulation',
@@ -88,12 +86,6 @@ export const lensMetadata: Record<GlobeLens, {
     icon: 'scale',
     color: '#ff4444' // cyber-red
   },
-  projects: {
-    label: 'Projects',
-    description: 'Active projects and companies building on XRPL',
-    icon: 'building',
-    color: '#00ffff' // cyber-cyan
-  }
 };
 
 // Get brief for a lens

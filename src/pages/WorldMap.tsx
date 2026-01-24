@@ -5,7 +5,7 @@ import {
   Route, Scale, Building, Eye, X, RefreshCw, Wifi, WifiOff,
   ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock
 } from 'lucide-react'
-import { AreaChart, Area, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { WorldGlobe } from '../components/globe/WorldGlobe'
 import { useGlobeStore } from '../store/globeStore'
 import { useLiveNetworkData } from '../hooks/useLiveNetworkData'
@@ -71,18 +71,22 @@ import {
   type XRPLConnectedChain,
 } from '../data/corridorData'
 import type { GlobeLens, GlobeHub } from '../types/globe'
+import {
+  xrplCategories,
+  getAllProjects,
+  type XRPLProject,
+} from '../data/xrplExpandedData'
 
 // Lens icons mapping
 const lensIcons: Record<GlobeLens, React.ReactNode> = {
   validators: <Server size={14} />,
   ilp: <Link2 size={14} />,
   corridors: <Route size={14} />,
-  community: <Users size={14} />,
+  community: <Users size={14} />,  // Combined Community/Projects
   regulation: <Scale size={14} />,
-  projects: <Building size={14} />
 }
 
-const lensOrder: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation', 'projects']
+const lensOrder: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation']
 
 // Hub type colors
 const hubTypeColors: Record<GlobeHub['type'], string> = {
@@ -111,17 +115,41 @@ const hubTypeLabels: Record<GlobeHub['type'], string> = {
   regulatory: 'Regulatory Hub'
 }
 
-// Mock TPS data
-const tpsHistory = Array.from({ length: 24 }, (_, i) => ({
-  hour: `${i}:00`,
-  tps: Math.floor(800 + Math.random() * 700),
-}))
+// Country code to name mapping for corridor legend
+const countryCodeNames: Record<string, string> = {
+  jp: 'Japan',
+  ph: 'Philippines',
+  vn: 'Vietnam',
+  id: 'Indonesia',
+  th: 'Thailand',
+  my: 'Malaysia',
+  sg: 'Singapore',
+  kr: 'South Korea',
+  mx: 'Mexico',
+  us: 'United States',
+  gb: 'United Kingdom',
+  eu: 'Europe',
+  ae: 'UAE',
+  in: 'India',
+  au: 'Australia',
+  br: 'Brazil',
+}
+
+// Helper to decode corridor code like "jp-ph" to "Japan → Philippines"
+function decodeCorridorCode(code: string): string {
+  const parts = code.toLowerCase().split('-')
+  if (parts.length === 2) {
+    const from = countryCodeNames[parts[0]] || parts[0].toUpperCase()
+    const to = countryCodeNames[parts[1]] || parts[1].toUpperCase()
+    return `${from} → ${to}`
+  }
+  return code
+}
 
 export default function WorldMap() {
   const { activeLens, setActiveLens, selection, clearSelection } = useGlobeStore()
   const { 
     validators: liveValidators,
-    nodes: liveNodes,
     stats: liveStats,
     isLoading: isLoadingLive,
     error: liveError,
@@ -176,6 +204,19 @@ export default function WorldMap() {
   const [selectedChain, setSelectedChain] = useState<XRPLConnectedChain | null>(null)
   const [selectedPartner, setSelectedPartner] = useState<ODLPartner | null>(null)
   const corridorStats = useMemo(() => getCorridorStats(), [])
+  
+  // Community & Projects data state
+  const [communityFilter, setCommunityFilter] = useState<keyof typeof xrplCategories | 'all'>('all')
+  const [selectedProject, setSelectedProject] = useState<XRPLProject | null>(null)
+  const allProjects = useMemo(() => getAllProjects(), [])
+  
+  // Filter community/projects items
+  const filteredCommunityItems = useMemo(() => {
+    if (communityFilter === 'all') {
+      return allProjects
+    }
+    return allProjects.filter(p => p.category === communityFilter)
+  }, [communityFilter, allProjects])
   
   // Get ILP data for selected country
   const selectedCountryILPData = useMemo(() => {
@@ -284,18 +325,18 @@ export default function WorldMap() {
           live: true
         },
         { 
-          label: 'Network Nodes', 
-          value: liveStats.totalNodes.toString(), 
-          change: `${liveStats.activeNodes} active`, 
+          label: 'Agreement', 
+          value: `${(liveStats.averageAgreement * 100).toFixed(1)}%`, 
+          change: '24h average', 
           color: 'cyber-purple',
           live: true
         },
         { 
-          label: 'Top Region', 
-          value: liveStats.topCountries[0]?.code || 'N/A', 
-          change: `${liveStats.topCountries[0]?.count || 0} nodes`, 
+          label: 'Global Hubs', 
+          value: hubs.length.toString(), 
+          change: `${corridors.length} corridors`, 
           color: 'cyber-cyan',
-          live: true
+          live: false
         },
       ]
     }
@@ -305,7 +346,7 @@ export default function WorldMap() {
       { label: 'Active Validators', value: hubs.reduce((sum, h) => sum + h.validators, 0).toString(), change: '+3', color: 'cyber-green', live: false },
       { label: 'Total Hubs', value: hubs.length.toString(), change: '+2', color: 'cyber-glow', live: false },
       { label: 'Corridors', value: corridors.length.toString(), change: '+1', color: 'cyber-purple', live: false },
-      { label: 'TPS (Current)', value: '1,500', change: '+8.3%', color: 'cyber-cyan', live: false },
+      { label: 'Agreement', value: '99.5%', change: '24h avg', color: 'cyber-cyan', live: false },
     ]
   }, [hubs, corridors, liveStats, showLiveData])
 
@@ -383,7 +424,7 @@ export default function WorldMap() {
             Global XRPL Network Visualization & Analytics
             {showLiveData && liveStats && (
               <span className="ml-2 text-cyber-glow text-xs">
-                • {liveValidators.length} validators • {liveNodes.length} nodes mapped
+                • {liveValidators.length} validators mapped
               </span>
             )}
           </p>
@@ -508,45 +549,6 @@ export default function WorldMap() {
                       <span className="text-[10px] text-cyber-muted">UNL Validator</span>
                     </div>
                   </div>
-                </div>
-              )}
-              
-              {/* Live Node Legend - shown on validators, community, corridors */}
-              {showLiveData && (activeLens === 'validators' || activeLens === 'community' || activeLens === 'corridors') && (
-                <div className="mb-4">
-                  <p className="text-xs text-cyber-muted mb-2 font-cyber">NODE STATUS</p>
-                  <div className="space-y-1">
-                    {[
-                      { label: 'Online (<5m)', color: '#00ff88' },
-                      { label: 'Recent (<30m)', color: '#00d4ff' },
-                      { label: 'Stale (<60m)', color: '#ffd700' },
-                      { label: 'Offline (>60m)', color: '#ff4444' },
-                    ].map((item) => (
-                      <div key={item.label} className="flex items-center gap-2">
-                        <div 
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="text-[10px] text-cyber-muted">
-                          {item.label}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  {liveStats && (
-                    <div className="mt-2 pt-2 border-t border-cyber-border/30">
-                      <div className="grid grid-cols-2 gap-1">
-                        <div className="p-1.5 rounded bg-cyber-darker/50 text-center">
-                          <p className="text-sm font-cyber text-cyber-purple">{liveStats.totalNodes}</p>
-                          <p className="text-[8px] text-cyber-muted">Total Nodes</p>
-                        </div>
-                        <div className="p-1.5 rounded bg-cyber-darker/50 text-center">
-                          <p className="text-sm font-cyber text-cyber-green">{liveStats.activeNodes}</p>
-                          <p className="text-[8px] text-cyber-muted">Active</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
               
@@ -1356,10 +1358,29 @@ export default function WorldMap() {
                       <p className="text-[9px] text-cyber-muted mb-1">Corridors ({selectedPartner.corridors.length})</p>
                       <div className="flex flex-wrap gap-1">
                         {selectedPartner.corridors.map((corr) => (
-                          <span key={corr} className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-green/20 text-cyber-green">
+                          <span 
+                            key={corr} 
+                            className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-green/20 text-cyber-green cursor-help"
+                            title={decodeCorridorCode(corr)}
+                          >
                             {corr}
                           </span>
                         ))}
+                      </div>
+                      {/* Corridor Legend */}
+                      <div className="mt-2 pt-2 border-t border-cyber-border/20">
+                        <p className="text-[8px] text-cyber-muted mb-1">LEGEND (hover for details)</p>
+                        <div className="text-[8px] text-cyber-muted space-y-0.5">
+                          {selectedPartner.corridors.slice(0, 4).map((corr) => (
+                            <div key={`legend-${corr}`} className="flex items-center gap-1">
+                              <span className="text-cyber-green font-mono">{corr}</span>
+                              <span className="text-cyber-muted">= {decodeCorridorCode(corr)}</span>
+                            </div>
+                          ))}
+                          {selectedPartner.corridors.length > 4 && (
+                            <span className="text-cyber-muted">+{selectedPartner.corridors.length - 4} more</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     {selectedPartner.website && (
@@ -1832,7 +1853,224 @@ export default function WorldMap() {
               </motion.div>
             )}
             
-            {/* Network Nodes Panel (shown on validators lens with live data) */}
+            {/* Community/Projects Panel (combined view) */}
+            {activeLens === 'community' && (
+              <motion.div 
+                className="cyber-panel p-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-cyber text-sm text-cyber-cyan">
+                    COMMUNITY / PROJECTS ({filteredCommunityItems.length})
+                  </span>
+                  {communityFilter !== 'all' && (
+                    <button 
+                      onClick={() => setCommunityFilter('all')}
+                      className="text-[10px] text-cyber-muted hover:text-cyber-cyan"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </div>
+                
+                {/* Category Filters */}
+                <div className="flex flex-wrap gap-1 mb-3">
+                  <button
+                    onClick={() => setCommunityFilter('all')}
+                    className={`px-2 py-1 rounded text-[10px] transition-all ${
+                      communityFilter === 'all'
+                        ? 'bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/50'
+                        : 'bg-cyber-darker/50 text-cyber-muted border border-cyber-border hover:border-cyber-cyan/30'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {Object.entries(xrplCategories).map(([key, cat]) => (
+                    <button
+                      key={key}
+                      onClick={() => setCommunityFilter(key as keyof typeof xrplCategories)}
+                      className={`px-2 py-1 rounded text-[10px] transition-all flex items-center gap-1 ${
+                        communityFilter === key
+                          ? `bg-${cat.color}/20 text-${cat.color} border border-${cat.color}/50`
+                          : 'bg-cyber-darker/50 text-cyber-muted border border-cyber-border hover:border-cyber-cyan/30'
+                      }`}
+                    >
+                      <span>{cat.icon}</span>
+                      <span className="hidden sm:inline">{cat.name}</span>
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Projects List */}
+                <div className="max-h-[300px] overflow-y-auto space-y-2 custom-scrollbar">
+                  {filteredCommunityItems.slice(0, 15).map((project, idx) => {
+                    const category = xrplCategories[project.category as keyof typeof xrplCategories]
+                    return (
+                      <motion.div
+                        key={`${project.name}-${idx}`}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.02 }}
+                        className={`p-3 rounded bg-cyber-darker/50 border-l-2 border-${category?.color || 'cyber-cyan'} hover:bg-cyber-darker/80 transition-all cursor-pointer group`}
+                        onClick={() => setSelectedProject(project)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">{category?.icon}</span>
+                            <span className="text-xs text-cyber-text font-medium group-hover:text-cyber-cyan transition-colors">
+                              {project.name}
+                            </span>
+                          </div>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded bg-${category?.color || 'cyber-cyan'}/20 text-${category?.color || 'cyber-cyan'}`}>
+                            {category?.name || project.category}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-cyber-muted line-clamp-2">
+                          {project.description}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <span className="text-[9px] text-cyber-muted">📍 {project.location}</span>
+                          {project.links.length > 0 && (
+                            <a
+                              href={project.links[0]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-[9px] text-cyber-cyan hover:text-cyber-glow flex items-center gap-0.5"
+                            >
+                              <ExternalLink size={8} /> Link
+                            </a>
+                          )}
+                        </div>
+                      </motion.div>
+                    )
+                  })}
+                  {filteredCommunityItems.length > 15 && (
+                    <p className="text-[10px] text-cyber-muted text-center pt-2">
+                      +{filteredCommunityItems.length - 15} more items...
+                    </p>
+                  )}
+                </div>
+                
+                {/* Category Stats */}
+                <div className="mt-3 pt-3 border-t border-cyber-border/30">
+                  <p className="text-[10px] text-cyber-muted mb-2">CATEGORY BREAKDOWN</p>
+                  <div className="grid grid-cols-4 gap-1">
+                    {Object.entries(xrplCategories).slice(0, 4).map(([key, cat]) => (
+                      <div 
+                        key={key}
+                        className={`p-2 rounded bg-cyber-darker/50 border border-${cat.color}/30 text-center cursor-pointer hover:border-${cat.color}/60 transition-all`}
+                        onClick={() => setCommunityFilter(key as keyof typeof xrplCategories)}
+                      >
+                        <p className={`text-sm font-cyber text-${cat.color}`}>{cat.data.length}</p>
+                        <p className="text-[8px] text-cyber-muted">{cat.icon}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 mt-1">
+                    {Object.entries(xrplCategories).slice(4).map(([key, cat]) => (
+                      <div 
+                        key={key}
+                        className={`p-2 rounded bg-cyber-darker/50 border border-${cat.color}/30 text-center cursor-pointer hover:border-${cat.color}/60 transition-all`}
+                        onClick={() => setCommunityFilter(key as keyof typeof xrplCategories)}
+                      >
+                        <p className={`text-sm font-cyber text-${cat.color}`}>{cat.data.length}</p>
+                        <p className="text-[8px] text-cyber-muted">{cat.icon}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Quick Links */}
+                <div className="mt-3 pt-3 border-t border-cyber-border/30">
+                  <p className="text-[10px] text-cyber-muted mb-2">QUICK LINKS</p>
+                  <div className="flex flex-wrap gap-1">
+                    <a href="https://xrpl.org/community" target="_blank" rel="noopener noreferrer" 
+                       className="px-2 py-1 rounded text-[9px] bg-cyber-glow/20 text-cyber-glow hover:bg-cyber-glow/30">
+                      XRPL.org
+                    </a>
+                    <a href="https://www.xrpl-commons.org" target="_blank" rel="noopener noreferrer"
+                       className="px-2 py-1 rounded text-[9px] bg-cyber-purple/20 text-cyber-purple hover:bg-cyber-purple/30">
+                      XRPL Commons
+                    </a>
+                    <a href="https://xrpcafe.com" target="_blank" rel="noopener noreferrer"
+                       className="px-2 py-1 rounded text-[9px] bg-cyber-cyan/20 text-cyber-cyan hover:bg-cyber-cyan/30">
+                      XRP Cafe
+                    </a>
+                    <a href="https://xpmarket.com" target="_blank" rel="noopener noreferrer"
+                       className="px-2 py-1 rounded text-[9px] bg-cyber-green/20 text-cyber-green hover:bg-cyber-green/30">
+                      XPMarket
+                    </a>
+                    <a href="https://www.easya.io" target="_blank" rel="noopener noreferrer"
+                       className="px-2 py-1 rounded text-[9px] bg-cyber-yellow/20 text-cyber-yellow hover:bg-cyber-yellow/30">
+                      EasyA
+                    </a>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            
+            {/* Selected Project Detail Modal */}
+            {selectedProject && (
+              <motion.div 
+                className="cyber-panel p-4 border-cyber-cyan/30"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{xrplCategories[selectedProject.category as keyof typeof xrplCategories]?.icon}</span>
+                    <span className="font-cyber text-sm text-cyber-cyan">{selectedProject.name}</span>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedProject(null)}
+                    className="p-1 hover:bg-cyber-red/20 rounded transition-colors"
+                  >
+                    <X size={14} className="text-cyber-muted hover:text-cyber-red" />
+                  </button>
+                </div>
+                
+                <p className="text-xs text-cyber-text mb-3">{selectedProject.description}</p>
+                
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-cyber-muted">📍 Location:</span>
+                    <span className="text-xs text-cyber-text">{selectedProject.location}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-cyber-muted">📂 Category:</span>
+                    <span className={`text-xs text-${xrplCategories[selectedProject.category as keyof typeof xrplCategories]?.color || 'cyber-cyan'}`}>
+                      {xrplCategories[selectedProject.category as keyof typeof xrplCategories]?.name || selectedProject.category}
+                    </span>
+                  </div>
+                </div>
+                
+                {selectedProject.links.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProject.links.map((link, idx) => (
+                      <a
+                        key={idx}
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 rounded bg-cyber-cyan/20 text-cyber-cyan hover:bg-cyber-cyan/30 text-xs transition-all"
+                      >
+                        <ExternalLink size={12} />
+                        {link.includes('x.com') || link.includes('twitter') ? 'X/Twitter' : 
+                         link.includes('github') ? 'GitHub' :
+                         link.includes('facebook') ? 'Facebook' :
+                         link.includes('youtube') ? 'YouTube' :
+                         link.includes('udemy') ? 'Udemy' :
+                         'Website'}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+            
+            {/* Validators Panel (shown on validators lens with live data) */}
             {activeLens === 'validators' && showLiveData && liveStats && (
               <motion.div 
                 className="cyber-panel p-4"
@@ -1840,46 +2078,22 @@ export default function WorldMap() {
                 animate={{ opacity: 1 }}
               >
                 <div className="flex items-center justify-between mb-3">
-                  <span className="font-cyber text-sm text-cyber-purple">NETWORK NODES</span>
+                  <span className="font-cyber text-sm text-cyber-glow">VALIDATORS</span>
                   <div className="flex items-center gap-1">
                     <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
                     <span className="text-[10px] text-cyber-green">LIVE</span>
                   </div>
                 </div>
                 
-                {/* Node Stats Grid */}
+                {/* Validator Stats */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30 text-center">
-                    <p className="text-xl font-cyber text-cyber-purple">{liveStats.totalNodes}</p>
-                    <p className="text-[9px] text-cyber-muted">Total Nodes</p>
+                  <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/30 text-center">
+                    <p className="text-2xl font-cyber text-cyber-glow">{liveStats.totalValidators}</p>
+                    <p className="text-[9px] text-cyber-muted">Total Validators</p>
                   </div>
-                  <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30 text-center">
-                    <p className="text-xl font-cyber text-cyber-green">{liveStats.activeNodes}</p>
-                    <p className="text-[9px] text-cyber-muted">Active Nodes</p>
-                  </div>
-                  <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30 text-center">
-                    <p className="text-xl font-cyber text-cyber-glow">{liveStats.totalValidators}</p>
-                    <p className="text-[9px] text-cyber-muted">Validators</p>
-                  </div>
-                  <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30 text-center">
-                    <p className="text-xl font-cyber text-cyber-cyan">{liveStats.unlValidators}</p>
+                  <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/30 text-center">
+                    <p className="text-2xl font-cyber text-cyber-cyan">{liveStats.unlValidators}</p>
                     <p className="text-[9px] text-cyber-muted">UNL Validators</p>
-                  </div>
-                </div>
-                
-                {/* Top Countries */}
-                <div className="mb-3">
-                  <p className="text-[10px] text-cyber-muted mb-2 font-cyber">TOP COUNTRIES BY NODES</p>
-                  <div className="space-y-1">
-                    {liveStats.topCountries.slice(0, 5).map((country, idx) => (
-                      <div key={country.code} className="flex items-center justify-between p-1.5 rounded bg-cyber-darker/30">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-cyber-muted w-4">{idx + 1}.</span>
-                          <span className="text-xs text-cyber-text font-medium">{country.code}</span>
-                        </div>
-                        <span className="text-xs font-cyber text-cyber-glow">{country.count}</span>
-                      </div>
-                    ))}
                   </div>
                 </div>
                 
@@ -1940,54 +2154,6 @@ export default function WorldMap() {
                     </div>
                     <span className="text-xs text-cyber-muted font-cyber">{region.nodes}</span>
                   </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* TPS Chart */}
-            <div className="cyber-panel p-4">
-              <h3 className="font-cyber text-sm text-cyber-cyan mb-4">NETWORK TPS (24H)</h3>
-              <div className="h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={tpsHistory}>
-                    <defs>
-                      <linearGradient id="tpsGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#00d4ff" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#00d4ff" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <Area 
-                      type="monotone" 
-                      dataKey="tps" 
-                      stroke="#00d4ff" 
-                      fill="url(#tpsGradient)" 
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            
-            {/* Top Hubs */}
-            <div className="cyber-panel p-4">
-              <h3 className="font-cyber text-sm text-cyber-purple mb-4">TOP HUBS</h3>
-              <div className="space-y-2">
-                {hubs.slice(0, 5).map((hub, idx) => (
-                  <button
-                    key={hub.id}
-                    onClick={() => useGlobeStore.getState().setSelection({ type: 'hub', id: hub.id, countryIso2: hub.countryIso2 })}
-                    className="w-full flex items-center justify-between p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/30 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-cyber-muted w-4">{idx + 1}.</span>
-                      <div 
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: hubTypeColors[hub.type] }}
-                      />
-                      <span className="text-sm text-cyber-text">{hub.city}</span>
-                    </div>
-                    <span className="text-xs text-cyber-glow font-cyber">{hub.validators}</span>
-                  </button>
                 ))}
               </div>
             </div>

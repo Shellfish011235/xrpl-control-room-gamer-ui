@@ -49,6 +49,9 @@ interface GlobeStore extends GlobeState {
   toggleShowLiveData: () => void;
 }
 
+// Valid lens values (keep in sync with GlobeLens type)
+const validLenses: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation'];
+
 const initialState: GlobeState = {
   activeLens: 'validators',
   selection: {
@@ -183,7 +186,13 @@ export const useGlobeStore = create<GlobeStore>()(
         pinnedItems: state.pinnedItems,
         stepCompletions: state.stepCompletions,
         showLiveData: state.showLiveData
-      })
+      }),
+      // Handle migration from old lens values (e.g., 'projects' -> 'community')
+      onRehydrateStorage: () => (state) => {
+        if (state && !validLenses.includes(state.activeLens)) {
+          state.activeLens = 'community'; // Migrate invalid lens to community
+        }
+      }
     }
   )
 );

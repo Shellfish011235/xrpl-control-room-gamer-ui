@@ -40,6 +40,8 @@ export interface PredictionSignal {
   description: string;
   confidence: number;
   timestamp: Date;
+  asset: string; // The crypto asset this signal applies to (e.g., 'XRP', 'BTC')
+  targetPrice?: number; // Optional target price
 }
 
 export interface ArbitrageOpportunity {
@@ -357,6 +359,29 @@ function getAxiomMarketData(): PredictionMarket[] {
 // ==================== SIGNAL GENERATION ====================
 
 /**
+ * Extract crypto asset from market question
+ */
+function extractAssetFromQuestion(question: string): string {
+  const q = question.toLowerCase();
+  
+  // Check for specific crypto mentions
+  if (q.includes('xrp') || q.includes('ripple')) return 'XRP';
+  if (q.includes('bitcoin') || q.includes(' btc')) return 'BTC';
+  if (q.includes('ethereum') || q.includes(' eth')) return 'ETH';
+  if (q.includes('solana') || q.includes(' sol')) return 'SOL';
+  if (q.includes('dogecoin') || q.includes('doge')) return 'DOGE';
+  if (q.includes('cardano') || q.includes(' ada')) return 'ADA';
+  if (q.includes('chainlink') || q.includes('link')) return 'LINK';
+  if (q.includes('polkadot') || q.includes(' dot')) return 'DOT';
+  if (q.includes('avalanche') || q.includes('avax')) return 'AVAX';
+  
+  // If it's crypto-related but no specific asset, default to XRP
+  if (q.includes('crypto') || q.includes('defi') || q.includes('blockchain')) return 'XRP';
+  
+  return 'XRP'; // Default for XRP-focused app
+}
+
+/**
  * Generate trading signals from prediction market data
  */
 export function generatePredictionSignals(markets: PredictionMarket[]): PredictionSignal[] {
@@ -369,16 +394,33 @@ export function generatePredictionSignals(markets: PredictionMarket[]): Predicti
     const yesOutcome = market.outcomes.find(o => o.name.toLowerCase() === 'yes');
     if (!yesOutcome) continue;
     
+    const asset = extractAssetFromQuestion(market.question);
+    
     // High probability bullish signal
-    if (yesOutcome.probability > 0.65 && market.question.toLowerCase().includes('xrp')) {
+    if (yesOutcome.probability > 0.65) {
       signals.push({
         type: 'bullish',
         strength: Math.round(yesOutcome.probability * 100),
         source: market.source,
         market: market.question,
         description: `Market predicts ${(yesOutcome.probability * 100).toFixed(0)}% chance of positive outcome`,
-        confidence: Math.min(90, Math.round(market.liquidity / 10000)),
+        confidence: Math.min(90, Math.round(market.liquidity / 10000) + 60),
         timestamp: new Date(),
+        asset,
+      });
+    }
+    
+    // Low probability bearish signal
+    if (yesOutcome.probability < 0.35) {
+      signals.push({
+        type: 'bearish',
+        strength: Math.round((1 - yesOutcome.probability) * 100),
+        source: market.source,
+        market: market.question,
+        description: `Market predicts ${((1 - yesOutcome.probability) * 100).toFixed(0)}% chance of negative outcome`,
+        confidence: Math.min(90, Math.round(market.liquidity / 10000) + 60),
+        timestamp: new Date(),
+        asset,
       });
     }
     
@@ -392,6 +434,7 @@ export function generatePredictionSignals(markets: PredictionMarket[]): Predicti
         description: `Probability shifted ${yesOutcome.change24h > 0 ? '+' : ''}${(yesOutcome.change24h * 100).toFixed(1)}% in 24h`,
         confidence: 70,
         timestamp: new Date(),
+        asset,
       });
     }
     
@@ -405,12 +448,13 @@ export function generatePredictionSignals(markets: PredictionMarket[]): Predicti
         description: `High trading activity: $${(market.volume24h / 1000).toFixed(0)}K volume in 24h`,
         confidence: 80,
         timestamp: new Date(),
+        asset,
       });
     }
   }
   
-  // Sort by strength
-  signals.sort((a, b) => b.strength - a.strength);
+  // Sort by confidence then strength
+  signals.sort((a, b) => b.confidence - a.confidence || b.strength - a.strength);
   
   return signals.slice(0, 10); // Top 10 signals
 }

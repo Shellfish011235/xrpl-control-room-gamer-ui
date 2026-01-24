@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Clock, Users, ExternalLink, ChevronRight,
   Cpu, HardDrive, Wifi, DollarSign, MemoryStick, RefreshCw,
-  X, FileText
+  X, FileText, CheckCircle, AlertTriangle, Loader2
 } from 'lucide-react';
+import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFeeds';
 
 // Types based on XRPL Governance Companion
 type PerformanceImpact = 'Low' | 'Medium' | 'High' | 'Unknown';
@@ -31,98 +32,79 @@ interface Amendment {
   ledgerImpact: LedgerImpact;
   validatorSupport: { current: number; required: number };
   enabled?: boolean;
+  // Live data fields
+  percentSupport?: number;
+  status?: 'enabled' | 'majority' | 'pending' | 'unsupported';
+  daysUntilEnabled?: number;
 }
 
-// Sample amendments data (would ideally come from XRPL API)
-const sampleAmendments: Amendment[] = [
-  {
-    id: 'fix-nftoken-dir-v1',
-    name: 'fixNFTokenDirV1',
-    summary: 'Corrects edge-case errors in NFToken directory pagination logic',
-    tier: 'A',
-    performanceImpact: 'Low',
-    waitingDays: 21,
-    ledgerImpact: {
-      estimatedImpact: 'Low',
-      confidence: 'High',
-      affectedAreas: ['CPU', 'Disk IO'],
-      rationale: 'Adds a single validation check during NFToken operations. Benchmarks show negligible impact (<0.1% CPU overhead).',
-      evidenceLinks: [
-        { label: 'Performance Analysis PR', url: 'https://github.com/XRPLF/rippled/pull/4567' }
-      ]
-    },
-    validatorSupport: { current: 28, required: 35 }
-  },
-  {
-    id: 'clawback',
-    name: 'Clawback',
-    summary: 'Enables token issuers to reclaim tokens from holder accounts',
-    tier: 'B',
-    performanceImpact: 'Low',
-    waitingDays: 45,
-    ledgerImpact: {
-      estimatedImpact: 'Low',
-      confidence: 'High',
-      affectedAreas: ['CPU'],
-      rationale: 'Adds a flag check during token transfers. Only affects tokens with clawback enabled.',
-      evidenceLinks: [
-        { label: 'Implementation PR', url: 'https://github.com/XRPLF/rippled/pull/4553' }
-      ]
-    },
-    validatorSupport: { current: 32, required: 35 }
-  },
-  {
-    id: 'amm',
-    name: 'AMM',
-    summary: 'Native automated market maker functionality for the XRP Ledger',
-    tier: 'B',
-    performanceImpact: 'Medium',
-    waitingDays: 67,
-    ledgerImpact: {
-      estimatedImpact: 'Medium',
-      confidence: 'Medium',
-      affectedAreas: ['CPU', 'Memory', 'Disk IO'],
-      rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.',
-      evidenceLinks: [
-        { label: 'Performance Report', url: 'https://github.com/XRPLF/rippled/pull/4294' }
-      ]
-    },
-    validatorSupport: { current: 33, required: 35 },
-    enabled: true
-  },
-  {
-    id: 'price-oracle',
-    name: 'PriceOracle',
-    summary: 'Native price oracle infrastructure for on-chain price feeds',
-    tier: 'B',
-    performanceImpact: 'Medium',
-    waitingDays: 34,
-    ledgerImpact: {
-      estimatedImpact: 'Medium',
-      confidence: 'Medium',
-      affectedAreas: ['CPU', 'Network', 'Fee pressure'],
-      rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.',
-      evidenceLinks: []
-    },
-    validatorSupport: { current: 25, required: 35 }
-  },
-  {
-    id: 'did',
-    name: 'DID',
-    summary: 'Decentralized Identifier support on the XRP Ledger',
-    tier: 'C',
-    performanceImpact: 'Low',
-    waitingDays: 89,
-    ledgerImpact: {
-      estimatedImpact: 'Low',
-      confidence: 'High',
-      affectedAreas: ['Disk IO'],
-      rationale: 'New ledger object type for storing DID documents. Minimal processing overhead.',
-      evidenceLinks: []
-    },
-    validatorSupport: { current: 20, required: 35 }
+// Amendment metadata (performance impact assessments)
+const amendmentMetadata: Record<string, { 
+  summary: string; 
+  tier: Tier; 
+  impact: PerformanceImpact;
+  areas: AffectedArea[];
+  rationale: string;
+}> = {
+  'AMM': { summary: 'Native automated market maker functionality', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.' },
+  'Clawback': { summary: 'Enables token issuers to reclaim tokens from holders', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds flag check during token transfers. Only affects tokens with clawback enabled.' },
+  'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.' },
+  'DID': { summary: 'Decentralized Identifier support on XRPL', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.' },
+  'XChainBridge': { summary: 'Cross-chain bridge functionality', tier: 'A', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers.' },
+  'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.' },
+  'fixReducedOffersV1': { summary: 'Corrects offer reduction calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Minor calculation fix in DEX operations.' },
+  'fixAMMOverflowOffer': { summary: 'Fixes AMM overflow in offer calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Prevents integer overflow in AMM edge cases.' },
+  'fixInnerObjTemplate2': { summary: 'Template fix for inner objects', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Internal template consistency fix.' },
+  'MPTokensV1': { summary: 'Multi-Purpose Token support', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New token type with additional metadata support.' },
+  'Credentials': { summary: 'On-chain credential verification', tier: 'B', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger entry type for credential storage.' },
+  'InvariantsV1_1': { summary: 'Enhanced ledger invariant checks', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Additional validation checks during consensus.' },
+};
+
+// Helper to convert XRPScan amendment to our Amendment type
+function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
+  const metadata = amendmentMetadata[xrpAmendment.name] || {
+    summary: `XRPL amendment: ${xrpAmendment.name}`,
+    tier: 'C' as Tier,
+    impact: 'Unknown' as PerformanceImpact,
+    areas: ['CPU'] as AffectedArea[],
+    rationale: 'Performance impact not yet assessed.'
+  };
+
+  // Calculate waiting days
+  let waitingDays = 0;
+  if (xrpAmendment.majority) {
+    const majorityDate = new Date(xrpAmendment.majority);
+    const now = new Date();
+    const daysSinceMajority = Math.floor((now.getTime() - majorityDate.getTime()) / (24 * 60 * 60 * 1000));
+    waitingDays = Math.max(0, 14 - daysSinceMajority);
   }
-];
+
+  return {
+    id: xrpAmendment.amendment_id,
+    name: xrpAmendment.name,
+    summary: metadata.summary,
+    tier: metadata.tier,
+    performanceImpact: metadata.impact,
+    waitingDays: xrpAmendment.daysUntilEnabled || waitingDays,
+    ledgerImpact: {
+      estimatedImpact: metadata.impact,
+      confidence: amendmentMetadata[xrpAmendment.name] ? 'High' : 'Low',
+      affectedAreas: metadata.areas,
+      rationale: metadata.rationale,
+      evidenceLinks: [
+        { label: 'View on XRPScan', url: `https://xrpscan.com/amendment/${xrpAmendment.name}` }
+      ]
+    },
+    validatorSupport: { 
+      current: xrpAmendment.count, 
+      required: xrpAmendment.threshold 
+    },
+    enabled: xrpAmendment.enabled,
+    percentSupport: xrpAmendment.percentSupport,
+    status: xrpAmendment.status,
+    daysUntilEnabled: xrpAmendment.daysUntilEnabled
+  };
+}
 
 const areaIcons: Record<AffectedArea, React.ReactNode> = {
   'CPU': <Cpu size={12} />,
@@ -146,10 +128,51 @@ const tierColors: Record<Tier, string> = {
 };
 
 export function LedgerImpactTool() {
-  const [amendments] = useState<Amendment[]>(sampleAmendments);
+  const [amendments, setAmendments] = useState<Amendment[]>([]);
   const [selectedAmendment, setSelectedAmendment] = useState<Amendment | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'enabled'>('pending');
+  const [dataSource, setDataSource] = useState<'live' | 'fallback'>('fallback');
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  // Fetch live amendments from XRPScan
+  const fetchAmendments = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const liveAmendments = await fetchXRPLAmendments();
+      
+      if (liveAmendments.length > 0) {
+        // Sort: majority/pending first, then by support percentage
+        const sorted = liveAmendments
+          .map(convertToAmendment)
+          .sort((a, b) => {
+            // Enabled amendments last
+            if (a.enabled && !b.enabled) return 1;
+            if (!a.enabled && b.enabled) return -1;
+            // Then by status (majority first)
+            if (a.status === 'majority' && b.status !== 'majority') return -1;
+            if (a.status !== 'majority' && b.status === 'majority') return 1;
+            // Then by support percentage
+            return (b.percentSupport || 0) - (a.percentSupport || 0);
+          });
+        
+        setAmendments(sorted);
+        setDataSource('live');
+        setLastUpdate(new Date());
+        console.log('[LedgerImpact] Loaded', sorted.length, 'amendments from XRPScan');
+      }
+    } catch (error) {
+      console.error('[LedgerImpact] Failed to fetch amendments:', error);
+      setDataSource('fallback');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch on mount
+  useEffect(() => {
+    fetchAmendments();
+  }, [fetchAmendments]);
 
   const filteredAmendments = amendments.filter(a => {
     if (filter === 'pending') return !a.enabled;
@@ -158,11 +181,11 @@ export function LedgerImpactTool() {
   });
 
   const handleRefresh = async () => {
-    setIsLoading(true);
-    // In production, this would fetch from XRPL
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsLoading(false);
+    await fetchAmendments();
   };
+
+  // Count amendments at majority (>80% support, not yet enabled)
+  const atMajority = amendments.filter(a => !a.enabled && a.status === 'majority').length;
 
   // Calculate impact summary
   const impactSummary = {
@@ -178,16 +201,33 @@ export function LedgerImpactTool() {
         <div className="flex items-center gap-2">
           <Zap size={16} className="text-cyber-cyan" />
           <span className="font-cyber text-sm text-cyber-cyan tracking-wider">LEDGER IMPACT TOOL</span>
+          {dataSource === 'live' && (
+            <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyber-green animate-pulse" />
+              LIVE
+            </span>
+          )}
         </div>
         <button
           onClick={handleRefresh}
           disabled={isLoading}
           className="p-1.5 hover:bg-cyber-glow/10 rounded transition-colors"
-          title="Refresh amendments"
+          title="Refresh amendments from XRPScan"
         >
           <RefreshCw size={14} className={`text-cyber-muted hover:text-cyber-glow ${isLoading ? 'animate-spin' : ''}`} />
         </button>
       </div>
+
+      {/* Majority Alert Banner */}
+      {atMajority > 0 && (
+        <div className="mb-4 p-2 rounded bg-cyber-yellow/10 border border-cyber-yellow/30 flex items-center gap-2">
+          <AlertTriangle size={14} className="text-cyber-yellow shrink-0" />
+          <p className="text-[10px] text-cyber-yellow">
+            <span className="font-cyber">{atMajority}</span> amendment{atMajority > 1 ? 's' : ''} at majority threshold - 
+            in 2-week waiting period before activation
+          </p>
+        </div>
+      )}
 
       {/* Impact Summary Bars */}
       <div className="mb-4">
@@ -248,40 +288,73 @@ export function LedgerImpactTool() {
 
       {/* Amendments List */}
       <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-        {filteredAmendments.map((amendment) => (
-          <motion.button
-            key={amendment.id}
-            onClick={() => setSelectedAmendment(amendment)}
-            className="w-full p-2 rounded-lg border border-cyber-border/50 bg-cyber-darker/50 hover:border-cyber-glow/30 transition-all text-left group"
-            whileHover={{ scale: 1.01 }}
-          >
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-cyber bg-${tierColors[amendment.tier]}/20 text-${tierColors[amendment.tier]} border border-${tierColors[amendment.tier]}/30`}>
-                  {amendment.tier}
-                </span>
-                <span className="text-xs text-cyber-text font-medium truncate">{amendment.name}</span>
-              </div>
-              <span className={`text-[10px] text-${impactColors[amendment.ledgerImpact.estimatedImpact]}`}>
-                {amendment.ledgerImpact.estimatedImpact}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                {amendment.ledgerImpact.affectedAreas.slice(0, 3).map(area => (
-                  <span key={area} className="text-cyber-muted" title={area}>
-                    {areaIcons[area]}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <Loader2 size={24} className="text-cyber-cyan animate-spin mb-2" />
+            <p className="text-xs text-cyber-muted">Loading from XRPScan...</p>
+          </div>
+        ) : filteredAmendments.length === 0 ? (
+          <div className="text-center py-8 text-cyber-muted text-xs">
+            No amendments found for this filter
+          </div>
+        ) : (
+          filteredAmendments.slice(0, 15).map((amendment) => (
+            <motion.button
+              key={amendment.id}
+              onClick={() => setSelectedAmendment(amendment)}
+              className={`w-full p-2 rounded-lg border bg-cyber-darker/50 hover:border-cyber-glow/30 transition-all text-left group ${
+                amendment.status === 'majority' 
+                  ? 'border-cyber-yellow/50' 
+                  : 'border-cyber-border/50'
+              }`}
+              whileHover={{ scale: 1.01 }}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-cyber bg-${tierColors[amendment.tier]}/20 text-${tierColors[amendment.tier]} border border-${tierColors[amendment.tier]}/30`}>
+                    {amendment.tier}
                   </span>
-                ))}
+                  <span className="text-xs text-cyber-text font-medium truncate">{amendment.name}</span>
+                  {amendment.status === 'majority' && (
+                    <span className="px-1 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30">
+                      {amendment.daysUntilEnabled}d
+                    </span>
+                  )}
+                </div>
+                <span className={`text-[10px] text-${impactColors[amendment.ledgerImpact.estimatedImpact]}`}>
+                  {amendment.ledgerImpact.estimatedImpact}
+                </span>
               </div>
-              <div className="flex items-center gap-2 text-[10px] text-cyber-muted">
-                <span>{amendment.validatorSupport.current}/{amendment.validatorSupport.required}</span>
-                <Users size={10} />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1">
+                  {amendment.ledgerImpact.affectedAreas.slice(0, 3).map(area => (
+                    <span key={area} className="text-cyber-muted" title={area}>
+                      {areaIcons[area]}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  <span className={
+                    (amendment.percentSupport || 0) >= 80 ? 'text-cyber-green' :
+                    (amendment.percentSupport || 0) >= 50 ? 'text-cyber-yellow' :
+                    'text-cyber-muted'
+                  }>
+                    {amendment.validatorSupport.current}/{amendment.validatorSupport.required}
+                  </span>
+                  <Users size={10} className="text-cyber-muted" />
+                </div>
               </div>
-            </div>
-          </motion.button>
-        ))}
+            </motion.button>
+          ))
+        )}
       </div>
+
+      {/* Last Update */}
+      {lastUpdate && (
+        <div className="mt-2 text-[9px] text-cyber-muted text-right">
+          Updated: {lastUpdate.toLocaleTimeString()}
+        </div>
+      )}
 
       {/* Quick Links */}
       <div className="mt-4 pt-3 border-t border-cyber-border space-y-1.5">

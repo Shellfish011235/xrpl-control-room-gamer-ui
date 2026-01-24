@@ -100,6 +100,7 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
     coordinates: [0, 20],
     zoom: 1
   });
+  const [mapLocked, setMapLocked] = useState(true); // Map locked by default
   const [hoveredValidator, setHoveredValidator] = useState<LiveValidatorMarker | null>(null);
   const [hoveredNode, setHoveredNode] = useState<LiveNodeMarker | null>(null);
   const [hoveredConnector, setHoveredConnector] = useState<ILPConnectorInstance | null>(null);
@@ -234,14 +235,18 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
   const handleZoomIn = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setPosition(p => ({ ...p, zoom: Math.min(p.zoom * 1.5, 8) }));
-  }, []);
+    if (!mapLocked) {
+      setPosition(p => ({ ...p, zoom: Math.min(p.zoom * 1.5, 8) }));
+    }
+  }, [mapLocked]);
   
   const handleZoomOut = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setPosition(p => ({ ...p, zoom: Math.max(p.zoom / 1.5, 1) }));
-  }, []);
+    if (!mapLocked) {
+      setPosition(p => ({ ...p, zoom: Math.max(p.zoom / 1.5, 1) }));
+    }
+  }, [mapLocked]);
   
   const handleReset = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -278,9 +283,14 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
         <ZoomableGroup
           center={position.coordinates}
           zoom={position.zoom}
-          onMoveEnd={({ coordinates, zoom }: { coordinates: [number, number]; zoom: number }) => setPosition({ coordinates, zoom })}
+          onMoveEnd={({ coordinates, zoom }: { coordinates: [number, number]; zoom: number }) => {
+            if (!mapLocked) {
+              setPosition({ coordinates, zoom });
+            }
+          }}
           minZoom={1}
           maxZoom={8}
+          filterZoomEvent={() => !mapLocked}
         >
           {/* Countries */}
           <Geographies geography={geoUrl}>
@@ -670,12 +680,32 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
       
       {/* Map controls - CYBERPUNK STYLED */}
       <div className="absolute bottom-4 left-4 flex flex-col gap-2 z-10">
+        {/* Lock/Unlock toggle */}
+        <motion.button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMapLocked(!mapLocked); }}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          className={`w-10 h-10 cyber-panel flex items-center justify-center transition-colors font-cyber text-sm ${
+            mapLocked 
+              ? 'text-cyber-yellow bg-cyber-yellow/10 border-cyber-yellow/50' 
+              : 'text-cyber-green bg-cyber-green/10 border-cyber-green/50'
+          }`}
+          title={mapLocked ? 'Unlock map to drag' : 'Lock map position'}
+        >
+          {mapLocked ? '🔒' : '🔓'}
+        </motion.button>
         <motion.button
           type="button"
           onClick={handleZoomIn}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          className="w-10 h-10 cyber-panel flex items-center justify-center text-cyber-glow hover:bg-cyber-glow/10 transition-colors font-cyber text-lg"
+          disabled={mapLocked}
+          className={`w-10 h-10 cyber-panel flex items-center justify-center transition-colors font-cyber text-lg ${
+            mapLocked 
+              ? 'text-cyber-muted cursor-not-allowed opacity-50' 
+              : 'text-cyber-glow hover:bg-cyber-glow/10'
+          }`}
         >
           +
         </motion.button>
@@ -684,7 +714,12 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
           onClick={handleZoomOut}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          className="w-10 h-10 cyber-panel flex items-center justify-center text-cyber-glow hover:bg-cyber-glow/10 transition-colors font-cyber text-lg"
+          disabled={mapLocked}
+          className={`w-10 h-10 cyber-panel flex items-center justify-center transition-colors font-cyber text-lg ${
+            mapLocked 
+              ? 'text-cyber-muted cursor-not-allowed opacity-50' 
+              : 'text-cyber-glow hover:bg-cyber-glow/10'
+          }`}
         >
           −
         </motion.button>
@@ -698,6 +733,17 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
           ↺
         </motion.button>
       </div>
+      
+      {/* Map lock indicator */}
+      {mapLocked && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute top-4 right-4 px-3 py-1.5 cyber-panel bg-cyber-yellow/10 border-cyber-yellow/30 text-[10px] text-cyber-yellow font-cyber tracking-wider z-10 flex items-center gap-1.5"
+        >
+          🔒 MAP LOCKED
+        </motion.div>
+      )}
       
       {/* Selection indicator */}
       {selection.type !== 'none' && (
