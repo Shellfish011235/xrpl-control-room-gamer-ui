@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe, Skull, User, HeartPulse, Home, Menu, X, TrendingUp, TrendingDown, Brain } from 'lucide-react'
+import { Globe, Skull, User, HeartPulse, Home, Menu, X, TrendingUp, TrendingDown, Brain, Activity } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 // XRP Price Hook - fetches from CoinGecko
@@ -161,6 +161,7 @@ function useLedgerIndex() {
 
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
+  { path: '/terminal', label: 'Terminal', icon: Activity },
   { path: '/world', label: 'World Map', icon: Globe },
   { path: '/underworld', label: 'Underworld', icon: Skull },
   { path: '/memetic-lab', label: 'Memetic Lab', icon: Brain },

@@ -14,9 +14,10 @@ import {
   Activity, Radio, Eye, CircleDot
 } from 'lucide-react';
 import { usePaperTradingStore } from '../store/paperTradingStore';
+import { useWalletStore } from '../store/walletStore';
 
 // Auto-trade icons
-import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List } from 'lucide-react';
+import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink } from 'lucide-react';
 
 // ==================== ALERTS SYSTEM ====================
 
@@ -259,6 +260,14 @@ export function PaperTradingPanel({
   currentPrices = DEFAULT_PRICES 
 }: PaperTradingPanelProps) {
   const store = usePaperTradingStore();
+  const walletStore = useWalletStore();
+  
+  // Live trading state
+  const [isLiveMode, setIsLiveMode] = useState(false);
+  const [showWalletConnect, setShowWalletConnect] = useState(false);
+  const connectedWallets = walletStore?.wallets?.filter(w => w.provider !== 'demo') || [];
+  const activeWallet = walletStore?.wallets?.find(w => w.id === walletStore?.activeWalletId);
+  const hasRealWallet = connectedWallets.length > 0;
   
   // Destructure with fallbacks
   const cashBalance = store?.cashBalance ?? 10000;
@@ -303,6 +312,104 @@ export function PaperTradingPanel({
   
   // Process suggested trades through auto-trader when they arrive
   const [lastProcessedSignals, setLastProcessedSignals] = useState<string>('');
+  
+  // Simulation boost state
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationProgress, setSimulationProgress] = useState(0);
+  
+  // Simulation Boost - generates realistic trading activity to build history
+  const runSimulationBoost = useCallback(async (numTrades: number = 20) => {
+    if (!executeTrade || isSimulating) return;
+    
+    setIsSimulating(true);
+    setSimulationProgress(0);
+    
+    const assets = ['XRP', 'BTC', 'ETH', 'SOL', 'DOGE', 'ADA', 'LINK', 'DOT'];
+    const simulatedPrices = { ...prices };
+    
+    // Simulate a series of trades over "time"
+    for (let i = 0; i < numTrades; i++) {
+      // Simulate price movements (realistic random walk)
+      Object.keys(simulatedPrices).forEach(asset => {
+        const volatility = asset === 'BTC' ? 0.02 : asset === 'ETH' ? 0.025 : 0.04;
+        const change = 1 + (Math.random() - 0.5) * volatility;
+        simulatedPrices[asset] = simulatedPrices[asset] * change;
+      });
+      
+      // Pick a random asset
+      const asset = assets[Math.floor(Math.random() * assets.length)];
+      const price = simulatedPrices[asset];
+      
+      // Determine if we should buy or sell based on "momentum"
+      const momentum = Math.random();
+      const existingPosition = positions.find(p => p.asset === asset);
+      
+      // Trading logic: 60% chance to follow trend, manage positions
+      let action: 'buy' | 'sell';
+      let amount: number;
+      
+      if (existingPosition && existingPosition.quantity > 0) {
+        // We have a position - decide to hold, add, or sell
+        const pnlPercent = ((price - existingPosition.averageCost) / existingPosition.averageCost) * 100;
+        
+        if (pnlPercent > 10 && Math.random() > 0.4) {
+          // Take profit
+          action = 'sell';
+          amount = existingPosition.quantity * (0.3 + Math.random() * 0.7); // Sell 30-100%
+        } else if (pnlPercent < -8 && Math.random() > 0.5) {
+          // Stop loss
+          action = 'sell';
+          amount = existingPosition.quantity;
+        } else if (momentum > 0.6 && cashBalance > price * 10) {
+          // Add to position
+          action = 'buy';
+          amount = (cashBalance * (0.05 + Math.random() * 0.1)) / price;
+        } else {
+          // Skip this iteration
+          setSimulationProgress(Math.round(((i + 1) / numTrades) * 100));
+          await new Promise(r => setTimeout(r, 100));
+          continue;
+        }
+      } else {
+        // No position - consider buying
+        if (momentum > 0.4 && cashBalance > price * 10) {
+          action = 'buy';
+          amount = (cashBalance * (0.05 + Math.random() * 0.15)) / price;
+        } else {
+          // Skip
+          setSimulationProgress(Math.round(((i + 1) / numTrades) * 100));
+          await new Promise(r => setTimeout(r, 100));
+          continue;
+        }
+      }
+      
+      // Execute the trade
+      try {
+        executeTrade({
+          type: action,
+          asset,
+          amount: Math.max(0.01, Math.floor(amount * 100) / 100),
+          price,
+          source: 'auto',
+          notes: `Simulation: ${action === 'buy' ? 'Entry signal' : 'Exit signal'} at $${price.toFixed(4)}`,
+        });
+      } catch (e) {
+        console.warn('[Simulation] Trade failed:', e);
+      }
+      
+      // Update progress
+      setSimulationProgress(Math.round(((i + 1) / numTrades) * 100));
+      
+      // Small delay for visual effect
+      await new Promise(r => setTimeout(r, 150));
+    }
+    
+    // Update display prices to final simulated prices
+    setPrices(prev => ({ ...prev, ...simulatedPrices }));
+    
+    setIsSimulating(false);
+    setSimulationProgress(100);
+  }, [executeTrade, isSimulating, prices, positions, cashBalance]);
   
   useEffect(() => {
     // Skip if auto-trading disabled or no signals
@@ -673,6 +780,209 @@ export function PaperTradingPanel({
         </div>
       </div>
 
+      {/* Live Trading Connect Banner */}
+      <div className={`mb-4 p-3 rounded-lg border transition-all ${
+        isLiveMode 
+          ? 'bg-gradient-to-r from-cyber-green/20 to-cyber-cyan/20 border-cyber-green/50' 
+          : 'bg-gradient-to-r from-cyber-magenta/10 to-cyber-purple/10 border-cyber-magenta/30 hover:border-cyber-magenta/50'
+      }`}>
+        {isLiveMode && activeWallet ? (
+          // Connected - Live Mode Active
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyber-green/30 flex items-center justify-center">
+                <Link2 size={20} className="text-cyber-green" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-cyber text-sm text-cyber-green">LIVE TRADING ACTIVE</h4>
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyber-green opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyber-green"></span>
+                  </span>
+                </div>
+                <p className="text-[10px] text-cyber-muted">
+                  Connected: {activeWallet.label} ({activeWallet.address.slice(0, 8)}...{activeWallet.address.slice(-6)})
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <a 
+                href="https://xrpl.org/dex.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-3 py-1.5 text-[10px] rounded bg-cyber-cyan/20 text-cyber-cyan hover:bg-cyber-cyan/30 border border-cyber-cyan/30 transition-all"
+              >
+                <ExternalLink size={12} />
+                XRPL DEX
+              </a>
+              <button
+                onClick={() => setIsLiveMode(false)}
+                className="flex items-center gap-1 px-3 py-1.5 text-[10px] rounded bg-cyber-darker text-cyber-muted hover:text-cyber-red hover:border-cyber-red/50 border border-cyber-border transition-all"
+              >
+                <Unlink size={12} />
+                Exit Live Mode
+              </button>
+            </div>
+          </div>
+        ) : hasRealWallet ? (
+          // Has wallet but not in live mode
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyber-magenta/30 flex items-center justify-center">
+                <Zap size={20} className="text-cyber-magenta" />
+              </div>
+              <div>
+                <h4 className="font-cyber text-sm text-cyber-text">READY FOR LIVE TRADING</h4>
+                <p className="text-[10px] text-cyber-muted">
+                  {connectedWallets.length} wallet{connectedWallets.length > 1 ? 's' : ''} connected • Switch to trade with real XRP on XRPL DEX
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsLiveMode(true)}
+              className="flex items-center gap-2 px-4 py-2 text-xs rounded bg-gradient-to-r from-cyber-magenta to-cyber-purple text-white font-cyber hover:opacity-90 transition-all shadow-lg shadow-cyber-magenta/20"
+            >
+              <Zap size={14} />
+              GO LIVE
+            </button>
+          </div>
+        ) : (
+          // No wallet connected
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-cyber-magenta/30 flex items-center justify-center animate-pulse">
+                <Wallet size={20} className="text-cyber-magenta" />
+              </div>
+              <div>
+                <h4 className="font-cyber text-sm text-cyber-text">CONNECT WALLET FOR LIVE TRADING</h4>
+                <p className="text-[10px] text-cyber-muted">
+                  Trade real XRP on the XRPL DEX • Requires Xaman or other XRPL wallet
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowWalletConnect(true)}
+              className="flex items-center gap-2 px-4 py-2 text-xs rounded bg-gradient-to-r from-cyber-magenta to-cyber-purple text-white font-cyber hover:opacity-90 transition-all shadow-lg shadow-cyber-magenta/20"
+            >
+              <Link2 size={14} />
+              CONNECT WALLET
+            </button>
+          </div>
+        )}
+        
+        {/* Live mode warning */}
+        {isLiveMode && (
+          <div className="mt-3 pt-3 border-t border-cyber-green/20 flex items-start gap-2">
+            <AlertTriangle size={14} className="text-cyber-yellow shrink-0 mt-0.5" />
+            <p className="text-[9px] text-cyber-yellow">
+              <strong>CAUTION:</strong> Live mode uses real XRP. Trades on the XRPL DEX are irreversible. 
+              Start with small amounts and verify all transactions in your wallet app before signing.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Wallet Connect Modal */}
+      <AnimatePresence>
+        {showWalletConnect && (
+          <motion.div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowWalletConnect(false)}
+          >
+            <motion.div
+              className="cyber-panel cyber-glow w-full max-w-md p-6"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-cyber text-lg text-cyber-glow">CONNECT XRPL WALLET</h3>
+                <button
+                  onClick={() => setShowWalletConnect(false)}
+                  className="p-1 hover:bg-cyber-border/30 rounded"
+                >
+                  <X size={18} className="text-cyber-muted" />
+                </button>
+              </div>
+              
+              <p className="text-sm text-cyber-muted mb-4">
+                Connect your XRPL wallet to trade real XRP on the decentralized exchange.
+              </p>
+              
+              {/* Wallet Options */}
+              <div className="space-y-2 mb-4">
+                <button
+                  onClick={() => {
+                    // Would integrate with Xaman SDK
+                    window.open('https://xaman.app/', '_blank');
+                    setShowWalletConnect(false);
+                  }}
+                  className="w-full p-4 rounded-lg border border-cyber-border bg-cyber-darker hover:border-cyber-cyan/50 hover:bg-cyber-cyan/10 transition-all flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-[#3052FF]/20 flex items-center justify-center text-2xl">
+                    📱
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-medium text-cyber-text">Xaman (XUMM)</p>
+                    <p className="text-[10px] text-cyber-muted">Recommended • Scan QR to sign trades</p>
+                  </div>
+                  <ExternalLink size={16} className="text-cyber-muted" />
+                </button>
+                
+                <button
+                  onClick={() => {
+                    window.open('https://gemwallet.app/', '_blank');
+                    setShowWalletConnect(false);
+                  }}
+                  className="w-full p-4 rounded-lg border border-cyber-border bg-cyber-darker hover:border-cyber-purple/50 hover:bg-cyber-purple/10 transition-all flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-cyber-purple/20 flex items-center justify-center text-2xl">
+                    💎
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-medium text-cyber-text">GemWallet</p>
+                    <p className="text-[10px] text-cyber-muted">Browser extension for XRPL</p>
+                  </div>
+                  <ExternalLink size={16} className="text-cyber-muted" />
+                </button>
+                
+                <button
+                  onClick={() => {
+                    window.open('https://crossmark.io/', '_blank');
+                    setShowWalletConnect(false);
+                  }}
+                  className="w-full p-4 rounded-lg border border-cyber-border bg-cyber-darker hover:border-cyber-green/50 hover:bg-cyber-green/10 transition-all flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 rounded-lg bg-cyber-green/20 flex items-center justify-center text-2xl">
+                    ✖️
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-medium text-cyber-text">Crossmark</p>
+                    <p className="text-[10px] text-cyber-muted">Browser extension wallet</p>
+                  </div>
+                  <ExternalLink size={16} className="text-cyber-muted" />
+                </button>
+              </div>
+              
+              <div className="p-3 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-cyber-yellow shrink-0 mt-0.5" />
+                  <div className="text-[10px] text-cyber-yellow">
+                    <strong>Security Note:</strong> Never share your secret key. 
+                    All transactions require wallet approval. This app never has access to your funds.
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Portfolio Summary */}
       <div 
         id="portfolio-summary"
@@ -686,6 +996,9 @@ export function PaperTradingPanel({
             {totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
           <p className="text-[9px] text-cyber-muted">XRP</p>
+          <p className="text-[10px] text-cyber-yellow mt-1">
+            ≈ ${(totalValue * (prices['XRP'] || 2.45)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </p>
         </div>
         <div className="p-2 rounded bg-cyber-darker border border-cyber-border/50 text-center">
           <p className="text-[9px] text-cyber-muted mb-1">AVAILABLE CASH</p>
@@ -693,6 +1006,9 @@ export function PaperTradingPanel({
             {cashBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
           <p className="text-[9px] text-cyber-muted">XRP</p>
+          <p className="text-[10px] text-cyber-yellow mt-1">
+            ≈ ${(cashBalance * (prices['XRP'] || 2.45)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </p>
         </div>
         <div className={`p-2 rounded border text-center ${
           totalPnL >= 0 
@@ -712,6 +1028,9 @@ export function PaperTradingPanel({
           </div>
           <p className={`text-[9px] ${totalPnL >= 0 ? 'text-cyber-green' : 'text-cyber-red'}`}>
             {totalPnL >= 0 ? '+' : ''}{totalPnL.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRP
+          </p>
+          <p className={`text-[10px] ${totalPnL >= 0 ? 'text-cyber-green/70' : 'text-cyber-red/70'}`}>
+            ≈ ${Math.abs(totalPnL * (prices['XRP'] || 2.45)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
         </div>
       </div>
@@ -1738,17 +2057,93 @@ export function PaperTradingPanel({
               )}
             </div>
             
+            {/* Simulation Boost */}
+            <div className="p-4 rounded bg-gradient-to-r from-cyber-magenta/10 to-cyber-purple/10 border border-cyber-magenta/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-cyber-magenta/30">
+                    <Zap size={20} className="text-cyber-magenta" />
+                  </div>
+                  <div>
+                    <h4 className="font-cyber text-sm text-cyber-text">SIMULATION BOOST</h4>
+                    <p className="text-[9px] text-cyber-muted">
+                      Generate trading history to train the auto-trader
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              {isSimulating ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-cyber-magenta">Simulating trades...</span>
+                    <span className="text-cyber-text font-cyber">{simulationProgress}%</span>
+                  </div>
+                  <div className="h-2 rounded-full bg-cyber-darker overflow-hidden">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-cyber-magenta to-cyber-purple"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${simulationProgress}%` }}
+                      transition={{ duration: 0.3 }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => runSimulationBoost(10)}
+                    className="p-2 rounded bg-cyber-darker border border-cyber-magenta/30 hover:border-cyber-magenta hover:bg-cyber-magenta/20 transition-all text-center group"
+                  >
+                    <Zap size={16} className="mx-auto mb-1 text-cyber-magenta group-hover:animate-pulse" />
+                    <p className="text-[10px] font-cyber text-cyber-text">Quick</p>
+                    <p className="text-[8px] text-cyber-muted">10 trades</p>
+                  </button>
+                  <button
+                    onClick={() => runSimulationBoost(25)}
+                    className="p-2 rounded bg-cyber-darker border border-cyber-purple/30 hover:border-cyber-purple hover:bg-cyber-purple/20 transition-all text-center group"
+                  >
+                    <Activity size={16} className="mx-auto mb-1 text-cyber-purple group-hover:animate-pulse" />
+                    <p className="text-[10px] font-cyber text-cyber-text">Medium</p>
+                    <p className="text-[8px] text-cyber-muted">25 trades</p>
+                  </button>
+                  <button
+                    onClick={() => runSimulationBoost(50)}
+                    className="p-2 rounded bg-cyber-darker border border-cyber-cyan/30 hover:border-cyber-cyan hover:bg-cyber-cyan/20 transition-all text-center group"
+                  >
+                    <TrendingUp size={16} className="mx-auto mb-1 text-cyber-cyan group-hover:animate-pulse" />
+                    <p className="text-[10px] font-cyber text-cyber-text">Full</p>
+                    <p className="text-[8px] text-cyber-muted">50 trades</p>
+                  </button>
+                </div>
+              )}
+              
+              <p className="text-[8px] text-cyber-muted mt-2 text-center">
+                Simulates realistic market conditions with price movements
+              </p>
+            </div>
+            
             {/* Strategy Selector */}
             <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/30">
-              <div className="flex items-center gap-2 mb-3">
-                <Settings2 size={14} className="text-cyber-purple" />
-                <span className="text-xs text-cyber-text font-medium">TRADING STRATEGY</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Settings2 size={14} className="text-cyber-purple" />
+                  <span className="text-xs text-cyber-text font-medium">TRADING STRATEGY</span>
+                </div>
+                <span className="text-[8px] text-cyber-muted">Click to apply preset defaults</span>
               </div>
               
               <div className="grid grid-cols-3 gap-2">
                 {/* Conservative */}
                 <button
-                  onClick={() => setAutoTradeSettings?.({ strategy: 'conservative' })}
+                  onClick={() => setAutoTradeSettings?.({ 
+                    strategy: 'conservative',
+                    minConfidence: 85,
+                    maxTradePercent: 5,
+                    takeProfitPercent: 10,
+                    stopLossPercent: 5,
+                    maxDailyTrades: 5,
+                    cooldownMinutes: 15
+                  })}
                   className={`p-3 rounded border transition-all text-center ${
                     autoTradeSettings?.strategy === 'conservative'
                       ? 'bg-cyber-cyan/20 border-cyber-cyan text-cyber-cyan shadow-lg shadow-cyber-cyan/20'
@@ -1757,12 +2152,20 @@ export function PaperTradingPanel({
                 >
                   <Shield size={18} className="mx-auto mb-1" />
                   <p className="text-[10px] font-medium">Conservative</p>
-                  <p className="text-[8px] opacity-70 mt-1">Low risk</p>
+                  <p className="text-[8px] opacity-70 mt-1">Low risk, small trades</p>
                 </button>
                 
                 {/* Moderate */}
                 <button
-                  onClick={() => setAutoTradeSettings?.({ strategy: 'moderate' })}
+                  onClick={() => setAutoTradeSettings?.({ 
+                    strategy: 'moderate',
+                    minConfidence: 70,
+                    maxTradePercent: 10,
+                    takeProfitPercent: 15,
+                    stopLossPercent: 10,
+                    maxDailyTrades: 10,
+                    cooldownMinutes: 5
+                  })}
                   className={`p-3 rounded border transition-all text-center ${
                     autoTradeSettings?.strategy === 'moderate'
                       ? 'bg-cyber-yellow/20 border-cyber-yellow text-cyber-yellow shadow-lg shadow-cyber-yellow/20'
@@ -1771,12 +2174,20 @@ export function PaperTradingPanel({
                 >
                   <Gauge size={18} className="mx-auto mb-1" />
                   <p className="text-[10px] font-medium">Moderate</p>
-                  <p className="text-[8px] opacity-70 mt-1">Balanced</p>
+                  <p className="text-[8px] opacity-70 mt-1">Balanced risk/reward</p>
                 </button>
                 
                 {/* Aggressive */}
                 <button
-                  onClick={() => setAutoTradeSettings?.({ strategy: 'aggressive' })}
+                  onClick={() => setAutoTradeSettings?.({ 
+                    strategy: 'aggressive',
+                    minConfidence: 55,
+                    maxTradePercent: 20,
+                    takeProfitPercent: 25,
+                    stopLossPercent: 15,
+                    maxDailyTrades: 20,
+                    cooldownMinutes: 2
+                  })}
                   className={`p-3 rounded border transition-all text-center ${
                     autoTradeSettings?.strategy === 'aggressive'
                       ? 'bg-cyber-red/20 border-cyber-red text-cyber-red shadow-lg shadow-cyber-red/20'
@@ -1785,16 +2196,40 @@ export function PaperTradingPanel({
                 >
                   <Flame size={18} className="mx-auto mb-1" />
                   <p className="text-[10px] font-medium">Aggressive</p>
-                  <p className="text-[8px] opacity-70 mt-1">High risk</p>
+                  <p className="text-[8px] opacity-70 mt-1">High risk, big trades</p>
                 </button>
+              </div>
+              
+              {/* Strategy Summary */}
+              <div className="mt-3 p-2 rounded bg-cyber-darker/80 border border-cyber-border/20">
+                <div className="grid grid-cols-3 gap-2 text-[8px] text-center">
+                  <div>
+                    <p className="text-cyber-muted">CONSERVATIVE</p>
+                    <p className="text-cyber-cyan">85% conf, 5% size</p>
+                    <p className="text-cyber-cyan">TP +10% / SL -5%</p>
+                  </div>
+                  <div>
+                    <p className="text-cyber-muted">MODERATE</p>
+                    <p className="text-cyber-yellow">70% conf, 10% size</p>
+                    <p className="text-cyber-yellow">TP +15% / SL -10%</p>
+                  </div>
+                  <div>
+                    <p className="text-cyber-muted">AGGRESSIVE</p>
+                    <p className="text-cyber-red">55% conf, 20% size</p>
+                    <p className="text-cyber-red">TP +25% / SL -15%</p>
+                  </div>
+                </div>
               </div>
             </div>
             
             {/* Configuration */}
             <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/30">
-              <div className="flex items-center gap-2 mb-3">
-                <Gauge size={14} className="text-cyber-cyan" />
-                <span className="text-xs text-cyber-text font-medium">CONFIGURATION</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Gauge size={14} className="text-cyber-cyan" />
+                  <span className="text-xs text-cyber-text font-medium">FINE-TUNE SETTINGS</span>
+                </div>
+                <span className="text-[8px] text-cyber-muted italic">Adjust after selecting strategy</span>
               </div>
               
               <div className="space-y-3">

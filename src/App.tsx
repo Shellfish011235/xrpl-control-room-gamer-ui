@@ -8,6 +8,7 @@ import Underworld from './pages/Underworld'
 import Character from './pages/Character'
 import Clinic from './pages/Clinic'
 import MemeticLab from './pages/MemeticLab'
+import Terminal from './pages/Terminal'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ function App() {
                 <Route path="/character" element={<Character />} />
                 <Route path="/clinic" element={<Clinic />} />
                 <Route path="/memetic-lab" element={<MemeticLab />} />
+                <Route path="/terminal" element={<Terminal />} />
               </Routes>
             </AnimatePresence>
           </main>
