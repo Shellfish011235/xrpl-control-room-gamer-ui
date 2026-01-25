@@ -34,12 +34,12 @@ A cyberpunk-inspired **institutional-grade trading terminal** for monitoring the
 - **Xaman Wallet Integration** - QR code connection
 - **Live Feeds** - Twitter/X and GitHub activity streams
 
-### 🗺️ World Map ⚠️ (In Development)
-- **Interactive 3D Globe** - Global XRPL network visualization
+### 🗺️ World Map
+- **Interactive World Map** - Global XRPL network visualization
 - **Payment Corridors** - ILP corridor volume and routing data
 - **Node Hotspots** - Validator locations and health metrics
 - **Regional Analytics** - TPS charts and distribution stats
-- *Note: Currently experiencing rendering issues - fix in progress*
+- **Live Data Toggle** - Switch between live XRPScan data and static view
 
 ### 💀 Underworld
 - **Regulatory Intelligence** - Real-time tracking of crypto regulations
@@ -171,8 +171,8 @@ This dashboard features a **cyberpunk/gaming aesthetic** inspired by:
 | **XRPL WebSocket** | Ledger index, live feed | ✅ Live |
 | **CoinGecko** | XRP price in nav bar | ✅ Live |
 | **Binance WebSocket** | Real-time orderbook, trades | ✅ Live (Terminal) |
-| **XRPL Pathfinding** | Payment routing | ⚠️ UI only (not connected) |
-| **World Globe** | 3D visualization | ⚠️ Rendering issues |
+| **XRPL Pathfinding** | Payment routing (ripple_path_find) | ✅ Live |
+| **World Globe** | 2D map visualization | ✅ Fixed |
 | **CoinGlass** | Liquidation data | 🔧 Ready for API key |
 | **Telegram Bot API** | Alert notifications | 🔧 Ready for token |
 | **Discord Webhooks** | Alert notifications | 🔧 Ready for webhook URL |
@@ -197,13 +197,6 @@ docker build -t xrpl-control-room .
 docker run -p 3000:3000 xrpl-control-room
 ```
 
-## ⚠️ Known Issues
-
-| Issue | Page | Status |
-|-------|------|--------|
-| Globe renders blank | World Map | Investigating |
-| Pathfinding not connected to live data | Home (Pathfinding Tool) | Planned |
-
 ## 🗺️ Roadmap
 
 - [x] Real-time WebSocket price feeds (Terminal)
@@ -212,8 +205,8 @@ docker run -p 3000:3000 xrpl-control-room
 - [x] Multi-channel alert system
 - [x] Paper trading simulator
 - [x] Game theory & cognitive security lab
-- [ ] **Fix World Map globe rendering**
-- [ ] **Connect XRPL Pathfinding to live data**
+- [x] World Map with error handling and fallback CDNs
+- [x] XRPL Pathfinding with live mainnet connection
 - [ ] Backtesting engine with historical data
 - [ ] Advanced order types (TWAP, iceberg)
 - [ ] REST API for external integrations

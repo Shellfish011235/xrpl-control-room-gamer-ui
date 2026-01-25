@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -49,8 +49,15 @@ interface GeoFeature {
   geometry: object;
 }
 
-// World topology - using a CDN for the world map
-const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+// World topology - multiple CDN sources for fallback
+const GEO_URLS = [
+  'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+  'https://unpkg.com/world-atlas@2.0.2/countries-110m.json',
+  'https://raw.githubusercontent.com/topojson/world-atlas/master/countries-110m.json',
+];
+
+// Default to first URL
+const geoUrl = GEO_URLS[0];
 
 // Hub type colors - CYBERPUNK PALETTE
 const hubTypeColors: Record<GlobeHub['type'], string> = {
@@ -106,6 +113,52 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
   const [hoveredConnector, setHoveredConnector] = useState<ILPConnectorInstance | null>(null);
   const [hoveredPaymentCorridor, setHoveredPaymentCorridor] = useState<PaymentCorridor | null>(null);
   const [hoveredODLPartner, setHoveredODLPartner] = useState<ODLPartner | null>(null);
+  
+  // Geography loading state
+  const [geoLoading, setGeoLoading] = useState(true);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [currentGeoUrl, setCurrentGeoUrl] = useState(GEO_URLS[0]);
+  const [geoUrlIndex, setGeoUrlIndex] = useState(0);
+
+  // Pre-fetch and validate geography data
+  useEffect(() => {
+    const testGeoUrl = async (url: string): Promise<boolean> => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) return false;
+        const data = await response.json();
+        // Check if it's valid TopoJSON
+        return data && data.type === 'Topology' && data.objects;
+      } catch {
+        return false;
+      }
+    };
+
+    const findWorkingUrl = async () => {
+      setGeoLoading(true);
+      setGeoError(null);
+      
+      for (let i = 0; i < GEO_URLS.length; i++) {
+        const url = GEO_URLS[i];
+        console.log(`[WorldGlobe] Trying geo source ${i + 1}/${GEO_URLS.length}: ${url}`);
+        const isValid = await testGeoUrl(url);
+        if (isValid) {
+          console.log(`[WorldGlobe] Using geo source: ${url}`);
+          setCurrentGeoUrl(url);
+          setGeoUrlIndex(i);
+          setGeoLoading(false);
+          return;
+        }
+      }
+      
+      // All sources failed
+      console.error('[WorldGlobe] All geography sources failed');
+      setGeoError('Unable to load map data. Please check your internet connection.');
+      setGeoLoading(false);
+    };
+
+    findWorkingUrl();
+  }, []);
   
   const hubs = useMemo(() => getHubs(), []);
   const corridors = useMemo(() => getCorridors(), []);
@@ -255,6 +308,46 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
     clearSelection();
   }, [clearSelection]);
   
+  // Show loading state
+  if (geoLoading) {
+    return (
+      <div 
+        className={clsx('relative w-full h-full rounded-lg overflow-hidden flex items-center justify-center', className)}
+        style={{ backgroundColor: '#050810' }}
+      >
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-cyber-glow/30 border-t-cyber-glow rounded-full animate-spin mx-auto mb-4" />
+          <p className="font-cyber text-cyber-glow text-sm">LOADING MAP DATA...</p>
+          <p className="text-cyber-muted text-xs mt-2">Connecting to geography server</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (geoError) {
+    return (
+      <div 
+        className={clsx('relative w-full h-full rounded-lg overflow-hidden flex items-center justify-center', className)}
+        style={{ backgroundColor: '#050810' }}
+      >
+        <div className="text-center cyber-panel p-6 max-w-md">
+          <div className="w-16 h-16 rounded-full bg-cyber-red/20 border border-cyber-red/50 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <p className="font-cyber text-cyber-red text-sm mb-2">MAP LOAD FAILED</p>
+          <p className="text-cyber-muted text-xs mb-4">{geoError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 rounded bg-cyber-glow/20 border border-cyber-glow/50 text-cyber-glow text-xs font-cyber hover:bg-cyber-glow/30 transition-all"
+          >
+            RETRY
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       className={clsx('relative w-full h-full rounded-lg overflow-hidden', className)}
@@ -293,7 +386,7 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
           filterZoomEvent={() => !mapLocked}
         >
           {/* Countries */}
-          <Geographies geography={geoUrl}>
+          <Geographies geography={currentGeoUrl}>
             {({ geographies }: { geographies: GeoFeature[] }) =>
               geographies.map((geo: GeoFeature) => (
                 <Geography

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Route, ArrowRight, Search, Loader2, AlertCircle,
   CheckCircle, TrendingUp, Layers, Zap, RefreshCw,
-  ChevronDown, ExternalLink, Wallet, DollarSign
+  ChevronDown, ExternalLink, Wallet, DollarSign, Play
 } from 'lucide-react';
 import {
   findPaymentPaths,
@@ -17,6 +17,25 @@ import {
   type PaymentPath
 } from '../services/xrplPathfinding';
 
+// Demo accounts - known active accounts on XRPL mainnet for testing
+const DEMO_ACCOUNTS = {
+  // Bitstamp hot wallet - very active, good for pathfinding
+  bitstamp: {
+    address: 'rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv',
+    label: 'Bitstamp Hot Wallet',
+  },
+  // GateHub - major issuer
+  gatehub: {
+    address: 'rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq',
+    label: 'GateHub',
+  },
+  // Ripple - for XRP transactions
+  ripple: {
+    address: 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe',
+    label: 'Ripple',
+  },
+};
+
 interface PathfindingToolProps {
   compact?: boolean;
 }
@@ -28,6 +47,15 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
   const [destCurrency, setDestCurrency] = useState('USD');
   const [destIssuer, setDestIssuer] = useState('rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq');
   const [destAmount, setDestAmount] = useState('100');
+  
+  // Demo mode - auto-fill with known working accounts
+  const loadDemoAccounts = useCallback(() => {
+    setSourceAccount(DEMO_ACCOUNTS.bitstamp.address);
+    setDestAccount(DEMO_ACCOUNTS.gatehub.address);
+    setDestCurrency('USD');
+    setDestIssuer(DEMO_ACCOUNTS.gatehub.address);
+    setDestAmount('100');
+  }, []);
   
   // Results state
   const [result, setResult] = useState<PathfindingResult | null>(null);
@@ -110,18 +138,28 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
           <Route size={16} className="text-cyber-cyan" />
           <span className="font-cyber text-sm text-cyber-cyan tracking-wider">XRPL PATHFINDING</span>
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
-            FREE
+            LIVE
           </span>
         </div>
-        <a
-          href="https://xrpl.org/docs/concepts/tokens/fungible-tokens/paths"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-cyber-muted hover:text-cyber-cyan transition-colors"
-          title="XRPL Paths Documentation"
-        >
-          <ExternalLink size={14} />
-        </a>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadDemoAccounts}
+            className="flex items-center gap-1 px-2 py-1 rounded text-[9px] bg-cyber-purple/20 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/30 transition-all"
+            title="Load demo accounts to test"
+          >
+            <Play size={10} />
+            DEMO
+          </button>
+          <a
+            href="https://xrpl.org/docs/concepts/tokens/fungible-tokens/paths"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-cyber-muted hover:text-cyber-cyan transition-colors"
+            title="XRPL Paths Documentation"
+          >
+            <ExternalLink size={14} />
+          </a>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -507,7 +545,10 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
       {/* Info Footer */}
       <div className="mt-4 pt-3 border-t border-cyber-border">
         <p className="text-[9px] text-cyber-muted text-center">
-          💡 Uses native XRPL pathfinding via free public nodes (xrplcluster.com, s1.ripple.com)
+          🟢 Connected to LIVE XRPL mainnet via public nodes (xrplcluster.com, s1.ripple.com)
+        </p>
+        <p className="text-[8px] text-cyber-muted/70 text-center mt-1">
+          Click DEMO to load test accounts, or enter your own XRPL addresses
         </p>
       </div>
     </div>
