@@ -9,51 +9,75 @@ import {
 } from 'lucide-react';
 import { useOrderBook, type OrderBook } from '../../services/websocketPriceFeeds';
 
-// Generate simulated order book when WebSocket fails
-function generateSimulatedOrderBook(symbol: string, basePrice: number): OrderBook {
-  const bids: { price: number; size: number; total: number }[] = [];
-  const asks: { price: number; size: number; total: number }[] = [];
-  
-  let bidTotal = 0;
-  let askTotal = 0;
-  
-  // Generate 20 levels each side
-  for (let i = 0; i < 20; i++) {
-    const bidPrice = basePrice * (1 - 0.0001 * (i + 1) - Math.random() * 0.0001);
-    const askPrice = basePrice * (1 + 0.0001 * (i + 1) + Math.random() * 0.0001);
-    const bidSize = Math.random() * 100 + 10;
-    const askSize = Math.random() * 100 + 10;
-    
-    bidTotal += bidSize;
-    askTotal += askSize;
-    
-    bids.push({ price: bidPrice, size: bidSize, total: bidTotal });
-    asks.push({ price: askPrice, size: askSize, total: askTotal });
-  }
-  
-  const bestBid = bids[0]?.price || basePrice * 0.999;
-  const bestAsk = asks[0]?.price || basePrice * 1.001;
-  
-  return {
-    symbol,
-    exchange: 'simulated',
-    bids,
-    asks,
-    timestamp: Date.now(),
-    spread: bestAsk - bestBid,
-    midPrice: (bestBid + bestAsk) / 2,
-    imbalance: (bidTotal - askTotal) / (bidTotal + askTotal),
-  };
-}
-
-// Base prices for different symbols
-const BASE_PRICES: Record<string, number> = {
-  'XRP': 2.45,
-  'BTC': 98500,
-  'ETH': 3850,
-  'SOL': 245,
-  'DOGE': 0.42,
+// Symbol mapping for Binance
+const BINANCE_SYMBOLS: Record<string, string> = {
+  'XRP': 'XRPUSDT',
+  'BTC': 'BTCUSDT',
+  'ETH': 'ETHUSDT',
+  'SOL': 'SOLUSDT',
+  'DOGE': 'DOGEUSDT',
 };
+
+// Fetch order book from Binance REST API (fallback when WebSocket fails)
+async function fetchOrderBookFromREST(symbol: string): Promise<OrderBook | null> {
+  const binanceSymbol = BINANCE_SYMBOLS[symbol];
+  if (!binanceSymbol) return null;
+  
+  try {
+    const response = await fetch(
+      `https://api.binance.com/api/v3/depth?symbol=${binanceSymbol}&limit=20`
+    );
+    
+    if (!response.ok) throw new Error('Binance API error');
+    
+    const data = await response.json();
+    
+    const bids: { price: number; size: number; total: number }[] = [];
+    const asks: { price: number; size: number; total: number }[] = [];
+    
+    let bidTotal = 0;
+    let askTotal = 0;
+    
+    // Process bids
+    for (const [price, size] of data.bids || []) {
+      const p = parseFloat(price);
+      const s = parseFloat(size);
+      bidTotal += s;
+      bids.push({ price: p, size: s, total: bidTotal });
+    }
+    
+    // Process asks
+    for (const [price, size] of data.asks || []) {
+      const p = parseFloat(price);
+      const s = parseFloat(size);
+      askTotal += s;
+      asks.push({ price: p, size: s, total: askTotal });
+    }
+    
+    const bestBid = bids[0]?.price || 0;
+    const bestAsk = asks[0]?.price || 0;
+    const midPrice = (bestBid + bestAsk) / 2;
+    const spread = bestAsk - bestBid;
+    
+    const totalBidVolume = bids.reduce((sum, b) => sum + b.size * b.price, 0);
+    const totalAskVolume = asks.reduce((sum, a) => sum + a.size * a.price, 0);
+    const imbalance = (totalBidVolume - totalAskVolume) / (totalBidVolume + totalAskVolume);
+    
+    return {
+      symbol,
+      exchange: 'binance',
+      bids,
+      asks,
+      timestamp: Date.now(),
+      spread,
+      midPrice,
+      imbalance,
+    };
+  } catch (error) {
+    console.error('[OrderBook] REST API error:', error);
+    return null;
+  }
+}
 
 interface OrderBookDepthProps {
   symbol: string;
@@ -64,45 +88,65 @@ interface OrderBookDepthProps {
 export function OrderBookDepth({ symbol, maxLevels = 15, compact = false }: OrderBookDepthProps) {
   const liveOrderBook = useOrderBook(symbol);
   const [viewMode, setViewMode] = useState<'book' | 'depth'>('book');
-  const [connectionTimeout, setConnectionTimeout] = useState(false);
-  const [simulatedBook, setSimulatedBook] = useState<OrderBook | null>(null);
+  const [restOrderBook, setRestOrderBook] = useState<OrderBook | null>(null);
+  const [isLoadingRest, setIsLoadingRest] = useState(false);
+  const [dataSource, setDataSource] = useState<'websocket' | 'rest' | 'none'>('none');
   
-  // Set up connection timeout and simulated data
+  // If WebSocket doesn't connect within 3 seconds, try REST API
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (!liveOrderBook) {
-        setConnectionTimeout(true);
-        // Generate simulated order book
-        const basePrice = BASE_PRICES[symbol] || 100;
-        setSimulatedBook(generateSimulatedOrderBook(symbol, basePrice));
-      }
-    }, 5000); // 5 second timeout
+    let cancelled = false;
     
-    return () => clearTimeout(timeout);
+    const timeout = setTimeout(async () => {
+      if (!liveOrderBook && !cancelled) {
+        setIsLoadingRest(true);
+        const data = await fetchOrderBookFromREST(symbol);
+        if (!cancelled && data) {
+          setRestOrderBook(data);
+          setDataSource('rest');
+        }
+        setIsLoadingRest(false);
+      }
+    }, 3000);
+    
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
   }, [liveOrderBook, symbol]);
   
-  // Update simulated data periodically if not connected
+  // Poll REST API every 2 seconds if using REST fallback
   useEffect(() => {
-    if (connectionTimeout && !liveOrderBook) {
-      const interval = setInterval(() => {
-        const basePrice = BASE_PRICES[symbol] || 100;
-        setSimulatedBook(generateSimulatedOrderBook(symbol, basePrice));
+    if (dataSource === 'rest' && !liveOrderBook) {
+      const interval = setInterval(async () => {
+        const data = await fetchOrderBookFromREST(symbol);
+        if (data) setRestOrderBook(data);
       }, 2000);
       
       return () => clearInterval(interval);
     }
-  }, [connectionTimeout, liveOrderBook, symbol]);
+  }, [dataSource, liveOrderBook, symbol]);
   
-  // Use live data if available, otherwise simulated
-  const orderBook = liveOrderBook || simulatedBook;
-  const isSimulated = !liveOrderBook && !!simulatedBook;
+  // Detect when WebSocket connects
+  useEffect(() => {
+    if (liveOrderBook) {
+      setDataSource('websocket');
+    }
+  }, [liveOrderBook]);
+  
+  // Use WebSocket data if available, otherwise REST API data
+  const orderBook = liveOrderBook || restOrderBook;
+  const isLive = dataSource === 'websocket' || dataSource === 'rest';
   
   if (!orderBook) {
     return (
       <div className="cyber-panel p-4 flex flex-col items-center justify-center min-h-[300px]">
         <RefreshCw className="w-6 h-6 text-cyber-cyan animate-spin mb-2" />
-        <span className="text-cyber-muted text-sm">Connecting to order book...</span>
-        <span className="text-cyber-muted/50 text-xs mt-1">Binance WebSocket</span>
+        <span className="text-cyber-muted text-sm">
+          {isLoadingRest ? 'Fetching from Binance API...' : 'Connecting to Binance...'}
+        </span>
+        <span className="text-cyber-muted/50 text-xs mt-1">
+          {isLoadingRest ? 'REST API fallback' : 'WebSocket → REST fallback'}
+        </span>
       </div>
     );
   }
@@ -132,15 +176,15 @@ export function OrderBookDepth({ symbol, maxLevels = 15, compact = false }: Orde
           <span className="font-cyber text-sm text-cyber-cyan">ORDER BOOK</span>
           <span className="text-xs text-cyber-muted ml-2">{symbol}</span>
           {/* Connection Status Indicator */}
-          {isSimulated ? (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30">
-              <WifiOff size={10} />
-              SIMULATED
-            </span>
-          ) : (
+          {isLive ? (
             <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
               <Wifi size={10} />
-              LIVE
+              LIVE {dataSource === 'rest' ? '(API)' : '(WS)'}
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30">
+              <WifiOff size={10} />
+              CONNECTING...
             </span>
           )}
         </div>

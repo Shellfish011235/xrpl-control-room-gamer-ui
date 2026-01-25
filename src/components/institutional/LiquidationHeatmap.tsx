@@ -63,9 +63,15 @@ export function LiquidationHeatmap({ symbol, currentPrice, compact = false }: Li
           <Flame className="w-5 h-5 text-cyber-orange" />
           <span className="font-cyber text-sm text-cyber-orange">LIQUIDATION HEATMAP</span>
           <span className="text-xs text-cyber-muted ml-2">{symbol}</span>
-          <span className="px-2 py-0.5 rounded text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30">
-            SIMULATED
-          </span>
+          {data.heatmap.source === 'binance' ? (
+            <span className="px-2 py-0.5 rounded text-[9px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
+              LIVE (BINANCE)
+            </span>
+          ) : (
+            <span className="px-2 py-0.5 rounded text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30">
+              ESTIMATED
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
