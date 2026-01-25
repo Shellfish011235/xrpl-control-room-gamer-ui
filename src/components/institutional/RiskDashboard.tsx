@@ -73,6 +73,9 @@ export function RiskDashboard({ compact = false }: RiskDashboardProps) {
         <div className="flex items-center gap-2">
           <Shield className="w-5 h-5 text-cyber-purple" />
           <span className="font-cyber text-sm text-cyber-purple">RISK DASHBOARD</span>
+          <span className="px-2 py-0.5 rounded text-[9px] bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/30">
+            PAPER TRADING
+          </span>
         </div>
         <div className="flex items-center gap-1">
           {['metrics', 'stress', 'sizing'].map((tab) => (

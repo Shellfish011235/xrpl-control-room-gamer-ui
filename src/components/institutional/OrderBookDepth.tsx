@@ -1,13 +1,59 @@
 // Order Book Depth Component
 // Real-time order book visualization with depth chart
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   BarChart3, TrendingUp, TrendingDown, Activity,
-  RefreshCw, Layers, ArrowUpRight, ArrowDownRight
+  RefreshCw, Layers, ArrowUpRight, ArrowDownRight, AlertCircle, Wifi, WifiOff
 } from 'lucide-react';
 import { useOrderBook, type OrderBook } from '../../services/websocketPriceFeeds';
+
+// Generate simulated order book when WebSocket fails
+function generateSimulatedOrderBook(symbol: string, basePrice: number): OrderBook {
+  const bids: { price: number; size: number; total: number }[] = [];
+  const asks: { price: number; size: number; total: number }[] = [];
+  
+  let bidTotal = 0;
+  let askTotal = 0;
+  
+  // Generate 20 levels each side
+  for (let i = 0; i < 20; i++) {
+    const bidPrice = basePrice * (1 - 0.0001 * (i + 1) - Math.random() * 0.0001);
+    const askPrice = basePrice * (1 + 0.0001 * (i + 1) + Math.random() * 0.0001);
+    const bidSize = Math.random() * 100 + 10;
+    const askSize = Math.random() * 100 + 10;
+    
+    bidTotal += bidSize;
+    askTotal += askSize;
+    
+    bids.push({ price: bidPrice, size: bidSize, total: bidTotal });
+    asks.push({ price: askPrice, size: askSize, total: askTotal });
+  }
+  
+  const bestBid = bids[0]?.price || basePrice * 0.999;
+  const bestAsk = asks[0]?.price || basePrice * 1.001;
+  
+  return {
+    symbol,
+    exchange: 'simulated',
+    bids,
+    asks,
+    timestamp: Date.now(),
+    spread: bestAsk - bestBid,
+    midPrice: (bestBid + bestAsk) / 2,
+    imbalance: (bidTotal - askTotal) / (bidTotal + askTotal),
+  };
+}
+
+// Base prices for different symbols
+const BASE_PRICES: Record<string, number> = {
+  'XRP': 2.45,
+  'BTC': 98500,
+  'ETH': 3850,
+  'SOL': 245,
+  'DOGE': 0.42,
+};
 
 interface OrderBookDepthProps {
   symbol: string;
@@ -16,14 +62,47 @@ interface OrderBookDepthProps {
 }
 
 export function OrderBookDepth({ symbol, maxLevels = 15, compact = false }: OrderBookDepthProps) {
-  const orderBook = useOrderBook(symbol);
+  const liveOrderBook = useOrderBook(symbol);
   const [viewMode, setViewMode] = useState<'book' | 'depth'>('book');
+  const [connectionTimeout, setConnectionTimeout] = useState(false);
+  const [simulatedBook, setSimulatedBook] = useState<OrderBook | null>(null);
+  
+  // Set up connection timeout and simulated data
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!liveOrderBook) {
+        setConnectionTimeout(true);
+        // Generate simulated order book
+        const basePrice = BASE_PRICES[symbol] || 100;
+        setSimulatedBook(generateSimulatedOrderBook(symbol, basePrice));
+      }
+    }, 5000); // 5 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [liveOrderBook, symbol]);
+  
+  // Update simulated data periodically if not connected
+  useEffect(() => {
+    if (connectionTimeout && !liveOrderBook) {
+      const interval = setInterval(() => {
+        const basePrice = BASE_PRICES[symbol] || 100;
+        setSimulatedBook(generateSimulatedOrderBook(symbol, basePrice));
+      }, 2000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [connectionTimeout, liveOrderBook, symbol]);
+  
+  // Use live data if available, otherwise simulated
+  const orderBook = liveOrderBook || simulatedBook;
+  const isSimulated = !liveOrderBook && !!simulatedBook;
   
   if (!orderBook) {
     return (
-      <div className="cyber-panel p-4 flex items-center justify-center min-h-[300px]">
-        <RefreshCw className="w-6 h-6 text-cyber-cyan animate-spin" />
-        <span className="ml-2 text-cyber-muted">Connecting to order book...</span>
+      <div className="cyber-panel p-4 flex flex-col items-center justify-center min-h-[300px]">
+        <RefreshCw className="w-6 h-6 text-cyber-cyan animate-spin mb-2" />
+        <span className="text-cyber-muted text-sm">Connecting to order book...</span>
+        <span className="text-cyber-muted/50 text-xs mt-1">Binance WebSocket</span>
       </div>
     );
   }
@@ -52,6 +131,18 @@ export function OrderBookDepth({ symbol, maxLevels = 15, compact = false }: Orde
           <Layers className="w-5 h-5 text-cyber-cyan" />
           <span className="font-cyber text-sm text-cyber-cyan">ORDER BOOK</span>
           <span className="text-xs text-cyber-muted ml-2">{symbol}</span>
+          {/* Connection Status Indicator */}
+          {isSimulated ? (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30">
+              <WifiOff size={10} />
+              SIMULATED
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
+              <Wifi size={10} />
+              LIVE
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button
