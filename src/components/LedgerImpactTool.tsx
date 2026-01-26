@@ -1,11 +1,190 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Clock, Users, ExternalLink, ChevronRight,
   Cpu, HardDrive, Wifi, DollarSign, MemoryStick, RefreshCw,
-  X, FileText, CheckCircle, AlertTriangle, Loader2
+  X, FileText, AlertTriangle, Loader2, Timer
 } from 'lucide-react';
 import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFeeds';
+
+// ==================== COUNTDOWN TIMER COMPONENT ====================
+// Shows countdown until 2-week waiting period completes
+// Shows elapsed time when countdown is complete but amendment not yet enabled
+
+interface CountdownTimerProps {
+  majorityDate: string | null;
+  daysUntilEnabled?: number;
+  compact?: boolean;
+  className?: string;
+}
+
+// Helper to validate if a date is reasonable (after 2020)
+function isValidMajorityDate(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const year2020 = new Date('2020-01-01').getTime();
+  return date.getTime() > year2020 && !isNaN(date.getTime());
+}
+
+function CountdownTimer({ majorityDate, daysUntilEnabled, compact = false, className = '' }: CountdownTimerProps) {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Update every second for live clock
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Calculate time values - PRIORITY: majorityDate first, then daysUntilEnabled as fallback
+  const timeData = useMemo(() => {
+    // FIRST: If majorityDate is valid, calculate exact countdown from it
+    // This ensures each amendment has its own unique countdown based on when it reached majority
+    if (isValidMajorityDate(majorityDate)) {
+      const majority = new Date(majorityDate!);
+      const activationDate = new Date(majority.getTime() + 14 * 24 * 60 * 60 * 1000);
+      const diff = activationDate.getTime() - currentTime.getTime();
+      
+      if (diff > 0) {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        return { days, hours, minutes, seconds, isCountdown: true, isExpired: false, hasMajorityDate: true };
+      }
+      // Majority date is valid but countdown expired - waiting for flag ledger
+      const hours = currentTime.getHours();
+      const minutes = currentTime.getMinutes();
+      const seconds = currentTime.getSeconds();
+      return { days: 0, hours, minutes, seconds, isCountdown: false, isExpired: true, hasMajorityDate: true };
+    }
+    
+    // FALLBACK: If no valid majorityDate but we have daysUntilEnabled, show approximate countdown
+    // This is less accurate but better than nothing when XRPScan doesn't provide majority dates
+    if (daysUntilEnabled !== undefined && daysUntilEnabled > 0) {
+      // Show days remaining with ?? for hours/minutes/seconds since we don't have exact time
+      return { 
+        days: daysUntilEnabled, 
+        hours: 0, 
+        minutes: 0, 
+        seconds: 0, 
+        isCountdown: true, 
+        isExpired: false,
+        hasMajorityDate: false,
+        isApproximate: true 
+      };
+    }
+    
+    // Expired/waiting state - show elapsed time waiting for flag ledger
+    // Use current time to show a live ticking clock
+    const hours = currentTime.getHours();
+    const minutes = currentTime.getMinutes();
+    const seconds = currentTime.getSeconds();
+    
+    return { days: 0, hours, minutes, seconds, isCountdown: false, isExpired: true, hasMajorityDate: false };
+  }, [majorityDate, daysUntilEnabled, currentTime]);
+
+  // Type guard for approximate data
+  const isApproximate = 'isApproximate' in timeData && timeData.isApproximate;
+
+  // Compact inline display for list view
+  if (compact) {
+    if (timeData.isExpired) {
+      // Show live clock while waiting for flag ledger
+      return (
+        <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30 font-mono flex items-center gap-1 ${className}`}>
+          <span className="w-1.5 h-1.5 rounded-full bg-cyber-green animate-pulse" />
+          {String(timeData.hours).padStart(2, '0')}:{String(timeData.minutes).padStart(2, '0')}:{String(timeData.seconds).padStart(2, '0')}
+        </span>
+      );
+    }
+    // Show countdown - exact if we have majorityDate, approximate otherwise
+    if (isApproximate) {
+      return (
+        <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30 font-mono ${className}`} title="Approximate - exact majority date unavailable">
+          ~{timeData.days}d
+        </span>
+      );
+    }
+    return (
+      <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30 font-mono ${className}`}>
+        {timeData.days}d {String(timeData.hours).padStart(2, '0')}:{String(timeData.minutes).padStart(2, '0')}:{String(timeData.seconds).padStart(2, '0')}
+      </span>
+    );
+  }
+
+  // Full display for modal view
+  if (timeData.isExpired) {
+    return (
+      <div className={`${className}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Timer size={14} className="text-cyber-green animate-pulse" />
+          <span className="text-cyber-green font-cyber text-sm">Waiting for flag ledger activation...</span>
+        </div>
+        <div className="flex gap-1">
+          <div className="text-center px-2 py-1 rounded bg-cyber-green/10 border border-cyber-green/30">
+            <p className="font-mono text-sm text-cyber-green">{String(timeData.hours).padStart(2, '0')}</p>
+            <p className="text-[8px] text-cyber-muted">HRS</p>
+          </div>
+          <div className="text-center px-2 py-1 rounded bg-cyber-green/10 border border-cyber-green/30">
+            <p className="font-mono text-sm text-cyber-green">{String(timeData.minutes).padStart(2, '0')}</p>
+            <p className="text-[8px] text-cyber-muted">MIN</p>
+          </div>
+          <div className="text-center px-2 py-1 rounded bg-cyber-green/10 border border-cyber-green/30">
+            <p className="font-mono text-sm text-cyber-green">{String(timeData.seconds).padStart(2, '0')}</p>
+            <p className="text-[8px] text-cyber-muted">SEC</p>
+          </div>
+        </div>
+        <p className="text-[10px] text-cyber-muted mt-2">
+          Current time - amendment awaiting next flag ledger
+        </p>
+      </div>
+    );
+  }
+
+  // Full display - show approximate warning if no exact majority date
+  if (isApproximate) {
+    return (
+      <div className={`${className}`}>
+        <div className="flex items-center gap-2 mb-2">
+          <Timer size={14} className="text-cyber-yellow animate-pulse" />
+          <span className="text-cyber-yellow font-cyber text-sm">~{timeData.days} days remaining</span>
+        </div>
+        <p className="text-[10px] text-cyber-muted">
+          Approximate countdown - exact majority date unavailable from XRPScan
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <Timer size={14} className="text-cyber-yellow animate-pulse" />
+      <div className="flex gap-1">
+        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
+          <p className="font-mono text-sm text-cyber-yellow">{timeData.days}</p>
+          <p className="text-[8px] text-cyber-muted">DAYS</p>
+        </div>
+        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
+          <p className="font-mono text-sm text-cyber-yellow">{String(timeData.hours).padStart(2, '0')}</p>
+          <p className="text-[8px] text-cyber-muted">HRS</p>
+        </div>
+        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
+          <p className="font-mono text-sm text-cyber-yellow">{String(timeData.minutes).padStart(2, '0')}</p>
+          <p className="text-[8px] text-cyber-muted">MIN</p>
+        </div>
+        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
+          <p className="font-mono text-sm text-cyber-yellow">{String(timeData.seconds).padStart(2, '0')}</p>
+          <p className="text-[8px] text-cyber-muted">SEC</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Export for use in other components
+export { CountdownTimer };
 
 // Types based on XRPL Governance Companion
 type PerformanceImpact = 'Low' | 'Medium' | 'High' | 'Unknown';
@@ -36,6 +215,8 @@ interface Amendment {
   percentSupport?: number;
   status?: 'enabled' | 'majority' | 'pending' | 'unsupported';
   daysUntilEnabled?: number;
+  majorityDate?: string | null; // Date when majority was reached (for countdown)
+  enabledOn?: string | null; // Date when amendment was enabled (for enabled amendments)
 }
 
 // Amendment metadata (performance impact assessments)
@@ -102,7 +283,9 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     enabled: xrpAmendment.enabled,
     percentSupport: xrpAmendment.percentSupport,
     status: xrpAmendment.status,
-    daysUntilEnabled: xrpAmendment.daysUntilEnabled
+    daysUntilEnabled: xrpAmendment.daysUntilEnabled,
+    majorityDate: xrpAmendment.majority || null,
+    enabledOn: xrpAmendment.enabled_on || null
   };
 }
 
@@ -305,6 +488,8 @@ export function LedgerImpactTool() {
               className={`w-full p-2 rounded-lg border bg-cyber-darker/50 hover:border-cyber-glow/30 transition-all text-left group ${
                 amendment.status === 'majority' 
                   ? 'border-cyber-yellow/50' 
+                  : amendment.status === 'enabled'
+                  ? 'border-cyber-green/30'
                   : 'border-cyber-border/50'
               }`}
               whileHover={{ scale: 1.01 }}
@@ -315,9 +500,20 @@ export function LedgerImpactTool() {
                     {amendment.tier}
                   </span>
                   <span className="text-xs text-cyber-text font-medium truncate">{amendment.name}</span>
+                  
+                  {/* Live countdown timer badge for amendments at majority */}
                   {amendment.status === 'majority' && (
-                    <span className="px-1 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30">
-                      {amendment.daysUntilEnabled}d
+                    <CountdownTimer 
+                      majorityDate={amendment.majorityDate} 
+                      daysUntilEnabled={amendment.daysUntilEnabled}
+                      compact 
+                    />
+                  )}
+                  
+                  {/* Enabled date badge for enabled amendments */}
+                  {amendment.status === 'enabled' && amendment.enabledOn && (
+                    <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
+                      ✓ {new Date(amendment.enabledOn).toLocaleDateString()}
                     </span>
                   )}
                 </div>
@@ -325,14 +521,8 @@ export function LedgerImpactTool() {
                   {amendment.ledgerImpact.estimatedImpact}
                 </span>
               </div>
+              
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1">
-                  {amendment.ledgerImpact.affectedAreas.slice(0, 3).map(area => (
-                    <span key={area} className="text-cyber-muted" title={area}>
-                      {areaIcons[area]}
-                    </span>
-                  ))}
-                </div>
                 <div className="flex items-center gap-2 text-[10px]">
                   <span className={
                     (amendment.percentSupport || 0) >= 80 ? 'text-cyber-green' :
@@ -412,6 +602,42 @@ export function LedgerImpactTool() {
 
               {/* Summary */}
               <p className="text-sm text-cyber-text mb-4">{selectedAmendment.summary}</p>
+
+              {/* Countdown Timer for Majority Amendments */}
+              {selectedAmendment.status === 'majority' && (
+                <div className="mb-4 p-3 rounded-lg bg-cyber-yellow/10 border border-cyber-yellow/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock size={14} className="text-cyber-yellow" />
+                    <span className="text-xs font-cyber text-cyber-yellow">TIME UNTIL ACTIVATION</span>
+                  </div>
+                  <CountdownTimer 
+                    majorityDate={selectedAmendment.majorityDate} 
+                    daysUntilEnabled={selectedAmendment.daysUntilEnabled}
+                  />
+                  {isValidMajorityDate(selectedAmendment.majorityDate) && (
+                    <p className="text-[10px] text-cyber-muted mt-2">
+                      Majority reached: {new Date(selectedAmendment.majorityDate!).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Enabled Date for Already Activated Amendments */}
+              {selectedAmendment.status === 'enabled' && selectedAmendment.enabledOn && (
+                <div className="mb-4 p-3 rounded-lg bg-cyber-green/10 border border-cyber-green/30">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} className="text-cyber-green" />
+                    <span className="text-xs font-cyber text-cyber-green">ACTIVATED</span>
+                  </div>
+                  <p className="text-sm text-cyber-green font-mono mt-1">
+                    {new Date(selectedAmendment.enabledOn).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+              )}
 
               {/* Quick Stats */}
               <div className="grid grid-cols-3 gap-2 mb-4">

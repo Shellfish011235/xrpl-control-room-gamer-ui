@@ -1019,10 +1019,10 @@ export default function WorldMap() {
                           href={item.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`block p-2 rounded bg-cyber-darker/50 border-l-2 border-${getStatusColor(item.status)} hover:bg-cyber-darker/80 transition-all group`}
+                          className={`block p-2 rounded bg-cyber-darker/50 border-l-2 border-${getRegStatusColor(item.status)} hover:bg-cyber-darker/80 transition-all group`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-${getStatusColor(item.status)}/20 text-${getStatusColor(item.status)}`}>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded bg-${getRegStatusColor(item.status)}/20 text-${getRegStatusColor(item.status)}`}>
                               {item.type}
                             </span>
                             <ExternalLink size={10} className="text-cyber-muted opacity-0 group-hover:opacity-100" />
@@ -1797,11 +1797,11 @@ export default function WorldMap() {
                       href={item.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className={`block p-2 rounded bg-cyber-darker/50 border-l-2 border-${getStatusColor(item.status)} hover:bg-cyber-darker/80 transition-all group`}
+                      className={`block p-2 rounded bg-cyber-darker/50 border-l-2 border-${getRegStatusColor(item.status)} hover:bg-cyber-darker/80 transition-all group`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[9px] px-1 py-0.5 rounded bg-${getStatusColor(item.status)}/20 text-${getStatusColor(item.status)}`}>
+                          <span className={`text-[9px] px-1 py-0.5 rounded bg-${getRegStatusColor(item.status)}/20 text-${getRegStatusColor(item.status)}`}>
                             {item.status.toUpperCase()}
                           </span>
                           <span className="text-[9px] text-cyber-muted">{item.jurisdiction}</span>

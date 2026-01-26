@@ -279,7 +279,11 @@ export async function analyzeLiquidity(
           issuer: destinationCurrency.issuer,
           value: amount
         },
-        [sourceCurrency]
+        [{
+          currency: sourceCurrency.currency,
+          issuer: sourceCurrency.issuer,
+          value: amount
+        }]
       );
 
       if (result.alternatives.length > 0) {

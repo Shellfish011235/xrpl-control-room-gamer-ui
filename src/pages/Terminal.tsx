@@ -15,6 +15,7 @@ import { OrderBookDepth } from '../components/institutional/OrderBookDepth';
 import { RiskDashboard } from '../components/institutional/RiskDashboard';
 import { AlertBuilder } from '../components/institutional/AlertBuilder';
 import { PaperTradingPanel } from '../components/PaperTradingPanel';
+import { LedgerImpactTool } from '../components/LedgerImpactTool';
 
 import { 
   useRealtimePrices, 
@@ -47,7 +48,7 @@ export default function Terminal() {
   const topAssets = ['XRP', 'BTC', 'ETH', 'SOL', 'DOGE'];
   
   return (
-    <div className="min-h-screen p-4 md:p-6">
+    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -212,7 +213,7 @@ export default function Terminal() {
       </div>
       
       {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         {/* Alerts */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -220,6 +221,15 @@ export default function Terminal() {
           transition={{ delay: 0.4 }}
         >
           <AlertBuilder compact />
+        </motion.div>
+        
+        {/* Ledger Impact Tool with Amendment Countdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+        >
+          <LedgerImpactTool />
         </motion.div>
         
         {/* Paper Trading */}

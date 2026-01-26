@@ -23,7 +23,7 @@ import {
 
 import {
   regulatoryItems,
-  countryProfiles,
+  countryRegulatoryProfiles,
   type RegulatoryItem,
   type CountryRegulatoryProfile
 } from '../data/regulatoryData';
@@ -46,7 +46,7 @@ import { getBriefForLens, getHubs, lensMetadata } from '../data/globeContent';
 
 import { fetchCryptoSentiment, fetchXRPLAmendments, fetchXRPLMetrics } from './freeDataFeeds';
 import { screenCryptos, type CryptoScreenerResult } from './cryptoScreener';
-import { fetchPredictionMarkets, generatePredictionSignals, type PredictionSignal } from './predictionMarkets';
+import { getAllCryptoMarkets, generatePredictionSignals, type PredictionSignal, type PredictionMarket } from './predictionMarkets';
 import { analyzeAMMIncentives, analyzeValidatorIncentives, modelMemeticPropagation } from './aiQuantumAnalytics';
 
 // ==================== TYPES ====================
@@ -292,11 +292,11 @@ class UnifiedAnalyticsAggregator {
       }));
     
     // Identify favorable/risk jurisdictions
-    const favorableJurisdictions = countryProfiles
+    const favorableJurisdictions = countryRegulatoryProfiles
       .filter(c => c.overallStatus === 'favorable')
       .map(c => c.countryCode);
     
-    const riskJurisdictions = countryProfiles
+    const riskJurisdictions = countryRegulatoryProfiles
       .filter(c => c.overallStatus === 'restricted')
       .map(c => c.countryCode);
     
@@ -491,12 +491,13 @@ class UnifiedAnalyticsAggregator {
   // ==================== PREDICTION MARKETS ====================
   
   async analyzePredictions(): Promise<UnifiedMarketIntelligence['predictionIntelligence']> {
-    let markets: any[] = [];
+    let markets: PredictionMarket[] = [];
     let signals: PredictionSignal[] = [];
     
     try {
-      markets = await fetchPredictionMarkets({ category: 'crypto' });
-      signals = await generatePredictionSignals('XRP');
+      const result = await getAllCryptoMarkets();
+      markets = result.markets || [];
+      signals = generatePredictionSignals(markets);
     } catch (e) {
       console.warn('[Analytics] Could not fetch prediction markets:', e);
     }
@@ -773,7 +774,7 @@ class UnifiedAnalyticsAggregator {
         this.getRegion(p.headquarters.countryCode) === region
       );
       
-      const regionProfiles = countryProfiles.filter(p => 
+      const regionProfiles = countryRegulatoryProfiles.filter(p => 
         this.getRegion(p.countryCode) === region
       );
       

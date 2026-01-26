@@ -927,7 +927,6 @@ export class MultiDimensionalQuantEngine {
       sectorRotationSignal,
     };
   }
-}
 
   // ==================== UNIFIED ANALYTICS INTEGRATION ====================
   

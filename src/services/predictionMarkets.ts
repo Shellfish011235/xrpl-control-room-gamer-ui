@@ -523,7 +523,7 @@ export function calculateMarketMomentum(markets: PredictionMarket[]): MarketMome
         probabilityChange1h: change24h / 24, // Estimate
         probabilityChange24h: change24h,
         volumeSpike: market.volume24h > market.totalVolume * 0.1, // 10% of total in 24h
-        direction: change24h > 0.02 ? 'up' : change24h < -0.02 ? 'down' : 'stable',
+        direction: (change24h > 0.02 ? 'up' : change24h < -0.02 ? 'down' : 'stable') as 'up' | 'down' | 'stable',
         significance: Math.min(100, Math.round(Math.abs(change24h) * 500 + market.volume24h / 10000)),
       };
     })

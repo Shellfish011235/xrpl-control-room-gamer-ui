@@ -2733,7 +2733,7 @@ export default function MemeticLab() {
                         <p className="text-[9px] text-cyber-muted mb-1">TOP MOVERS</p>
                         <p className="font-cyber text-lg text-cyber-cyan">{topMovers?.length || 0}</p>
                         <p className="text-[10px] text-cyber-muted">
-                          {(topMovers || []).filter(m => m.momentum > 60).length} High Momentum
+                          {(topMovers || []).filter(m => m.momentum === 'bullish').length} High Momentum
                         </p>
                       </div>
                     </div>

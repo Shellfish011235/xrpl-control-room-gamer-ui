@@ -383,7 +383,6 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
           }}
           minZoom={1}
           maxZoom={8}
-          filterZoomEvent={() => !mapLocked}
         >
           {/* Countries */}
           <Geographies geography={currentGeoUrl}>
@@ -681,9 +680,6 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
                 strokeOpacity={isHovered ? 1 : 0.7}
                 strokeLinecap="round"
                 strokeDasharray={corridor.volume === 'emerging' ? '4,4' : undefined}
-                onMouseEnter={() => setHoveredPaymentCorridor(corridor)}
-                onMouseLeave={() => setHoveredPaymentCorridor(null)}
-                style={{ cursor: 'pointer' }}
               />
             );
           })}

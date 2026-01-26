@@ -451,10 +451,14 @@ class AlertEngine {
   /**
    * Create a trigger object from an alert
    */
-  private createTrigger(alert: Alert, value: number): Omit<AlertTrigger, 'id' | 'timestamp' | 'read' | 'dismissed'> {
+  private createTrigger(alert: Alert, value: number): AlertTrigger {
     const conditionText = this.getConditionText(alert.condition);
     
     return {
+      id: `trigger-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+      read: false,
+      dismissed: false,
       alertId: alert.id,
       alertName: alert.name,
       category: alert.category,

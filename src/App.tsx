@@ -9,6 +9,8 @@ import Character from './pages/Character'
 import Clinic from './pages/Clinic'
 import MemeticLab from './pages/MemeticLab'
 import Terminal from './pages/Terminal'
+import CARV from './pages/CARV'
+import ILPMap from './pages/ILPMap'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +45,8 @@ function App() {
                 <Route path="/clinic" element={<Clinic />} />
                 <Route path="/memetic-lab" element={<MemeticLab />} />
                 <Route path="/terminal" element={<Terminal />} />
+                <Route path="/carv" element={<CARV />} />
+                <Route path="/ilp-map" element={<ILPMap />} />
               </Routes>
             </AnimatePresence>
           </main>

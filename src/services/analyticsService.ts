@@ -300,7 +300,7 @@ export async function fetchTopMovers(): Promise<TopMover[]> {
         potentialScore: c.potentialScore || 50,
         potentialReason: c.potentialReason || 'Analyzing...',
         momentum: c.momentum || 'neutral',
-        riskLevel: c.market_cap_rank <= 20 ? 'low' : c.market_cap_rank <= 100 ? 'medium' : 'high',
+        riskLevel: (c.market_cap_rank <= 20 ? 'low' : c.market_cap_rank <= 100 ? 'medium' : 'high') as 'low' | 'medium' | 'high',
       }));
     
     return movers;
