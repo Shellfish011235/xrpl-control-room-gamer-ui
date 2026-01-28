@@ -29,6 +29,20 @@ export { MerkleTree, BatchAttestor } from './merkleTree';
 export { VenueRouter, getRouter } from './venueRouter';
 export { AccountingLedger, getLedger } from './accountingLedger';
 
+// New Components - Real Infrastructure
+export { XRPLConnector, getXRPLConnector, resetXRPLConnector } from './xrplConnector';
+export { ILPConnector, getILPConnector, resetILPConnector } from './ilpConnector';
+export { LLMAgent, getLLMAgent, resetLLMAgent } from './llmAgent';
+export type { PaymentDecision, PaymentRequest, AgentSession, AgentThought } from './llmAgent';
+export { RegimeEngine, getRegimeEngine, resetRegimeEngine, PRESET_REGIMES } from './regimeEngine';
+export type { RegimeConfig, RegimeRule, RegimeValidation } from './regimeEngine';
+export { CARVOrchestrator, getOrchestrator, resetOrchestrator } from './orchestrator';
+export type { OrchestratorConfig, AgentPaymentRequest, AgentPaymentResult } from './orchestrator';
+
+// Pathfinder - Smart routing to institutions
+export { Pathfinder, getPathfinder, resetPathfinder } from './pathfinder';
+export type { Institution, Contact, PaymentMethod, PathfinderResult } from './pathfinder';
+
 // ==================== DEFAULT CONFIG ====================
 
 const DEFAULT_CONFIG: CARVConfig = {

@@ -61,12 +61,20 @@ export interface PopularPair {
 
 // ==================== CONSTANTS ====================
 
-// Free public XRPL servers (JSON-RPC endpoints)
-const PUBLIC_SERVERS = [
-  'https://xrplcluster.com/',
-  'https://s1.ripple.com:51234/',
-  'https://s2.ripple.com:51234/',
+// ==================== XRPL PUBLIC SERVERS ====================
+// WebSocket endpoints - using public servers with full API access
+// Note: ripple_path_find requires admin access, so we use book_offers instead
+const WEBSOCKET_SERVERS = [
+  'wss://xrplcluster.com',        // XRPL Foundation cluster
+  'wss://s1.ripple.com',          // Ripple server
+  'wss://s2.ripple.com',          // Ripple server (backup)
 ];
+
+// Active WebSocket connection
+let activeSocket: WebSocket | null = null;
+let currentServerIndex = 0;
+let requestId = 0;
+const pendingRequests: Map<number, { resolve: (value: any) => void; reject: (error: any) => void }> = new Map();
 
 // Popular trading pairs for quick lookup
 export const POPULAR_PAIRS: PopularPair[] = [
@@ -119,57 +127,143 @@ export const KNOWN_ISSUERS: Record<string, string> = {
   'rsoLo2S1kiGeCcn6hCUXVrCpGMWLrRrLZz': 'Sologenic',
 };
 
-let currentServerIndex = 0;
-
-// ==================== HTTP/JSON-RPC CALLS ====================
+// ==================== WEBSOCKET CONNECTION ====================
 
 function getNextServer(): string {
-  const server = PUBLIC_SERVERS[currentServerIndex];
-  currentServerIndex = (currentServerIndex + 1) % PUBLIC_SERVERS.length;
+  const server = WEBSOCKET_SERVERS[currentServerIndex];
+  currentServerIndex = (currentServerIndex + 1) % WEBSOCKET_SERVERS.length;
   return server;
 }
 
-async function xrplRequest(method: string, params: any[]): Promise<any> {
-  // Try each server until one works
-  for (let i = 0; i < PUBLIC_SERVERS.length; i++) {
-    const server = getNextServer();
+async function ensureConnection(): Promise<WebSocket> {
+  // Return existing connection if healthy
+  if (activeSocket && activeSocket.readyState === WebSocket.OPEN) {
+    return activeSocket;
+  }
+  
+  // Close stale connection
+  if (activeSocket) {
     try {
-      const response = await fetch(server, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          method,
-          params
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.result?.error) {
-        throw new Error(data.result.error_message || data.result.error);
-      }
-
-      return data.result;
-    } catch (error) {
-      console.warn(`[Pathfinding] Server ${server} failed:`, error);
-      // Try next server
+      activeSocket.close();
+    } catch (e) {
+      // Ignore close errors
+    }
+    activeSocket = null;
+  }
+  
+  // Try each server
+  const errors: string[] = [];
+  
+  for (let i = 0; i < WEBSOCKET_SERVERS.length; i++) {
+    const serverUrl = getNextServer();
+    console.log(`[Pathfinding] Connecting to WebSocket: ${serverUrl}`);
+    
+    try {
+      const socket = await connectWebSocket(serverUrl);
+      activeSocket = socket;
+      console.log(`[Pathfinding] Connected to ${serverUrl}`);
+      return socket;
+    } catch (error: any) {
+      console.warn(`[Pathfinding] Failed to connect to ${serverUrl}:`, error.message);
+      errors.push(`${serverUrl}: ${error.message}`);
     }
   }
+  
+  throw new Error(`Could not connect to any XRPL server:\n${errors.join('\n')}`);
+}
 
-  throw new Error('All XRPL servers failed');
+function connectWebSocket(url: string): Promise<WebSocket> {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      reject(new Error('Connection timeout (10s)'));
+    }, 10000);
+    
+    try {
+      const socket = new WebSocket(url);
+      
+      socket.onopen = () => {
+        clearTimeout(timeout);
+        console.log(`[Pathfinding] WebSocket opened: ${url}`);
+        resolve(socket);
+      };
+      
+      socket.onerror = (event) => {
+        clearTimeout(timeout);
+        reject(new Error('WebSocket connection error'));
+      };
+      
+      socket.onclose = (event) => {
+        console.log(`[Pathfinding] WebSocket closed: ${url}`, event.code, event.reason);
+        if (activeSocket === socket) {
+          activeSocket = null;
+        }
+      };
+      
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const id = data.id;
+          
+          if (id !== undefined && pendingRequests.has(id)) {
+            const { resolve, reject } = pendingRequests.get(id)!;
+            pendingRequests.delete(id);
+            
+            if (data.error) {
+              reject(new Error(data.error_message || data.error));
+            } else if (data.result?.error) {
+              reject(new Error(data.result.error_message || data.result.error));
+            } else {
+              resolve(data.result);
+            }
+          }
+        } catch (e) {
+          console.warn('[Pathfinding] Failed to parse message:', e);
+        }
+      };
+    } catch (error: any) {
+      clearTimeout(timeout);
+      reject(error);
+    }
+  });
+}
+
+async function xrplRequest(method: string, params: any[]): Promise<any> {
+  const socket = await ensureConnection();
+  
+  return new Promise((resolve, reject) => {
+    const id = ++requestId;
+    const timeout = setTimeout(() => {
+      pendingRequests.delete(id);
+      reject(new Error('Request timeout (30s)'));
+    }, 30000);
+    
+    pendingRequests.set(id, {
+      resolve: (value) => {
+        clearTimeout(timeout);
+        resolve(value);
+      },
+      reject: (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      }
+    });
+    
+    const request = {
+      id,
+      command: method,  // WebSocket uses 'command' not 'method'
+      ...params[0]      // Spread params directly
+    };
+    
+    console.log(`[Pathfinding] Sending request:`, request);
+    socket.send(JSON.stringify(request));
+  });
 }
 
 // ==================== PATHFINDING FUNCTIONS ====================
 
 /**
  * Find payment paths between two accounts/currencies
- * Uses the native XRPL ripple_path_find command (free on public nodes)
+ * Uses book_offers to analyze available liquidity (ripple_path_find requires admin)
  */
 export async function findPaymentPaths(
   sourceAccount: string,
@@ -178,55 +272,106 @@ export async function findPaymentPaths(
   sourceCurrencies?: PathAmount[]
 ): Promise<PathfindingResult> {
   try {
-    // Build the destination amount in XRPL format
-    let destAmount: string | { currency: string; issuer: string; value: string };
-    if (destinationAmount.currency === 'XRP') {
-      // XRP amounts are in drops (1 XRP = 1,000,000 drops)
-      destAmount = String(Math.floor(parseFloat(destinationAmount.value) * 1000000));
-    } else {
-      destAmount = {
-        currency: destinationAmount.currency,
-        issuer: destinationAmount.issuer!,
-        value: destinationAmount.value
-      };
-    }
-
-    // Build request params
-    const params: any = {
-      source_account: sourceAccount,
-      destination_account: destinationAccount,
-      destination_amount: destAmount
-    };
-
-    if (sourceCurrencies && sourceCurrencies.length > 0) {
-      params.source_currencies = sourceCurrencies.map(sc => ({
-        currency: sc.currency,
-        issuer: sc.issuer
-      }));
-    }
-
-    // Make the pathfinding request
-    const result = await xrplRequest('ripple_path_find', [params]);
-
-    // Process alternatives
-    const alternatives: PaymentPath[] = (result.alternatives || []).map((alt: any) => {
-      const sourceAmount = parseAmount(alt.source_amount);
-      const destValue = parseFloat(destinationAmount.value);
-      const srcValue = parseFloat(sourceAmount.value);
-      
-      return {
-        pathsComputed: alt.paths_computed || [],
-        sourceAmount,
-        effectiveRate: srcValue > 0 ? destValue / srcValue : 0,
-        hops: alt.paths_computed?.[0]?.length || 0,
-        liquidityScore: calculateLiquidityScore(alt)
-      };
+    // Use book_offers to get order book data
+    // This shows available liquidity without requiring admin access
+    // ripple_path_find requires admin permissions on public servers
+    
+    // Default to XRP as source currency (most common case)
+    const sourceCurrency = sourceCurrencies?.[0] || { currency: 'XRP', value: '0' };
+    
+    console.log('[Pathfinding] Finding paths:', {
+      source: sourceCurrency.currency,
+      dest: destinationAmount.currency,
+      destIssuer: destinationAmount.issuer,
+      amount: destinationAmount.value
     });
+    
+    // Build taker_gets (what we want) and taker_pays (what we offer)
+    let takerGets: any;
+    let takerPays: any;
+    
+    if (destinationAmount.currency === 'XRP') {
+      takerGets = { currency: 'XRP' };
+    } else {
+      takerGets = {
+        currency: destinationAmount.currency,
+        issuer: destinationAmount.issuer
+      };
+    }
+    
+    if (sourceCurrency.currency === 'XRP') {
+      takerPays = { currency: 'XRP' };
+    } else {
+      takerPays = {
+        currency: sourceCurrency.currency,
+        issuer: sourceCurrency.issuer
+      };
+    }
 
-    // Sort by best rate (lowest source amount)
-    alternatives.sort((a, b) => 
-      parseFloat(a.sourceAmount.value) - parseFloat(b.sourceAmount.value)
-    );
+    // Get order book offers
+    const result = await xrplRequest('book_offers', [{
+      taker_gets: takerGets,
+      taker_pays: takerPays,
+      limit: 20
+    }]);
+
+    console.log('[Pathfinding] book_offers result:', result);
+
+    // Process order book offers into path alternatives
+    const offers = result.offers || [];
+    const alternatives: PaymentPath[] = [];
+    
+    if (offers.length > 0) {
+      // Calculate aggregated liquidity from order book
+      let totalLiquidity = 0;
+      let bestRate = 0;
+      
+      for (const offer of offers) {
+        // Parse offer amounts
+        const getsValue = typeof offer.TakerGets === 'string' 
+          ? parseFloat(offer.TakerGets) / 1000000  // XRP in drops
+          : parseFloat(offer.TakerGets.value);
+        const paysValue = typeof offer.TakerPays === 'string'
+          ? parseFloat(offer.TakerPays) / 1000000  // XRP in drops  
+          : parseFloat(offer.TakerPays.value);
+        
+        if (paysValue > 0) {
+          const rate = getsValue / paysValue;
+          if (rate > bestRate) bestRate = rate;
+          totalLiquidity += getsValue;
+        }
+      }
+      
+      // Create a synthetic "path" representing the best available route
+      const requestedAmount = parseFloat(destinationAmount.value);
+      const estimatedSource = bestRate > 0 ? requestedAmount / bestRate : requestedAmount;
+      
+      alternatives.push({
+        pathsComputed: [],  // Direct through order book
+        sourceAmount: {
+          currency: sourceCurrency.currency,
+          issuer: sourceCurrency.issuer,
+          value: estimatedSource.toFixed(6)
+        },
+        effectiveRate: bestRate,
+        hops: 1,
+        liquidityScore: Math.min(100, (totalLiquidity / requestedAmount) * 10)
+      });
+    }
+
+    // If no offers found, return informative message
+    if (alternatives.length === 0) {
+      return {
+        success: false,
+        sourceAccount,
+        destinationAccount,
+        destinationAmount,
+        alternatives: [],
+        destinationCurrencies: [],
+        error: `No liquidity found for ${sourceCurrency.currency} → ${destinationAmount.currency}. Try a different currency pair or check issuer addresses.`,
+        timestamp: new Date()
+      };
+    }
 
     return {
       success: true,
@@ -234,7 +379,7 @@ export async function findPaymentPaths(
       destinationAccount,
       destinationAmount,
       alternatives,
-      destinationCurrencies: result.destination_currencies || [],
+      destinationCurrencies: [],
       timestamp: new Date()
     };
   } catch (error: any) {
@@ -253,6 +398,29 @@ export async function findPaymentPaths(
 }
 
 /**
+ * Disconnect from XRPL WebSocket servers
+ */
+export function disconnectXRPL(): void {
+  if (activeSocket) {
+    try {
+      activeSocket.close();
+    } catch (e) {
+      // Ignore
+    }
+    activeSocket = null;
+  }
+  pendingRequests.clear();
+  console.log('[Pathfinding] Disconnected from XRPL');
+}
+
+/**
+ * Check if connected to XRPL
+ */
+export function isConnected(): boolean {
+  return activeSocket !== null && activeSocket.readyState === WebSocket.OPEN;
+}
+
+/**
  * Analyze liquidity for a trading pair
  */
 export async function analyzeLiquidity(
@@ -260,9 +428,9 @@ export async function analyzeLiquidity(
   destinationCurrency: { currency: string; issuer?: string },
   testAmounts: string[] = ['1', '10', '100', '1000']
 ): Promise<LiquidityAnalysis> {
-  // Use a known active account for testing (Bitstamp hot wallet - very liquid)
-  const testSourceAccount = 'rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv';
-  const testDestAccount = 'rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv';
+  // Use Bitstamp as test account - very liquid, has many trustlines
+  const testSourceAccount = 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B';
+  const testDestAccount = 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B';
 
   const rates: number[] = [];
   let maxLiquidity = '0';
@@ -447,6 +615,8 @@ export const XRPLPathfinding = {
   analyzeLiquidity,
   getDestinationCurrencies,
   hasDirectPath,
+  disconnectXRPL,
+  isConnected,
   formatCurrency,
   formatRate,
   POPULAR_PAIRS,

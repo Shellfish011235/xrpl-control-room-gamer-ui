@@ -1,10 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { 
   Globe, Server, Users, Link2,
   Route, Scale, Building, Eye, X, RefreshCw, Wifi, WifiOff,
-  ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock
+  ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock,
+  Network as NetworkIcon
 } from 'lucide-react'
+import { ConnectorMap } from '../components/ilp/ConnectorMap'
+import { useILPStore } from '../store/ilpStore'
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { WorldGlobe } from '../components/globe/WorldGlobe'
 import { useGlobeStore } from '../store/globeStore'
@@ -146,7 +149,7 @@ function decodeCorridorCode(code: string): string {
   return code
 }
 
-export default function WorldMap() {
+export default function Network() {
   const { activeLens, setActiveLens, selection, clearSelection } = useGlobeStore()
   const { 
     validators: liveValidators,
@@ -361,7 +364,7 @@ export default function WorldMap() {
         >
           <div className="flex items-center gap-3 mb-2">
             <Globe className="text-cyber-glow" size={28} />
-            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">WORLD MAP</h1>
+            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">NETWORK</h1>
             <div className="ml-auto flex items-center gap-4">
               {/* Live data toggle */}
               <button
@@ -2160,6 +2163,84 @@ export default function WorldMap() {
           </motion.div>
         </div>
       </div>
+
+      {/* Network Topology Section */}
+      <NetworkTopologySection />
     </div>
   )
+}
+
+// Network Topology Section Component
+function NetworkTopologySection() {
+  const { initialized, ledgers, connectors, corridors, initialize } = useILPStore();
+
+  // Initialize ILP store on mount
+  useEffect(() => {
+    if (!initialized || ledgers.length === 0) {
+      initialize();
+    }
+  }, [initialized, ledgers.length, initialize]);
+
+  // Stats
+  const activeCorridors = corridors.filter(c => c.status === 'active').length;
+  const avgTrust = connectors.length > 0 
+    ? connectors.reduce((sum, c) => sum + c.trust_score, 0) / connectors.length 
+    : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+      className="mt-8 px-4 lg:px-8"
+    >
+      {/* Section Header */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-lg bg-cyber-cyan/20 flex items-center justify-center">
+          <NetworkIcon className="w-5 h-5 text-cyber-cyan" />
+        </div>
+        <div>
+          <h2 className="font-cyber text-lg text-cyber-text">LEDGER TOPOLOGY</h2>
+          <p className="text-xs text-cyber-muted">
+            How XRPL connects to other networks • Trust-based corridor visualization
+          </p>
+        </div>
+        
+        {/* Quick Stats */}
+        <div className="ml-auto hidden md:flex items-center gap-4 px-4 py-2 cyber-panel">
+          <div className="text-center">
+            <p className="text-[10px] text-cyber-muted">Ledgers</p>
+            <p className="font-cyber text-sm text-cyber-text">{ledgers.length}</p>
+          </div>
+          <div className="w-px h-6 bg-cyber-border" />
+          <div className="text-center">
+            <p className="text-[10px] text-cyber-muted">Corridors</p>
+            <p className="font-cyber text-sm text-cyber-green">{activeCorridors}</p>
+          </div>
+          <div className="w-px h-6 bg-cyber-border" />
+          <div className="text-center">
+            <p className="text-[10px] text-cyber-muted">Avg Trust</p>
+            <p className={`font-cyber text-sm ${avgTrust > 0.7 ? 'text-cyber-green' : avgTrust > 0.5 ? 'text-cyber-yellow' : 'text-cyber-red'}`}>
+              {(avgTrust * 100).toFixed(0)}%
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Connector Map */}
+      <div className="cyber-panel p-2" style={{ minHeight: '450px' }}>
+        <ConnectorMap
+          onLedgerClick={(ledger) => console.log('Clicked ledger:', ledger.name)}
+          onCorridorClick={(corridor) => console.log('Clicked corridor:', corridor.id)}
+        />
+      </div>
+
+      {/* Philosophy Footer */}
+      <div className="mt-4 text-center">
+        <p className="text-[10px] text-cyber-muted italic">
+          "ILP does not connect blockchains. Connectors do. Trust is a topology, not a claim."
+        </p>
+      </div>
+    </motion.div>
+  );
 }

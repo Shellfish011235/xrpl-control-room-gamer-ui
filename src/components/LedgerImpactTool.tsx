@@ -14,6 +14,10 @@ import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFee
 interface CountdownTimerProps {
   majorityDate: string | null;
   daysUntilEnabled?: number;
+  hoursUntilEnabled?: number;
+  minutesUntilEnabled?: number;
+  secondsUntilEnabled?: number;
+  activationDate?: Date | string;  // Calculated activation date from API
   compact?: boolean;
   className?: string;
 }
@@ -26,87 +30,91 @@ function isValidMajorityDate(dateStr: string | null): boolean {
   return date.getTime() > year2020 && !isNaN(date.getTime());
 }
 
-function CountdownTimer({ majorityDate, daysUntilEnabled, compact = false, className = '' }: CountdownTimerProps) {
+function CountdownTimer({ 
+  majorityDate, 
+  daysUntilEnabled, 
+  hoursUntilEnabled, 
+  minutesUntilEnabled, 
+  secondsUntilEnabled,
+  activationDate,
+  compact = false, 
+  className = '' 
+}: CountdownTimerProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   
-  // Update every second for live clock
+  // Update every second for live countdown
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
+      setElapsedSeconds(prev => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate time values - PRIORITY: majorityDate first, then daysUntilEnabled as fallback
+  // Calculate time values - Uses INDIVIDUAL countdown per amendment from API
   const timeData = useMemo(() => {
-    // FIRST: If majorityDate is valid, calculate exact countdown from it
-    // This ensures each amendment has its own unique countdown based on when it reached majority
-    if (isValidMajorityDate(majorityDate)) {
-      const majority = new Date(majorityDate!);
-      const activationDate = new Date(majority.getTime() + 14 * 24 * 60 * 60 * 1000);
-      const diff = activationDate.getTime() - currentTime.getTime();
+    // BEST CASE: We have activationDate from the API (calculated from Ripple epoch majority timestamp)
+    if (activationDate) {
+      const targetDate = typeof activationDate === 'string' ? new Date(activationDate) : activationDate;
+      const diff = targetDate.getTime() - currentTime.getTime();
       
       if (diff > 0) {
-        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-        return { days, hours, minutes, seconds, isCountdown: true, isExpired: false, hasMajorityDate: true };
+        // Live countdown to this specific amendment's activation
+        const totalSeconds = Math.floor(diff / 1000);
+        const days = Math.floor(totalSeconds / (24 * 60 * 60));
+        const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+        const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+        const seconds = totalSeconds % 60;
+        return { days, hours, minutes, seconds, isCountdown: true, isExpired: false, hasActivationDate: true };
       }
-      // Majority date is valid but countdown expired - waiting for flag ledger
-      const hours = currentTime.getHours();
-      const minutes = currentTime.getMinutes();
-      const seconds = currentTime.getSeconds();
-      return { days: 0, hours, minutes, seconds, isCountdown: false, isExpired: true, hasMajorityDate: true };
+      // Activation date passed - waiting for flag ledger
+      return { days: 0, hours: 0, minutes: 0, seconds: 0, isCountdown: false, isExpired: true, hasActivationDate: true };
     }
     
-    // FALLBACK: If no valid majorityDate but we have daysUntilEnabled, show approximate countdown
-    // This is less accurate but better than nothing when XRPScan doesn't provide majority dates
-    if (daysUntilEnabled !== undefined && daysUntilEnabled > 0) {
-      // Show days remaining with ?? for hours/minutes/seconds since we don't have exact time
-      return { 
-        days: daysUntilEnabled, 
-        hours: 0, 
-        minutes: 0, 
-        seconds: 0, 
-        isCountdown: true, 
-        isExpired: false,
-        hasMajorityDate: false,
-        isApproximate: true 
-      };
+    // FALLBACK: If we have explicit d/h/m/s from API, use them with live countdown
+    if (daysUntilEnabled !== undefined && daysUntilEnabled >= 0) {
+      // Calculate total seconds remaining based on API values minus elapsed time since component mounted
+      const initialTotalSeconds = 
+        (daysUntilEnabled * 24 * 60 * 60) + 
+        ((hoursUntilEnabled || 0) * 60 * 60) + 
+        ((minutesUntilEnabled || 0) * 60) + 
+        (secondsUntilEnabled || 0);
+      
+      const adjustedTotalSeconds = Math.max(0, initialTotalSeconds - elapsedSeconds);
+      
+      if (adjustedTotalSeconds > 0) {
+        const days = Math.floor(adjustedTotalSeconds / (24 * 60 * 60));
+        const hours = Math.floor((adjustedTotalSeconds % (24 * 60 * 60)) / (60 * 60));
+        const minutes = Math.floor((adjustedTotalSeconds % (60 * 60)) / 60);
+        const seconds = adjustedTotalSeconds % 60;
+        return { 
+          days, hours, minutes, seconds, 
+          isCountdown: true, 
+          isExpired: false,
+          hasActivationDate: false
+        };
+      }
+      // Countdown reached zero
+      return { days: 0, hours: 0, minutes: 0, seconds: 0, isCountdown: false, isExpired: true, hasActivationDate: false };
     }
     
-    // Expired/waiting state - show elapsed time waiting for flag ledger
-    // Use current time to show a live ticking clock
-    const hours = currentTime.getHours();
-    const minutes = currentTime.getMinutes();
-    const seconds = currentTime.getSeconds();
-    
-    return { days: 0, hours, minutes, seconds, isCountdown: false, isExpired: true, hasMajorityDate: false };
-  }, [majorityDate, daysUntilEnabled, currentTime]);
-
-  // Type guard for approximate data
-  const isApproximate = 'isApproximate' in timeData && timeData.isApproximate;
+    // No countdown data - show waiting state
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, isCountdown: false, isExpired: true, hasActivationDate: false };
+  }, [activationDate, daysUntilEnabled, hoursUntilEnabled, minutesUntilEnabled, secondsUntilEnabled, currentTime, elapsedSeconds]);
 
   // Compact inline display for list view
   if (compact) {
     if (timeData.isExpired) {
-      // Show live clock while waiting for flag ledger
+      // Countdown complete - waiting for flag ledger activation
       return (
         <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30 font-mono flex items-center gap-1 ${className}`}>
           <span className="w-1.5 h-1.5 rounded-full bg-cyber-green animate-pulse" />
-          {String(timeData.hours).padStart(2, '0')}:{String(timeData.minutes).padStart(2, '0')}:{String(timeData.seconds).padStart(2, '0')}
+          ACTIVATING...
         </span>
       );
     }
-    // Show countdown - exact if we have majorityDate, approximate otherwise
-    if (isApproximate) {
-      return (
-        <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30 font-mono ${className}`} title="Approximate - exact majority date unavailable">
-          ~{timeData.days}d
-        </span>
-      );
-    }
+    // Show live countdown with days, hours, minutes, seconds
     return (
       <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30 font-mono ${className}`}>
         {timeData.days}d {String(timeData.hours).padStart(2, '0')}:{String(timeData.minutes).padStart(2, '0')}:{String(timeData.seconds).padStart(2, '0')}
@@ -120,62 +128,37 @@ function CountdownTimer({ majorityDate, daysUntilEnabled, compact = false, class
       <div className={`${className}`}>
         <div className="flex items-center gap-2 mb-2">
           <Timer size={14} className="text-cyber-green animate-pulse" />
-          <span className="text-cyber-green font-cyber text-sm">Waiting for flag ledger activation...</span>
-        </div>
-        <div className="flex gap-1">
-          <div className="text-center px-2 py-1 rounded bg-cyber-green/10 border border-cyber-green/30">
-            <p className="font-mono text-sm text-cyber-green">{String(timeData.hours).padStart(2, '0')}</p>
-            <p className="text-[8px] text-cyber-muted">HRS</p>
-          </div>
-          <div className="text-center px-2 py-1 rounded bg-cyber-green/10 border border-cyber-green/30">
-            <p className="font-mono text-sm text-cyber-green">{String(timeData.minutes).padStart(2, '0')}</p>
-            <p className="text-[8px] text-cyber-muted">MIN</p>
-          </div>
-          <div className="text-center px-2 py-1 rounded bg-cyber-green/10 border border-cyber-green/30">
-            <p className="font-mono text-sm text-cyber-green">{String(timeData.seconds).padStart(2, '0')}</p>
-            <p className="text-[8px] text-cyber-muted">SEC</p>
-          </div>
+          <span className="text-cyber-green font-cyber text-sm">2-week countdown complete!</span>
         </div>
         <p className="text-[10px] text-cyber-muted mt-2">
-          Current time - amendment awaiting next flag ledger
+          Amendment awaiting next flag ledger for activation
         </p>
       </div>
     );
   }
 
-  // Full display - show approximate warning if no exact majority date
-  if (isApproximate) {
-    return (
-      <div className={`${className}`}>
-        <div className="flex items-center gap-2 mb-2">
-          <Timer size={14} className="text-cyber-yellow animate-pulse" />
-          <span className="text-cyber-yellow font-cyber text-sm">~{timeData.days} days remaining</span>
-        </div>
-        <p className="text-[10px] text-cyber-muted">
-          Approximate countdown - exact majority date unavailable from XRPScan
-        </p>
-      </div>
-    );
-  }
-
+  // Full display - live countdown with days, hours, minutes, seconds
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <Timer size={14} className="text-cyber-yellow animate-pulse" />
+    <div className={`${className}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Timer size={14} className="text-cyber-yellow animate-pulse" />
+        <span className="text-cyber-yellow font-cyber text-sm">Time until activation</span>
+      </div>
       <div className="flex gap-1">
         <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-sm text-cyber-yellow">{timeData.days}</p>
+          <p className="font-mono text-lg text-cyber-yellow">{timeData.days}</p>
           <p className="text-[8px] text-cyber-muted">DAYS</p>
         </div>
         <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-sm text-cyber-yellow">{String(timeData.hours).padStart(2, '0')}</p>
+          <p className="font-mono text-lg text-cyber-yellow">{String(timeData.hours).padStart(2, '0')}</p>
           <p className="text-[8px] text-cyber-muted">HRS</p>
         </div>
         <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-sm text-cyber-yellow">{String(timeData.minutes).padStart(2, '0')}</p>
+          <p className="font-mono text-lg text-cyber-yellow">{String(timeData.minutes).padStart(2, '0')}</p>
           <p className="text-[8px] text-cyber-muted">MIN</p>
         </div>
         <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-sm text-cyber-yellow">{String(timeData.seconds).padStart(2, '0')}</p>
+          <p className="font-mono text-lg text-cyber-yellow">{String(timeData.seconds).padStart(2, '0')}</p>
           <p className="text-[8px] text-cyber-muted">SEC</p>
         </div>
       </div>
@@ -211,15 +194,21 @@ interface Amendment {
   ledgerImpact: LedgerImpact;
   validatorSupport: { current: number; required: number };
   enabled?: boolean;
-  // Live data fields
+  // Live data fields from XRPScan API
   percentSupport?: number;
   status?: 'enabled' | 'majority' | 'pending' | 'unsupported';
+  // Individual countdown per amendment (not batched!)
   daysUntilEnabled?: number;
-  majorityDate?: string | null; // Date when majority was reached (for countdown)
-  enabledOn?: string | null; // Date when amendment was enabled (for enabled amendments)
+  hoursUntilEnabled?: number;
+  minutesUntilEnabled?: number;
+  secondsUntilEnabled?: number;
+  activationDate?: Date;  // Calculated activation date (majority + 14 days)
+  majorityDate?: string | null; // Date when majority was reached
+  enabledOn?: string | null; // Date when amendment was enabled
 }
 
 // Amendment metadata (performance impact assessments)
+// Updated January 2026 with live data from xrpscan.com
 const amendmentMetadata: Record<string, { 
   summary: string; 
   tier: Tier; 
@@ -227,18 +216,47 @@ const amendmentMetadata: Record<string, {
   areas: AffectedArea[];
   rationale: string;
 }> = {
+  // ==================== CURRENTLY AT MAJORITY (ETA ~5 days) ====================
+  'fixPriceOracleOrder': { summary: 'Fixes ordering issues in Price Oracle calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for price oracle ordering. Minimal performance impact, improves oracle reliability.' },
+  'fixMPTDeliveredAmount': { summary: 'Fixes delivered amount calculation for Multi-Purpose Tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for MPT amount calculations. Ensures accurate delivery amounts.' },
+  'fixIncludeKeyletFields': { summary: 'Fixes keylet field inclusion in ledger entries', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Internal fix for keylet field handling. No user-facing impact.' },
+  'fixAMMClawbackRounding': { summary: 'Fixes rounding issues in AMM clawback operations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Corrects edge-case rounding in AMM+Clawback interactions.' },
+  'fixTokenEscrowV1': { summary: 'Fixes edge cases in token escrow functionality', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for token escrow. Improves escrow reliability for issued tokens.' },
+  
+  // ==================== AT MAJORITY (ETA ~12 days) ====================
+  'PermissionedDomains': { summary: 'Enables permissioned domains for institutional use cases', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'New ledger object type for domain permissions. Enables compliant institutional deployments.' },
+  
+  // ==================== CURRENTLY VOTING ====================
+  'PermissionedDEX': { summary: 'Enables permissioned DEX trading for compliant assets', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory'], rationale: 'Adds permission checks to DEX operations. Moderate overhead for compliant trading.' },
+  'TokenEscrow': { summary: 'Native escrow support for issued tokens (not just XRP)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Disk IO'], rationale: 'Extends escrow functionality to all tokens. New transaction types and ledger objects.' },
+  'Batch': { summary: 'Enables batching multiple transactions atomically', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Fee pressure'], rationale: 'Allows atomic multi-transaction batches. Increases validation complexity but reduces fees.' },
+  'fixXChainRewardRounding': { summary: 'Fixes reward rounding in cross-chain bridge', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for XChain reward calculations. Minor validation overhead.' },
+  
+  // ==================== ENABLED (for reference) ====================
   'AMM': { summary: 'Native automated market maker functionality', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.' },
   'Clawback': { summary: 'Enables token issuers to reclaim tokens from holders', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds flag check during token transfers. Only affects tokens with clawback enabled.' },
   'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.' },
   'DID': { summary: 'Decentralized Identifier support on XRPL', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.' },
-  'XChainBridge': { summary: 'Cross-chain bridge functionality', tier: 'A', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers.' },
+  'XChainBridge': { summary: 'Cross-chain bridge functionality', tier: 'C', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers. Low adoption so far.' },
   'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.' },
   'fixReducedOffersV1': { summary: 'Corrects offer reduction calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Minor calculation fix in DEX operations.' },
+  'fixReducedOffersV2': { summary: 'Additional offer reduction calculation fixes', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up fix for DEX offer calculations.' },
   'fixAMMOverflowOffer': { summary: 'Fixes AMM overflow in offer calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Prevents integer overflow in AMM edge cases.' },
+  'fixAMMv1_1': { summary: 'AMM improvements and bug fixes (v1.1)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fixes for AMM functionality.' },
+  'fixAMMv1_2': { summary: 'AMM improvements and bug fixes (v1.2)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Additional bug fixes for AMM.' },
+  'fixAMMv1_3': { summary: 'AMM improvements and bug fixes (v1.3)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Latest AMM bug fixes.' },
   'fixInnerObjTemplate2': { summary: 'Template fix for inner objects', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Internal template consistency fix.' },
   'MPTokensV1': { summary: 'Multi-Purpose Token support', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New token type with additional metadata support.' },
   'Credentials': { summary: 'On-chain credential verification', tier: 'B', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger entry type for credential storage.' },
-  'InvariantsV1_1': { summary: 'Enhanced ledger invariant checks', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Additional validation checks during consensus.' },
+  'DeepFreeze': { summary: 'Enhanced freeze functionality for compliance', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds deep freeze capability. Minimal overhead.' },
+  'DynamicNFT': { summary: 'Mutable NFT metadata support', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'Allows NFT metadata updates. New transaction type.' },
+  'AMMClawback': { summary: 'Clawback support for AMM LP tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Extends clawback to AMM LP tokens. Minor validation overhead.' },
+  'NFTokenMintOffer': { summary: 'Combine NFT minting with sell offer', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Convenience feature. Reduces transaction count.' },
+  'fixDirectoryLimit': { summary: 'Fixes directory pagination limits', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Bug fix for directory handling. Improves large account support.' },
+  'fixEnforceNFTokenTrustline': { summary: 'Enforces NFToken trustline requirements', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Security fix for NFToken trustlines.' },
+  'fixEnforceNFTokenTrustlineV2': { summary: 'Additional NFToken trustline enforcement', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up security fix.' },
+  'fixPayChanCancelAfter': { summary: 'Fixes payment channel cancel timing', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for payment channel timing.' },
+  'fixNFTokenPageLinks': { summary: 'Fixes NFToken page linking issues', tier: 'A', impact: 'Low', areas: ['Disk IO'], rationale: 'Bug fix for NFToken pagination.' },
 };
 
 // Helper to convert XRPScan amendment to our Amendment type
@@ -251,14 +269,8 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     rationale: 'Performance impact not yet assessed.'
   };
 
-  // Calculate waiting days
-  let waitingDays = 0;
-  if (xrpAmendment.majority) {
-    const majorityDate = new Date(xrpAmendment.majority);
-    const now = new Date();
-    const daysSinceMajority = Math.floor((now.getTime() - majorityDate.getTime()) / (24 * 60 * 60 * 1000));
-    waitingDays = Math.max(0, 14 - daysSinceMajority);
-  }
+  // Use API-provided days (each amendment has its own individual countdown)
+  const waitingDays = xrpAmendment.daysUntilEnabled || 0;
 
   return {
     id: xrpAmendment.amendment_id,
@@ -266,7 +278,7 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     summary: metadata.summary,
     tier: metadata.tier,
     performanceImpact: metadata.impact,
-    waitingDays: xrpAmendment.daysUntilEnabled || waitingDays,
+    waitingDays: waitingDays,
     ledgerImpact: {
       estimatedImpact: metadata.impact,
       confidence: amendmentMetadata[xrpAmendment.name] ? 'High' : 'Low',
@@ -283,8 +295,13 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     enabled: xrpAmendment.enabled,
     percentSupport: xrpAmendment.percentSupport,
     status: xrpAmendment.status,
+    // Individual countdown per amendment (not batched!)
     daysUntilEnabled: xrpAmendment.daysUntilEnabled,
-    majorityDate: xrpAmendment.majority || null,
+    hoursUntilEnabled: xrpAmendment.hoursUntilEnabled,
+    minutesUntilEnabled: xrpAmendment.minutesUntilEnabled,
+    secondsUntilEnabled: xrpAmendment.secondsUntilEnabled,
+    activationDate: xrpAmendment.activationDate,  // Calculated from Ripple epoch majority timestamp
+    majorityDate: xrpAmendment.majority ? String(xrpAmendment.majority) : null,
     enabledOn: xrpAmendment.enabled_on || null
   };
 }
@@ -506,6 +523,10 @@ export function LedgerImpactTool() {
                     <CountdownTimer 
                       majorityDate={amendment.majorityDate} 
                       daysUntilEnabled={amendment.daysUntilEnabled}
+                      hoursUntilEnabled={amendment.hoursUntilEnabled}
+                      minutesUntilEnabled={amendment.minutesUntilEnabled}
+                      secondsUntilEnabled={amendment.secondsUntilEnabled}
+                      activationDate={amendment.activationDate}
                       compact 
                     />
                   )}
@@ -613,10 +634,14 @@ export function LedgerImpactTool() {
                   <CountdownTimer 
                     majorityDate={selectedAmendment.majorityDate} 
                     daysUntilEnabled={selectedAmendment.daysUntilEnabled}
+                    hoursUntilEnabled={selectedAmendment.hoursUntilEnabled}
+                    minutesUntilEnabled={selectedAmendment.minutesUntilEnabled}
+                    secondsUntilEnabled={selectedAmendment.secondsUntilEnabled}
+                    activationDate={selectedAmendment.activationDate}
                   />
-                  {isValidMajorityDate(selectedAmendment.majorityDate) && (
+                  {selectedAmendment.activationDate && (
                     <p className="text-[10px] text-cyber-muted mt-2">
-                      Majority reached: {new Date(selectedAmendment.majorityDate!).toLocaleDateString()}
+                      Activates: {new Date(selectedAmendment.activationDate).toLocaleString()}
                     </p>
                   )}
                 </div>

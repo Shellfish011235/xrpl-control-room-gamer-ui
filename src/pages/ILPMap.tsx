@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Map, Eye, Shield, Flame, Activity, Route,
+  Map, Eye, Shield, Activity, Route,
   Settings, Layers, RefreshCw, Target,
   ChevronRight, Globe, Zap, AlertTriangle
 } from 'lucide-react';
@@ -49,11 +49,21 @@ export default function ILPMapPage() {
 
   const lensOptions: { lens: UILens; icon: React.ReactNode; label: string; description: string }[] = [
     { lens: 'domain', icon: <Globe size={14} />, label: 'Domain', description: 'On/Off/Hybrid ledger classification' },
-    { lens: 'trust', icon: <Shield size={14} />, label: 'Trust', description: 'Connector trust scores and verification' },
-    { lens: 'heat', icon: <Flame size={14} />, label: 'Heat', description: 'Volume and activity intensity' },
-    { lens: 'fog', icon: <Eye size={14} />, label: 'Fog', description: 'Risk and uncertainty visualization' },
+    { lens: 'trust', icon: <Shield size={14} />, label: 'Trust', description: 'Connector trust scores & explanations' },
+    { lens: 'fog', icon: <Eye size={14} />, label: 'Risk', description: 'Risk flags & uncertainty visualization' },
     { lens: 'flow', icon: <Activity size={14} />, label: 'Flow', description: 'Directional value movement' },
   ];
+
+  // Get current lens index for slider
+  const currentLensIndex = lensOptions.findIndex(l => l.lens === activeLens);
+  const currentLensInfo = lensOptions[currentLensIndex] || lensOptions[0];
+
+  const handleSliderChange = (value: number) => {
+    const lens = lensOptions[value]?.lens;
+    if (lens) {
+      setActiveLens(lens);
+    }
+  };
 
   // Stats
   const activeCorridors = corridors.filter(c => c.status === 'active').length;
@@ -119,24 +129,64 @@ export default function ILPMapPage() {
           </div>
         </div>
 
-        {/* Lens Selector */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <span className="text-xs text-cyber-muted font-cyber shrink-0">UI LENS:</span>
-          {lensOptions.map(({ lens, icon, label, description }) => (
-            <button
-              key={lens}
-              onClick={() => setActiveLens(lens)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded border text-xs whitespace-nowrap transition-all ${
-                activeLens === lens
-                  ? 'bg-cyber-cyan/20 border-cyber-cyan/50 text-cyber-cyan'
-                  : 'bg-cyber-darker/50 border-cyber-border text-cyber-muted hover:text-cyber-text'
-              }`}
-              title={description}
-            >
-              {icon}
-              {label}
-            </button>
-          ))}
+        {/* Lens Slider */}
+        <div className="cyber-panel p-3">
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-cyber-muted font-cyber shrink-0">VIEW:</span>
+            
+            {/* Current Lens Display */}
+            <div className="flex items-center gap-2 min-w-[120px]">
+              <span className="text-cyber-cyan">{currentLensInfo.icon}</span>
+              <span className="font-cyber text-sm text-cyber-cyan">{currentLensInfo.label}</span>
+            </div>
+
+            {/* Slider */}
+            <div className="flex-1 flex items-center gap-3">
+              <span className="text-[10px] text-cyber-muted">{lensOptions[0].label}</span>
+              <input
+                type="range"
+                min={0}
+                max={lensOptions.length - 1}
+                step={1}
+                value={currentLensIndex >= 0 ? currentLensIndex : 0}
+                onChange={(e) => handleSliderChange(parseInt(e.target.value))}
+                className="flex-1 h-2 bg-cyber-darker rounded-lg appearance-none cursor-pointer accent-cyber-cyan
+                  [&::-webkit-slider-thumb]:appearance-none
+                  [&::-webkit-slider-thumb]:w-4
+                  [&::-webkit-slider-thumb]:h-4
+                  [&::-webkit-slider-thumb]:rounded-full
+                  [&::-webkit-slider-thumb]:bg-cyber-cyan
+                  [&::-webkit-slider-thumb]:shadow-[0_0_10px_rgba(0,212,255,0.5)]
+                  [&::-webkit-slider-thumb]:cursor-pointer
+                  [&::-moz-range-thumb]:w-4
+                  [&::-moz-range-thumb]:h-4
+                  [&::-moz-range-thumb]:rounded-full
+                  [&::-moz-range-thumb]:bg-cyber-cyan
+                  [&::-moz-range-thumb]:border-0
+                  [&::-moz-range-thumb]:cursor-pointer"
+              />
+              <span className="text-[10px] text-cyber-muted">{lensOptions[lensOptions.length - 1].label}</span>
+            </div>
+
+            {/* Description */}
+            <p className="text-[10px] text-cyber-muted hidden md:block max-w-[200px]">
+              {currentLensInfo.description}
+            </p>
+          </div>
+
+          {/* Lens Position Indicators */}
+          <div className="flex justify-between mt-2 px-[120px]">
+            {lensOptions.map((opt, i) => (
+              <div 
+                key={opt.lens}
+                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                  i === currentLensIndex 
+                    ? 'bg-cyber-cyan shadow-[0_0_6px_rgba(0,212,255,0.8)]' 
+                    : 'bg-cyber-border'
+                }`}
+              />
+            ))}
+          </div>
         </div>
       </motion.div>
 

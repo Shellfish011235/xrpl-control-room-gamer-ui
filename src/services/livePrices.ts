@@ -44,23 +44,25 @@ const COINGECKO_IDS: { [symbol: string]: string } = {
   ALGO: 'algorand',
 };
 
-// Fallback prices (updated periodically)
+// Fallback prices - LAST UPDATED: 2026-01-27
+// These are only used when CoinGecko API fails
+// Update these periodically to keep fallbacks reasonably accurate
 const FALLBACK_PRICES: { [symbol: string]: number } = {
-  XRP: 2.45,
-  BTC: 98500,
-  ETH: 3850,
+  XRP: 1.92,    // Updated 2026-01-27
+  BTC: 104500,  // Updated 2026-01-27
+  ETH: 3250,    // Updated 2026-01-27
   SOL: 245,
-  DOGE: 0.42,
-  ADA: 1.15,
-  LINK: 28.50,
-  DOT: 12.80,
-  AVAX: 45.00,
-  MATIC: 0.95,
-  ATOM: 12.50,
-  UNI: 15.00,
-  LTC: 125.00,
-  XLM: 0.45,
-  ALGO: 0.35,
+  DOGE: 0.35,
+  ADA: 0.95,
+  LINK: 24.50,
+  DOT: 8.80,
+  AVAX: 38.00,
+  MATIC: 0.55,
+  ATOM: 10.50,
+  UNI: 12.00,
+  LTC: 115.00,
+  XLM: 0.42,
+  ALGO: 0.30,
 };
 
 // Cache for rate limiting
@@ -163,13 +165,44 @@ export async function getPrice(symbol: string): Promise<number> {
 
 /**
  * Get XRP price specifically (common use case)
+ * Tries multiple sources to get the most accurate price
  */
 export async function getXRPPrice(): Promise<{ price: number; change24h: number; source: string }> {
+  // First try our standard service
   const update = await fetchLivePrices(['XRP']);
+  
+  // If we got live data, return it
+  if (update.source === 'live' || update.source === 'cached') {
+    console.log(`[LivePrices] XRP price: $${update.prices.XRP} (${update.source})`);
+    return {
+      price: update.prices.XRP || FALLBACK_PRICES.XRP,
+      change24h: update.changes.XRP || 0,
+      source: update.source,
+    };
+  }
+  
+  // If we got fallback, try Binance as backup
+  try {
+    console.log('[LivePrices] CoinGecko failed, trying Binance...');
+    const binanceResp = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT');
+    if (binanceResp.ok) {
+      const data = await binanceResp.json();
+      const price = parseFloat(data.price);
+      if (price > 0) {
+        console.log(`[LivePrices] XRP price from Binance: $${price}`);
+        return { price, change24h: 0, source: 'binance' };
+      }
+    }
+  } catch (e) {
+    console.warn('[LivePrices] Binance fallback also failed:', e);
+  }
+  
+  // Last resort: return fallback
+  console.warn(`[LivePrices] All sources failed, using fallback: $${FALLBACK_PRICES.XRP}`);
   return {
-    price: update.prices.XRP || FALLBACK_PRICES.XRP,
-    change24h: update.changes.XRP || 0,
-    source: update.source,
+    price: FALLBACK_PRICES.XRP,
+    change24h: 0,
+    source: 'fallback',
   };
 }
 

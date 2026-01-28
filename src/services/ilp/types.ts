@@ -86,6 +86,7 @@ export interface Connector {
   liquidity: LiquidityStatus;
   liquidity_depth?: number; // USD equivalent
   trust_score: number; // 0-1
+  trust_reason?: string; // Explanation for trust score
   latency_ms: number;
   settlement: SettlementMechanism;
   risk_flags: RiskFlag[];
@@ -152,7 +153,6 @@ export interface Route {
 export type UILens = 
   | 'domain'      // Ledger Domain View - on/off/hybrid classification
   | 'trust'       // Connector Trust View - trust scores and verification
-  | 'heat'        // Corridor Heat View - volume and activity
   | 'fog'         // Risk Fog View - uncertainty and risk visualization
   | 'flow';       // Asset Flow View - directional value movement
 

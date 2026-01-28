@@ -1,16 +1,15 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import Navigation from './components/Navigation'
 import Home from './pages/Home'
-import WorldMap from './pages/WorldMap'
+import Network from './pages/Network'
 import Underworld from './pages/Underworld'
 import Character from './pages/Character'
 import Clinic from './pages/Clinic'
 import MemeticLab from './pages/MemeticLab'
 import Terminal from './pages/Terminal'
 import CARV from './pages/CARV'
-import ILPMap from './pages/ILPMap'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,14 +38,15 @@ function App() {
             <AnimatePresence mode="wait">
               <Routes>
                 <Route path="/" element={<Home />} />
-                <Route path="/world" element={<WorldMap />} />
+                <Route path="/network" element={<Network />} />
+                <Route path="/world" element={<Navigate to="/network" replace />} />
+                <Route path="/ilp-map" element={<Navigate to="/network" replace />} />
                 <Route path="/underworld" element={<Underworld />} />
                 <Route path="/character" element={<Character />} />
                 <Route path="/clinic" element={<Clinic />} />
                 <Route path="/memetic-lab" element={<MemeticLab />} />
                 <Route path="/terminal" element={<Terminal />} />
                 <Route path="/carv" element={<CARV />} />
-                <Route path="/ilp-map" element={<ILPMap />} />
               </Routes>
             </AnimatePresence>
           </main>

@@ -1,5 +1,5 @@
 // ILP Connector Map Visualization - Full Featured Version
-// Supports all UI Lenses: Domain, Trust, Heat, Fog, Flow
+// Supports all UI Lenses: Domain, Trust, Fog, Flow
 // Shows active routes when calculated
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -45,10 +45,6 @@ function getLedgerColor(ledger: Ledger, lens: UILens, connectors: any[]): string
       if (avgTrust > 0.7) return TRUST_COLORS.high;
       if (avgTrust > 0.4) return TRUST_COLORS.medium;
       return TRUST_COLORS.low;
-    
-    case 'heat':
-      const heatLevel = Math.max(0, 1 - ledger.finality_seconds / 100);
-      return `hsl(${(1 - heatLevel) * 60}, 100%, ${50 + heatLevel * 30}%)`;
     
     case 'fog':
       const riskCount = ledger.risk_flags.length;
@@ -98,17 +94,6 @@ function getCorridorStyle(
         width: 1 + trust * 3,
         opacity: 0.4 + trust * 0.4,
         dashArray: trust < 0.3 ? '2,2' : 'none',
-      };
-    
-    case 'heat':
-      const heat = corridor.glow || 0.5;
-      const heatColor = `hsl(${(1 - heat) * 60}, 100%, 50%)`;
-      return {
-        color: heatColor,
-        toColor: heatColor,
-        width: 1 + heat * 4,
-        opacity: 0.3 + heat * 0.7,
-        dashArray: 'none',
       };
     
     case 'fog':
@@ -175,8 +160,15 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
       };
     });
     
+    // Debug: log ledger positions
+    console.log('[ConnectorMap] Ledgers:', ledgers.map(l => l.id));
+    console.log('[ConnectorMap] Positions:', Object.keys(pos));
+    console.log('[ConnectorMap] XRPL pos:', pos['xrpl']);
+    console.log('[ConnectorMap] EVM pos:', pos['xrpl_evm']);
+    console.log('[ConnectorMap] Corridors:', corridors.map(c => `${c.from_ledger} → ${c.to_ledger}`));
+    
     return pos;
-  }, [ledgers]);
+  }, [ledgers, corridors]);
 
   // Route corridors for highlighting
   const routeCorridorIds = useMemo(() => {
@@ -308,12 +300,28 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           </g>
         )}
 
+        {/* XRPL to EVM Sidechain connection */}
+        {positions['xrpl'] && positions['xrpl_evm'] && (
+          <line
+            x1={positions['xrpl'].x}
+            y1={positions['xrpl'].y}
+            x2={positions['xrpl_evm'].x}
+            y2={positions['xrpl_evm'].y}
+            stroke="#00D4FF"
+            strokeWidth={3}
+            strokeOpacity={0.8}
+          />
+        )}
+
         {/* Corridors (connections) */}
         <g className="corridors">
           {corridors.map(corridor => {
             const fromPos = positions[corridor.from_ledger];
             const toPos = positions[corridor.to_ledger];
-            if (!fromPos || !toPos) return null;
+            // Skip if positions missing
+            if (!fromPos || !toPos) {
+              return null;
+            }
             
             const style = getCorridorStyle(corridor, activeLens, connectors, ledgers);
             const isOnRoute = routeCorridorIds.has(corridor.id);
@@ -355,8 +363,8 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                     x2={x2}
                     y2={y2}
                     stroke={`url(#grad-${corridor.id})`}
-                    strokeWidth={isOnRoute ? style.width + 2 : isHovered || isSelected ? style.width + 1 : style.width}
-                    strokeOpacity={isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : style.opacity}
+                    strokeWidth={Math.max(2, isOnRoute ? style.width + 2 : isHovered || isSelected ? style.width + 1 : style.width)}
+                    strokeOpacity={Math.max(0.6, isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : style.opacity)}
                     strokeDasharray={style.dashArray}
                     filter={isOnRoute ? 'url(#glow-green)' : undefined}
                     style={{ cursor: 'pointer' }}
@@ -372,8 +380,8 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                     x2={x2}
                     y2={y2}
                     stroke={isOnRoute ? '#00FF88' : style.color}
-                    strokeWidth={isOnRoute ? style.width + 2 : isHovered || isSelected ? style.width + 1 : style.width}
-                    strokeOpacity={isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : style.opacity}
+                    strokeWidth={Math.max(2, isOnRoute ? style.width + 2 : isHovered || isSelected ? style.width + 1 : style.width)}
+                    strokeOpacity={Math.max(0.6, isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : style.opacity)}
                     strokeDasharray={isOnRoute ? '8,4' : style.dashArray}
                     strokeDashoffset={isOnRoute ? -flowOffset : 0}
                     filter={isOnRoute ? 'url(#glow-green)' : undefined}
@@ -478,7 +486,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
               activeRoute.hops.some(h => h.from_ledger === ledger.id || h.to_ledger === ledger.id)
             );
             
-            const baseRadius = isXRPL ? 25 : (activeLens === 'heat' ? 12 + (ledger.tps_estimate / 1000) * 5 : 15);
+            const baseRadius = isXRPL ? 25 : 15;
             
             return (
               <g 
@@ -510,11 +518,6 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                     <circle r={40} fill={color} opacity={0.15} />
                     <circle r={30} fill={color} opacity={0.3} />
                   </>
-                )}
-                
-                {/* Heat glow */}
-                {activeLens === 'heat' && (
-                  <circle r={baseRadius + 8} fill={color} opacity={0.3} className="animate-pulse" />
                 )}
                 
                 {/* Main circle */}
@@ -599,9 +602,6 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
               <text x="110" y="25" fill="#888" fontSize="8">No ILP</text>
             </>
           )}
-          {activeLens === 'heat' && (
-            <text x="10" y="25" fill="#888" fontSize="8">Hotter = Faster finality</text>
-          )}
         </g>
         
         {/* Direction Legend */}
@@ -668,6 +668,44 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
             </div>
           </div>
           
+          {/* Special explanation for Partner Banks */}
+          {selectedLedger === 'ripple_banks' && (
+            <div className="mt-3 p-3 rounded bg-cyber-purple/10 border border-cyber-purple/30">
+              <p className="text-xs text-cyber-purple font-cyber mb-2">HOW THIS WORKS:</p>
+              <p className="text-[11px] text-cyber-text leading-relaxed">
+                Ripple Partner Banks (like Santander, SBI Holdings, Tranglo) have <strong>direct integrations with Ripple</strong> for 
+                instant cross-border payments using XRP. These same banks are also <strong>SWIFT members</strong>, so they can route 
+                payments through either system. This creates a bridge between crypto rails (XRPL) and traditional banking (SWIFT).
+              </p>
+              <p className="text-[10px] text-cyber-muted mt-2">
+                Note: This is a business/operational bridge through bank partnerships, not a direct technical protocol connection.
+              </p>
+            </div>
+          )}
+          
+          {/* Special explanation for EVM Sidechain */}
+          {selectedLedger === 'xrpl_evm' && (
+            <div className="mt-3 p-3 rounded bg-cyber-cyan/10 border border-cyber-cyan/30">
+              <p className="text-xs text-cyber-cyan font-cyber mb-2">XRPL EVM SIDECHAIN:</p>
+              <p className="text-[11px] text-cyber-text leading-relaxed">
+                The XRPL EVM Sidechain is an <strong>EVM-compatible blockchain</strong> that uses XRP as its native 
+                currency. It has a <strong>native bridge</strong> to XRPL mainnet - you can lock XRP on mainnet and mint it on the sidechain.
+                This enables XRPL to connect to the Ethereum/EVM ecosystem and run Solidity smart contracts.
+              </p>
+            </div>
+          )}
+          
+          {/* Special explanation for Gatehub BTC */}
+          {selectedLedger === 'bitcoin' && (
+            <div className="mt-3 p-3 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
+              <p className="text-xs text-cyber-yellow font-cyber mb-2">BTC ON XRPL (GATEHUB):</p>
+              <p className="text-[11px] text-cyber-text leading-relaxed">
+                You can hold BTC on your Xaman wallet through <strong>Gatehub issued currencies</strong>. Gatehub holds real BTC 
+                and issues wrapped BTC tokens on XRPL via trust lines. This is a <strong>custodial bridge</strong> - Gatehub is the counterparty.
+              </p>
+            </div>
+          )}
+
           {/* Connected Corridors */}
           <div className="mt-3 pt-3 border-t border-cyber-border">
             <p className="text-xs text-cyber-muted mb-2">Connected Corridors:</p>
@@ -689,6 +727,30 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                 ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Trust Legend - show only in Trust lens */}
+      {activeLens === 'trust' && (
+        <div className="mt-4 p-3 rounded border border-cyber-border bg-cyber-darker/50">
+          <p className="text-xs text-cyber-muted mb-2 font-cyber">TRUST LEVEL LEGEND</p>
+          <div className="flex flex-wrap gap-4 text-[10px]">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#00FF88' }} />
+              <span className="text-cyber-text">High Trust (&gt;70%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FFD700' }} />
+              <span className="text-cyber-text">Medium Trust (40-70%)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF4444' }} />
+              <span className="text-cyber-text">Low Trust (&lt;40%)</span>
+            </div>
+          </div>
+          <p className="text-[9px] text-cyber-muted mt-2">
+            Trust scores are based on: security track record, decentralization, smart contract audits, counterparty risk, and operational history.
+          </p>
         </div>
       )}
 
@@ -729,34 +791,45 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
 
       {/* Corridor Stats */}
       <div className="mt-4 pt-4 border-t border-cyber-border">
-        <p className="text-xs text-cyber-muted mb-2">CORRIDORS</p>
-        <div className="flex flex-wrap gap-2">
+        <p className="text-xs text-cyber-muted mb-2">CORRIDORS {activeLens === 'trust' && '(Trust Lens)'}</p>
+        <div className="space-y-2">
           {corridors.map(corridor => {
             const style = getCorridorStyle(corridor, activeLens, connectors, ledgers);
+            const connector = connectors.find(c => c.id === corridor.connector_id);
             const isOnRoute = routeCorridorIds.has(corridor.id);
             const isRelatedToSelected = selectedLedger && (corridor.from_ledger === selectedLedger || corridor.to_ledger === selectedLedger);
+            const trustScore = connector?.trust_score || 0.5;
+            const trustReason = connector?.trust_reason;
             
             return (
-              <span 
-                key={corridor.id}
-                className={`px-2 py-1 rounded text-[10px] cursor-pointer transition-all flex items-center gap-1 ${
-                  isOnRoute 
-                    ? 'bg-cyber-green/30 text-cyber-green border-2 border-cyber-green' 
-                    : isRelatedToSelected
-                    ? 'bg-cyber-cyan/20 border-2 border-cyber-cyan text-cyber-cyan'
-                    : 'border'
-                }`}
-                style={{ 
-                  borderColor: isOnRoute || isRelatedToSelected ? undefined : style.color,
-                  color: isOnRoute || isRelatedToSelected ? undefined : style.color,
-                  backgroundColor: isOnRoute || isRelatedToSelected ? undefined : `${style.color}15`,
-                }}
-                onClick={() => onCorridorClick?.(corridor)}
-              >
-                {corridor.from_ledger} 
-                <span className="opacity-70">{corridor.bidirectional ? '⇄' : '→'}</span> 
-                {corridor.to_ledger}
-              </span>
+              <div key={corridor.id} className="space-y-1">
+                <span 
+                  className={`px-2 py-1 rounded text-[10px] cursor-pointer transition-all inline-flex items-center gap-1 ${
+                    isOnRoute 
+                      ? 'bg-cyber-green/30 text-cyber-green border-2 border-cyber-green' 
+                      : isRelatedToSelected
+                      ? 'bg-cyber-cyan/20 border-2 border-cyber-cyan text-cyber-cyan'
+                      : 'border'
+                  }`}
+                  style={{ 
+                    borderColor: isOnRoute || isRelatedToSelected ? undefined : style.color,
+                    color: isOnRoute || isRelatedToSelected ? undefined : style.color,
+                    backgroundColor: isOnRoute || isRelatedToSelected ? undefined : `${style.color}15`,
+                  }}
+                  onClick={() => onCorridorClick?.(corridor)}
+                >
+                  {corridor.from_ledger} 
+                  <span className="opacity-70">{corridor.bidirectional ? '⇄' : '→'}</span> 
+                  {corridor.to_ledger}
+                  {activeLens === 'trust' && (
+                    <span className="ml-1 opacity-80">({Math.round(trustScore * 100)}%)</span>
+                  )}
+                </span>
+                {/* Trust Reason - show in Trust lens */}
+                {activeLens === 'trust' && trustReason && (
+                  <p className="text-[9px] text-cyber-muted ml-2 leading-tight">{trustReason}</p>
+                )}
+              </div>
             );
           })}
         </div>

@@ -30,6 +30,22 @@ export interface AutoTradeSettings {
   takeProfitPercent: number;    // Auto-sell when position up this %
   stopLossPercent: number;      // Auto-sell when position down this %
   cooldownMinutes: number;      // Minutes between trades on same asset
+  
+  // Liquidation-aware settings
+  useLiquidationAwareStops: boolean;     // Use liquidation zones instead of fixed %
+  liquidationRiskTolerance: 'low' | 'medium' | 'high';  // How close to liq zones we allow
+  blockHighLiquidationRisk: boolean;     // Block trades when liquidation risk is extreme
+}
+
+// Liquidation warning for a position
+export interface LiquidationWarning {
+  asset: string;
+  riskLevel: 'safe' | 'caution' | 'warning' | 'danger';
+  distanceToLiqZone: number;     // % distance
+  liquidationPrice: number | null;
+  suggestedStopLoss: number | null;
+  message: string;
+  timestamp: number;
 }
 
 export interface AutoTradeLog {
@@ -92,6 +108,9 @@ interface PaperTradingState {
   dailyAutoTradeCount: number;
   dailyAutoTradeDate: string; // YYYY-MM-DD to track daily limit
   
+  // Liquidation Warnings
+  liquidationWarnings: LiquidationWarning[];
+  
   // Timestamps
   createdAt: number;
   lastTradeAt: number | null;
@@ -119,6 +138,11 @@ interface PaperTradingState {
   }) => AutoTradeLog;
   checkStopLossAndTakeProfit: (prices: { [asset: string]: number }) => void;
   clearAutoTradeLog: () => void;
+  
+  // Liquidation-Aware Actions
+  updateLiquidationWarnings: (warnings: LiquidationWarning[]) => void;
+  getLiquidationWarning: (asset: string) => LiquidationWarning | undefined;
+  hasHighRiskPositions: () => boolean;
 }
 
 // ==================== HELPERS ====================
@@ -141,6 +165,11 @@ const DEFAULT_AUTO_TRADE_SETTINGS: AutoTradeSettings = {
   takeProfitPercent: 15,
   stopLossPercent: 10,
   cooldownMinutes: 5,
+  
+  // Liquidation-aware settings (enabled by default for smarter trading)
+  useLiquidationAwareStops: true,
+  liquidationRiskTolerance: 'medium',
+  blockHighLiquidationRisk: true,
 };
 
 const getToday = () => new Date().toISOString().split('T')[0];
@@ -167,6 +196,9 @@ export const usePaperTradingStore = create<PaperTradingState>()(
       lastAutoTradeByAsset: {},
       dailyAutoTradeCount: 0,
       dailyAutoTradeDate: getToday(),
+      
+      // Liquidation Warnings
+      liquidationWarnings: [],
       
       createdAt: Date.now(),
       lastTradeAt: null,
@@ -616,6 +648,32 @@ export const usePaperTradingStore = create<PaperTradingState>()(
       
       clearAutoTradeLog: () => {
         set({ autoTradeLog: [] });
+      },
+      
+      // ==================== LIQUIDATION-AWARE ACTIONS ====================
+      
+      // Update liquidation warnings for all positions
+      updateLiquidationWarnings: (warnings) => {
+        set({ liquidationWarnings: warnings });
+        
+        // Log any danger-level warnings
+        const dangerWarnings = warnings.filter(w => w.riskLevel === 'danger');
+        if (dangerWarnings.length > 0) {
+          console.warn('[PaperTrading] DANGER: Positions near liquidation zones:', 
+            dangerWarnings.map(w => `${w.asset} (${w.distanceToLiqZone.toFixed(1)}% away)`).join(', ')
+          );
+        }
+      },
+      
+      // Get liquidation warning for a specific asset
+      getLiquidationWarning: (asset) => {
+        return get().liquidationWarnings.find(w => w.asset === asset);
+      },
+      
+      // Check if any positions are at high risk
+      hasHighRiskPositions: () => {
+        const warnings = get().liquidationWarnings;
+        return warnings.some(w => w.riskLevel === 'danger' || w.riskLevel === 'warning');
       },
     }),
     {

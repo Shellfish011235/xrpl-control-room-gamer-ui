@@ -22,16 +22,23 @@ export interface XRPLAmendment {
   introduced: string;
   enabled: boolean;
   enabled_on?: string;
-  majority?: string | null;
+  majority?: number | string | null;  // Ripple epoch timestamp (seconds since Jan 1, 2000) or ISO string
   supported: boolean;
   count: number;       // Validator votes FOR
   threshold: number;   // Votes needed
   validations: number; // Total validators
   tx_hash?: string;
+  eta?: string;        // ETA string from API (e.g., "05d:03h:58m")
+  xls?: string;        // XLS specification code (e.g., "XLS-80")
+  xls_url?: string;    // URL to XLS specification
   // Calculated fields
   percentSupport?: number;
   status?: 'enabled' | 'majority' | 'pending' | 'unsupported';
   daysUntilEnabled?: number;
+  hoursUntilEnabled?: number;
+  minutesUntilEnabled?: number;
+  secondsUntilEnabled?: number;
+  activationDate?: Date;  // Calculated activation date (majority + 14 days)
 }
 
 export interface WhaleTransaction {
@@ -124,9 +131,78 @@ export async function fetchCryptoSentiment(): Promise<{
 
 const XRPSCAN_API = 'https://api.xrpscan.com/api/v1';
 
+// Ripple epoch starts January 1, 2000 00:00:00 UTC
+// Unix epoch offset for Ripple = 946684800 seconds
+const RIPPLE_EPOCH_OFFSET = 946684800;
+
+/**
+ * Convert Ripple epoch timestamp to JavaScript Date
+ * Ripple epoch = seconds since Jan 1, 2000
+ * @param rippleTimestamp - seconds since Jan 1, 2000
+ * @returns JavaScript Date object
+ */
+function rippleEpochToDate(rippleTimestamp: number): Date {
+  // Convert Ripple epoch to Unix timestamp, then to milliseconds
+  const unixTimestamp = rippleTimestamp + RIPPLE_EPOCH_OFFSET;
+  return new Date(unixTimestamp * 1000);
+}
+
+/**
+ * Calculate countdown from majority date to activation (14 days after majority)
+ * Each amendment has its own individual countdown based on when IT reached majority
+ * @param majorityTimestamp - Ripple epoch timestamp when amendment reached majority
+ * @returns Object with days, hours, minutes, seconds until activation, plus activation date
+ */
+function calculateIndividualCountdown(majorityTimestamp: number): {
+  daysUntilEnabled: number;
+  hoursUntilEnabled: number;
+  minutesUntilEnabled: number;
+  secondsUntilEnabled: number;
+  activationDate: Date;
+} {
+  // Convert majority timestamp to JavaScript Date
+  const majorityDate = rippleEpochToDate(majorityTimestamp);
+  
+  // Activation is 14 days (2 weeks) after reaching majority
+  const activationDate = new Date(majorityDate.getTime() + (14 * 24 * 60 * 60 * 1000));
+  
+  // Calculate remaining time
+  const now = new Date();
+  const msRemaining = activationDate.getTime() - now.getTime();
+  
+  if (msRemaining <= 0) {
+    // Already activated or about to activate
+    return {
+      daysUntilEnabled: 0,
+      hoursUntilEnabled: 0,
+      minutesUntilEnabled: 0,
+      secondsUntilEnabled: 0,
+      activationDate
+    };
+  }
+  
+  // Calculate each component individually for this specific amendment
+  const totalSeconds = Math.floor(msRemaining / 1000);
+  const days = Math.floor(totalSeconds / (24 * 60 * 60));
+  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+  const seconds = totalSeconds % 60;
+  
+  return {
+    daysUntilEnabled: days,
+    hoursUntilEnabled: hours,
+    minutesUntilEnabled: minutes,
+    secondsUntilEnabled: seconds,
+    activationDate
+  };
+}
+
 /**
  * Fetch all XRPL amendments with their current voting status
  * This is the real-time data for your Ledger Impact Tool!
+ * 
+ * IMPORTANT: Each amendment has its OWN individual countdown based on when
+ * that specific amendment reached majority. Countdowns are NOT batched!
  */
 export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
   try {
@@ -138,7 +214,7 @@ export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
     
     const amendments: XRPLAmendment[] = await response.json();
     
-    // Enhance with calculated fields
+    // Enhance with calculated fields - INDIVIDUAL countdown per amendment
     return amendments.map(amendment => {
       const percentSupport = amendment.validations > 0 
         ? (amendment.count / amendment.validations) * 100 
@@ -146,19 +222,36 @@ export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
       
       let status: XRPLAmendment['status'] = 'pending';
       let daysUntilEnabled: number | undefined;
+      let hoursUntilEnabled: number | undefined;
+      let minutesUntilEnabled: number | undefined;
+      let secondsUntilEnabled: number | undefined;
+      let activationDate: Date | undefined;
       
       if (amendment.enabled) {
+        // Amendment is already active on the network
         status = 'enabled';
-      } else if (amendment.majority) {
+      } else if (amendment.majority && typeof amendment.majority === 'number') {
+        // Amendment has reached majority - calculate individual countdown
         status = 'majority';
-        // Calculate days until enabled (2 week waiting period)
-        const majorityDate = new Date(amendment.majority);
-        const enableDate = new Date(majorityDate.getTime() + 14 * 24 * 60 * 60 * 1000);
-        const now = new Date();
-        daysUntilEnabled = Math.max(0, Math.ceil((enableDate.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+        
+        // Calculate countdown from THIS amendment's specific majority timestamp
+        const countdown = calculateIndividualCountdown(amendment.majority);
+        daysUntilEnabled = countdown.daysUntilEnabled;
+        hoursUntilEnabled = countdown.hoursUntilEnabled;
+        minutesUntilEnabled = countdown.minutesUntilEnabled;
+        secondsUntilEnabled = countdown.secondsUntilEnabled;
+        activationDate = countdown.activationDate;
+        
+        console.log(`[FreeFeeds] ${amendment.name}: Majority at ${rippleEpochToDate(amendment.majority).toISOString()}, Activates: ${activationDate.toISOString()}, Countdown: ${daysUntilEnabled}d ${hoursUntilEnabled}h ${minutesUntilEnabled}m ${secondsUntilEnabled}s`);
+        
       } else if (percentSupport >= 80) {
-        status = 'majority'; // Just reached majority
+        // High support but no majority timestamp yet - unusual case
+        status = 'majority';
+        // Default to 14 days if we have high support but no majority date
         daysUntilEnabled = 14;
+        hoursUntilEnabled = 0;
+        minutesUntilEnabled = 0;
+        secondsUntilEnabled = 0;
       } else if (!amendment.supported) {
         status = 'unsupported';
       }
@@ -167,7 +260,11 @@ export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
         ...amendment,
         percentSupport: Math.round(percentSupport * 10) / 10,
         status,
-        daysUntilEnabled
+        daysUntilEnabled,
+        hoursUntilEnabled,
+        minutesUntilEnabled,
+        secondsUntilEnabled,
+        activationDate
       };
     });
   } catch (error) {

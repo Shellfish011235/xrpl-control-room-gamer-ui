@@ -19,7 +19,7 @@ import type {
   VisualConfig,
 } from '../services/ilp/types';
 import { DEFAULT_VISUAL_CONFIG } from '../services/ilp/types';
-import { getTopology } from '../services/ilp/topology';
+import { getTopology, resetTopology } from '../services/ilp/topology';
 import type { TopologyService } from '../services/ilp/topology';
 
 // ==================== TYPES ====================
@@ -126,7 +126,6 @@ type ILPStore = ILPStoreState & ILPStoreActions;
 const initialLensConfigs: Record<UILens, LensConfig> = {
   domain: { lens: 'domain', enabled: true, opacity: 1 },
   trust: { lens: 'trust', enabled: true, opacity: 1 },
-  heat: { lens: 'heat', enabled: false, opacity: 0.7 },
   fog: { lens: 'fog', enabled: true, opacity: 0.5 },
   flow: { lens: 'flow', enabled: false, opacity: 0.8 },
 };
@@ -186,19 +185,20 @@ export const useILPStore = create<ILPStore>()(
         // ==================== INITIALIZATION ====================
 
         initialize: () => {
-          // Always reinitialize if ledgers are empty (persist may have corrupted state)
+          // ALWAYS reinitialize to get fresh topology data
+          // This ensures new ledgers/corridors are picked up
           const state = get();
           console.log('[ILP Store] initialize() called. Current state:', {
             initialized: state.initialized,
             ledgersCount: state.ledgers.length,
           });
           
-          if (state.initialized && state.ledgers.length > 0) {
-            console.log('[ILP Store] Already initialized with data, skipping');
-            return;
-          }
+          // Force fresh data every time - don't skip
+          console.log('[ILP Store] Forcing fresh topology data...');
 
+          // Reset topology singleton to get fresh data
           console.log('[ILP Store] Creating topology service...');
+          resetTopology();
           topology = getTopology();
           
           // Debug: Check topology data immediately

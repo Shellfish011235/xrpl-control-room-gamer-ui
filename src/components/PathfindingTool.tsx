@@ -8,6 +8,7 @@ import {
 import {
   findPaymentPaths,
   analyzeLiquidity,
+  isConnected,
   formatCurrency,
   formatRate,
   POPULAR_PAIRS,
@@ -17,22 +18,23 @@ import {
   type PaymentPath
 } from '../services/xrplPathfinding';
 
-// Demo accounts - known active accounts on XRPL mainnet for testing
+// Demo accounts - known active accounts on XRPL mainnet for testing pathfinding
+// These accounts have trustlines and are known to work with pathfinding
 const DEMO_ACCOUNTS = {
-  // Bitstamp hot wallet - very active, good for pathfinding
+  // Bitstamp hot wallet - very active, has many trustlines
   bitstamp: {
-    address: 'rDsbeomae4FXwgQTJp9Rs64Qg9vDiTCdBv',
-    label: 'Bitstamp Hot Wallet',
+    address: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B',
+    label: 'Bitstamp',
   },
-  // GateHub - major issuer
+  // GateHub hot wallet - major issuer with many trustlines
   gatehub: {
     address: 'rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq',
     label: 'GateHub',
   },
-  // Ripple - for XRP transactions
-  ripple: {
-    address: 'rPT1Sjq2YGrBMTttX4GZHjKu9dyfzbpAYe',
-    label: 'Ripple',
+  // A known active account for testing
+  testAccount: {
+    address: 'r9cZA1mLK5R5Am25ArfXFmqgNwjZgnfk59',
+    label: 'Test Account',
   },
 };
 
@@ -48,13 +50,18 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
   const [destIssuer, setDestIssuer] = useState('rhub8VRN55s94qWKDv6jmDy1pUykJzF3wq');
   const [destAmount, setDestAmount] = useState('100');
   
-  // Demo mode - auto-fill with known working accounts
+  // Demo mode - auto-fill with known working accounts for pathfinding
   const loadDemoAccounts = useCallback(() => {
+    // Use Bitstamp and GateHub - both have trustlines for USD, good for pathfinding demo
     setSourceAccount(DEMO_ACCOUNTS.bitstamp.address);
     setDestAccount(DEMO_ACCOUNTS.gatehub.address);
     setDestCurrency('USD');
     setDestIssuer(DEMO_ACCOUNTS.gatehub.address);
-    setDestAmount('100');
+    setDestAmount('10'); // Smaller amount for demo
+    console.log('[PathfindingTool] Demo accounts loaded:', {
+      source: DEMO_ACCOUNTS.bitstamp,
+      dest: DEMO_ACCOUNTS.gatehub
+    });
   }, []);
   
   // Results state
@@ -74,6 +81,9 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
     }
   }, []);
 
+  // Connection error state
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+
   // Find paths
   const handleFindPaths = useCallback(async () => {
     if (!sourceAccount || !destAccount || !destAmount) {
@@ -83,6 +93,15 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
     setIsLoading(true);
     setResult(null);
     setSelectedPath(null);
+    setConnectionError(null);
+
+    console.log('[PathfindingTool] Finding paths:', {
+      source: sourceAccount,
+      dest: destAccount,
+      currency: destCurrency,
+      issuer: destIssuer,
+      amount: destAmount
+    });
 
     try {
       const pathResult = await findPaymentPaths(
@@ -94,13 +113,16 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
           value: destAmount
         }
       );
+      
+      console.log('[PathfindingTool] Result:', pathResult);
       setResult(pathResult);
       
       if (pathResult.alternatives.length > 0) {
         setSelectedPath(pathResult.alternatives[0]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('[PathfindingTool] Error:', error);
+      setConnectionError(error.message || 'Failed to connect to XRPL servers');
     } finally {
       setIsLoading(false);
     }
@@ -110,6 +132,7 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
   const handleAnalyzeLiquidity = useCallback(async () => {
     setIsLoading(true);
     setLiquidity(null);
+    setConnectionError(null);
 
     try {
       const analysis = await analyzeLiquidity(
@@ -120,8 +143,9 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
         }
       );
       setLiquidity(analysis);
-    } catch (error) {
+    } catch (error: any) {
       console.error('[PathfindingTool] Liquidity error:', error);
+      setConnectionError(error.message || 'Failed to analyze liquidity');
     } finally {
       setIsLoading(false);
     }
@@ -330,6 +354,29 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
             </button>
           </div>
 
+          {/* Connection Error */}
+          <AnimatePresence>
+            {connectionError && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-4 p-3 rounded border bg-cyber-red/10 border-cyber-red/30"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="text-cyber-red flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-cyber-red font-cyber mb-1">CONNECTION ERROR</p>
+                    <p className="text-[10px] text-cyber-red/80 whitespace-pre-wrap">{connectionError}</p>
+                    <p className="text-[9px] text-cyber-muted mt-2">
+                      Check browser console for details. Make sure you're connected to the internet.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Results */}
           <AnimatePresence>
             {result && (
@@ -493,6 +540,26 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
             </button>
           </div>
 
+          {/* Connection Error for Liquidity */}
+          <AnimatePresence>
+            {connectionError && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-4 p-3 rounded border bg-cyber-red/10 border-cyber-red/30"
+              >
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="text-cyber-red flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm text-cyber-red font-cyber mb-1">CONNECTION ERROR</p>
+                    <p className="text-[10px] text-cyber-red/80">{connectionError}</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Liquidity Results */}
           <AnimatePresence>
             {liquidity && (
@@ -545,10 +612,10 @@ export function PathfindingTool({ compact = false }: PathfindingToolProps) {
       {/* Info Footer */}
       <div className="mt-4 pt-3 border-t border-cyber-border">
         <p className="text-[9px] text-cyber-muted text-center">
-          🟢 Connected to LIVE XRPL mainnet via public nodes (xrplcluster.com, s1.ripple.com)
+          {isConnected() ? '🟢' : '⚪'} XRPL Mainnet via WebSocket (xrplcluster.com)
         </p>
         <p className="text-[8px] text-cyber-muted/70 text-center mt-1">
-          Click DEMO to load test accounts, or enter your own XRPL addresses
+          Click DEMO to load test accounts, then FIND PAYMENT PATHS
         </p>
       </div>
     </div>

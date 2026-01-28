@@ -18,9 +18,9 @@ import { useAssetsStore } from '../store/assetsStore'
 
 const pageCards = [
   {
-    path: '/world',
-    title: 'World Map',
-    subtitle: 'Global Network',
+    path: '/network',
+    title: 'Network',
+    subtitle: 'Global Topology',
     icon: Globe,
     color: 'cyber-glow',
     gradient: 'from-cyber-glow/20 to-cyber-blue/10',
@@ -711,16 +711,16 @@ export default function Home() {
                     
                     <div className="grid grid-cols-3 gap-3">
                       <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-purple/30 text-center">
-                        <p className="text-2xl font-cyber text-cyber-purple">35</p>
-                        <p className="text-[10px] text-cyber-muted">Active Amendments</p>
+                        <p className="text-2xl font-cyber text-cyber-green">1</p>
+                        <p className="text-[10px] text-cyber-muted">At Majority</p>
                       </div>
                       <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-green/30 text-center">
-                        <p className="text-2xl font-cyber text-cyber-green">150+</p>
-                        <p className="text-[10px] text-cyber-muted">Validators</p>
+                        <p className="text-2xl font-cyber text-cyber-green">34</p>
+                        <p className="text-[10px] text-cyber-muted">UNL Validators</p>
                       </div>
                       <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-yellow/30 text-center">
-                        <p className="text-2xl font-cyber text-cyber-yellow">80%</p>
-                        <p className="text-[10px] text-cyber-muted">Threshold</p>
+                        <p className="text-2xl font-cyber text-cyber-yellow">27/34</p>
+                        <p className="text-[10px] text-cyber-muted">Threshold (79%)</p>
                       </div>
                     </div>
                   </div>
@@ -734,10 +734,12 @@ export default function Home() {
                     
                     <div className="space-y-3">
                       {[
-                        { name: 'fixNFTokenDirV1', support: 80, status: 'Gaining' },
-                        { name: 'Clawback', support: 91, status: 'Near Threshold' },
-                        { name: 'PriceOracle', support: 71, status: 'Building' },
-                        { name: 'DID', support: 57, status: 'Early Stage' },
+                        { name: 'fixPriceOracleOrder', support: 97, status: 'ACTIVATED 5:19PM', voters: '33/34' },
+                        { name: 'fixMPTDeliveredAmount', support: 97, status: 'ACTIVATED 5:19PM', voters: '33/34' },
+                        { name: 'fixAMMClawbackRounding', support: 97, status: 'ACTIVATED 5:19PM', voters: '33/34' },
+                        { name: 'fixTokenEscrowV1', support: 97, status: 'ACTIVATED 5:19PM', voters: '33/34' },
+                        { name: 'fixIncludeKeyletFields', support: 97, status: 'ACTIVATED 5:19PM', voters: '33/34' },
+                        { name: 'PermissionedDomains', support: 88, status: 'Feb 4, 2026', voters: '30/34' },
                       ].map((item) => (
                         <div key={item.name} className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/30">
                           <div className="flex items-center justify-between mb-2">
@@ -757,7 +759,7 @@ export default function Home() {
                                 transition={{ duration: 0.5 }}
                               />
                             </div>
-                            <span className="text-xs text-cyber-muted w-10 text-right">{item.support}%</span>
+                            <span className="text-xs text-cyber-muted w-16 text-right">{item.voters}</span>
                           </div>
                         </div>
                       ))}
