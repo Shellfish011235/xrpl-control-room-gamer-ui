@@ -323,26 +323,34 @@ class XamanService {
     // Real mode - use Xumm SDK
     try {
       console.log('[Xaman] Creating payload via SDK...');
+      console.log('[Xaman] Payload:', JSON.stringify(payload, null, 2));
       
-      const result = await this.xumm.payload?.createAndSubscribe({
+      // Add timeout for SDK operations
+      const PAYLOAD_TIMEOUT = 30000; // 30 seconds to create payload
+      
+      const createPromise = this.xumm.payload?.createAndSubscribe({
         ...payload,
       }, (event) => {
         // Real-time event handler
-        console.log('[Xaman] Event:', event);
+        console.log('[Xaman] WebSocket Event:', event);
         
         if (event.data.opened) {
+          console.log('[Xaman] ✅ User opened the signing request');
           this.emit('signingOpened', { id: event.uuid });
         }
         
         if (event.data.signed !== undefined) {
+          console.log('[Xaman] Signing result received:', event.data.signed ? 'SIGNED' : 'REJECTED');
           const request = this.pendingRequests.get(event.uuid);
           if (request) {
             if (event.data.signed) {
               request.status = 'signed';
               request.txHash = event.data.txid;
+              console.log('[Xaman] ✅ Transaction signed! Hash:', event.data.txid);
               this.emit('signingSigned', request);
             } else {
               request.status = 'rejected';
+              console.log('[Xaman] ❌ Transaction rejected by user');
               this.emit('signingRejected', request);
             }
           }
@@ -350,7 +358,15 @@ class XamanService {
         }
       });
 
+      // Race against timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout creating Xaman payload')), PAYLOAD_TIMEOUT);
+      });
+
+      const result = await Promise.race([createPromise, timeoutPromise]) as any;
+
       if (!result || !result.created) {
+        console.error('[Xaman] Failed to create payload - no result');
         throw new Error('Failed to create payload');
       }
 
@@ -374,30 +390,56 @@ class XamanService {
       console.log('[Xaman] ✅ Payload created:', created.uuid);
       console.log('[Xaman] QR Code:', created.refs.qr_png);
       console.log('[Xaman] Deep Link:', created.next.always);
+      console.log('[Xaman] WebSocket URL:', created.refs.websocket_status);
 
-      // Handle the resolved promise in the background
-      resolved.then((resolvedPayload) => {
+      // Handle the resolved promise in the background with timeout
+      const resolvedTimeout = new Promise<null>((resolve) => {
+        setTimeout(() => {
+          console.log('[Xaman] ⏰ Resolved promise timeout - checking status');
+          resolve(null);
+        }, 10 * 60 * 1000); // 10 minute timeout for signing
+      });
+
+      Promise.race([resolved, resolvedTimeout]).then((resolvedPayload) => {
+        console.log('[Xaman] Resolved payload:', resolvedPayload);
         if (resolvedPayload) {
           const req = this.pendingRequests.get(created.uuid);
           if (req && req.status === 'pending') {
             if (resolvedPayload.signed) {
               req.status = 'signed';
               req.txHash = resolvedPayload.txid;
+              console.log('[Xaman] ✅ Payment signed via resolved promise');
               this.emit('signingSigned', req);
             } else {
               req.status = 'rejected';
+              console.log('[Xaman] ❌ Payment rejected via resolved promise');
               this.emit('signingRejected', req);
             }
           }
+        } else {
+          // Timeout - mark as expired if still pending
+          const req = this.pendingRequests.get(created.uuid);
+          if (req && req.status === 'pending') {
+            req.status = 'expired';
+            console.log('[Xaman] ⏰ Signing request expired');
+            this.emit('signingExpired', req);
+          }
         }
-      }).catch(console.error);
+      }).catch((err) => {
+        console.error('[Xaman] Resolved promise error:', err);
+        const req = this.pendingRequests.get(created.uuid);
+        if (req && req.status === 'pending') {
+          req.status = 'rejected';
+          this.emit('signingRejected', req);
+        }
+      });
 
       return request;
       
     } catch (error) {
       console.error('[Xaman] SDK error:', error);
       // Fall back to demo mode
-      console.log('[Xaman] Falling back to demo mode');
+      console.log('[Xaman] Falling back to demo mode due to error');
       return this.createDemoRequest(type, payload, now, expiresAt);
     }
   }

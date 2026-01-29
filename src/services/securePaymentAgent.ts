@@ -571,11 +571,31 @@ class SecurePaymentAgent {
 
   /**
    * Wait for a signing request to be completed
+   * Timeout after 5 minutes to prevent infinite loops
    */
   private waitForSignature(request: SigningRequest): Promise<SigningRequest> {
     return new Promise((resolve) => {
+      const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+      const startTime = Date.now();
+      
+      const cleanup = () => {
+        xamanService.off('signingSigned', onSigned);
+        xamanService.off('signingRejected', onRejected);
+        xamanService.off('signingExpired', onExpired);
+      };
+
       const checkStatus = () => {
+        // Check for timeout
+        if (Date.now() - startTime > TIMEOUT_MS) {
+          console.log('[SecureAgent] Signing request timed out');
+          cleanup();
+          request.status = 'expired';
+          resolve(request);
+          return;
+        }
+        
         if (request.status !== 'pending') {
+          cleanup();
           resolve(request);
           return;
         }
@@ -585,25 +605,19 @@ class SecurePaymentAgent {
       // Listen for events
       const onSigned = (data: SigningRequest) => {
         if (data.id === request.id) {
-          xamanService.off('signingSigned', onSigned);
-          xamanService.off('signingRejected', onRejected);
-          xamanService.off('signingExpired', onExpired);
+          cleanup();
           resolve(data);
         }
       };
       const onRejected = (data: SigningRequest) => {
         if (data.id === request.id) {
-          xamanService.off('signingSigned', onSigned);
-          xamanService.off('signingRejected', onRejected);
-          xamanService.off('signingExpired', onExpired);
+          cleanup();
           resolve(data);
         }
       };
       const onExpired = (data: SigningRequest) => {
         if (data.id === request.id) {
-          xamanService.off('signingSigned', onSigned);
-          xamanService.off('signingRejected', onRejected);
-          xamanService.off('signingExpired', onExpired);
+          cleanup();
           resolve(data);
         }
       };
