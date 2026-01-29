@@ -21,6 +21,7 @@ import {
   SafetyIndicator,
   SimpleStatusBadge,
   AgentPanel,
+  SecureAgentPanel,
 } from '../components/carv';
 import { useCARVStore } from '../store/carvStore';
 import { Bot } from 'lucide-react';
@@ -551,7 +552,7 @@ export default function CARVPage() {
           animate={{ opacity: 1, y: 0 }}
           className="h-[calc(100vh-200px)] min-h-[500px]"
         >
-          <AgentPanel />
+          <SecureAgentPanel />
         </motion.div>
       )}
 

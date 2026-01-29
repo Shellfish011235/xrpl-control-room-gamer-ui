@@ -656,6 +656,137 @@ export async function getWalletData(address: string): Promise<{
   };
 }
 
+// ==================== TRANSACTION LOOKUP ====================
+
+export interface TransactionResult {
+  hash: string;
+  success: boolean;
+  validated: boolean;
+  type: string;
+  account: string;
+  destination?: string;
+  amount?: number;
+  currency?: string;
+  fee: number;
+  ledgerIndex: number;
+  timestamp?: number;
+  error?: string;
+}
+
+/**
+ * Get transaction details by hash
+ * Useful for verifying a transaction was confirmed
+ */
+export async function getTransaction(txHash: string): Promise<TransactionResult> {
+  try {
+    const result = await xrplRequest<{
+      Account: string;
+      Amount?: string | { currency: string; issuer: string; value: string };
+      Destination?: string;
+      Fee: string;
+      TransactionType: string;
+      hash: string;
+      ledger_index: number;
+      date?: number;
+      validated?: boolean;
+      meta?: {
+        TransactionResult: string;
+        delivered_amount?: string | { currency: string; issuer: string; value: string };
+      };
+    }>('tx', [{ transaction: txHash }]);
+
+    const success = result.meta?.TransactionResult === 'tesSUCCESS';
+    
+    // Parse amount
+    let amount: number | undefined;
+    let currency = 'XRP';
+    
+    if (result.Amount) {
+      if (typeof result.Amount === 'string') {
+        amount = parseInt(result.Amount) / 1000000; // drops to XRP
+        currency = 'XRP';
+      } else {
+        amount = parseFloat(result.Amount.value);
+        currency = result.Amount.currency;
+      }
+    }
+
+    return {
+      hash: result.hash,
+      success,
+      validated: result.validated ?? false,
+      type: result.TransactionType,
+      account: result.Account,
+      destination: result.Destination,
+      amount,
+      currency,
+      fee: parseInt(result.Fee) / 1000000,
+      ledgerIndex: result.ledger_index,
+      timestamp: result.date ? rippleTimeToUnix(result.date) : undefined,
+    };
+  } catch (error) {
+    console.error('[XRPL] Failed to get transaction:', error);
+    return {
+      hash: txHash,
+      success: false,
+      validated: false,
+      type: 'unknown',
+      account: '',
+      fee: 0,
+      ledgerIndex: 0,
+      error: error instanceof Error ? error.message : 'Transaction not found',
+    };
+  }
+}
+
+/**
+ * Wait for a transaction to be validated on the ledger
+ * Polls until confirmed or timeout
+ */
+export async function waitForTransaction(
+  txHash: string, 
+  timeoutMs: number = 30000,
+  pollIntervalMs: number = 2000
+): Promise<TransactionResult> {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const result = await getTransaction(txHash);
+      
+      if (result.validated && result.success) {
+        console.log(`[XRPL] Transaction ${txHash} confirmed!`);
+        return result;
+      }
+      
+      if (result.validated && !result.success) {
+        console.log(`[XRPL] Transaction ${txHash} failed:`, result.error);
+        return result;
+      }
+      
+      // Not yet validated, keep polling
+      console.log(`[XRPL] Transaction ${txHash} pending validation...`);
+    } catch (error) {
+      // Transaction might not be in ledger yet, keep trying
+      console.log(`[XRPL] Transaction ${txHash} not found yet, retrying...`);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
+  }
+  
+  // Timeout
+  return {
+    hash: txHash,
+    success: false,
+    validated: false,
+    type: 'unknown',
+    account: '',
+    fee: 0,
+    ledgerIndex: 0,
+    error: 'Transaction confirmation timeout',
+  };
+}
+
 // Helper: Decode hex string to UTF-8
 function decodeHex(hex: string): string {
   try {

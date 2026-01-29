@@ -19,3 +19,4 @@ export {
 
 // AI Agent Components
 export { AgentPanel, MiniAgent } from './AgentPanel';
+export { SecureAgentPanel } from './SecureAgentPanel';
