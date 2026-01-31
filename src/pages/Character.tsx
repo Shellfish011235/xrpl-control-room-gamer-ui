@@ -4,7 +4,8 @@ import {
   User, Star, Trophy, Zap, Github, Twitter, Globe, 
   ChevronRight, Code, GitBranch, Users,
   Calendar, MessageSquare, Heart, ExternalLink,
-  Image as ImageIcon, Loader2, X as XIcon, RefreshCw, Coins, Copy, Check, Edit2
+  Image as ImageIcon, Loader2, X as XIcon, RefreshCw, Coins, Copy, Check, Edit2,
+  Palette, Sparkles, UserCircle
 } from 'lucide-react'
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
@@ -12,6 +13,7 @@ import { WalletConnect } from '../components/WalletConnect'
 import { useProfileStore } from '../store/profileStore'
 import { useWalletStore } from '../store/walletStore'
 import { useAssetsStore } from '../store/assetsStore'
+import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/themeStore'
 import type { NFTAsset, MemeToken } from '../store/assetsStore'
 
 const contributors = [
@@ -89,6 +91,371 @@ const truncateAddress = (address: string) => {
   if (address.length <= 16) return address;
   return `${address.slice(0, 8)}...${address.slice(-6)}`;
 };
+
+// Premium "Themed By" Badge - Shows off your NFT theme
+function ThemeBadge() {
+  const { appliedTheme, isCustomThemed, resetToCyberpunk } = useThemeStore();
+  
+  if (!isCustomThemed || !appliedTheme) return null;
+  
+  return (
+    <motion.div
+      className="cyber-panel p-3 cyber-glow"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+    >
+      <div className="flex items-center gap-3">
+        {/* Mini NFT Preview */}
+        {appliedTheme.nftImageUrl && (
+          <div className="w-12 h-12 rounded-lg overflow-hidden border-2 border-cyber-glow/50 shrink-0">
+            <img 
+              src={appliedTheme.nftImageUrl} 
+              alt={appliedTheme.nftName}
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles size={12} className="text-cyber-glow" />
+            <span className="text-[10px] text-cyber-glow font-cyber uppercase tracking-wider">Premium Theme Active</span>
+          </div>
+          <p className="text-sm text-cyber-text font-cyber truncate">{appliedTheme.nftName}</p>
+        </div>
+        
+        {/* Color Dots */}
+        <div className="flex gap-1">
+          {[appliedTheme.colors.primary, appliedTheme.colors.accent, appliedTheme.colors.highlight].map((color, i) => (
+            <div 
+              key={i}
+              className="w-3 h-3 rounded-full border border-white/20"
+              style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+            />
+          ))}
+        </div>
+      </div>
+      
+      {/* Reset Button */}
+      <button
+        onClick={resetToCyberpunk}
+        className="w-full mt-3 py-2 text-xs text-cyber-muted hover:text-cyber-cyan border border-cyber-border hover:border-cyber-cyan/50 rounded transition-colors flex items-center justify-center gap-2"
+      >
+        <RefreshCw size={12} />
+        Reset to Cyberpunk Default
+      </button>
+    </motion.div>
+  );
+}
+
+// NFT Detail Modal with Theme/PFP Actions
+function NftDetailModal({ 
+  nft, 
+  onClose, 
+  copyAddress, 
+  copiedAddress 
+}: { 
+  nft: NFTAsset; 
+  onClose: () => void;
+  copyAddress: (addr: string) => void;
+  copiedAddress: string | null;
+}) {
+  const { setProfileImage } = useProfileStore();
+  const { 
+    previewNft, 
+    clearPreview, 
+    applyCurrentPreview,
+    applyThemeFromNft,
+    setProfilePicture,
+    previewTheme,
+    appliedTheme,
+    isExtracting,
+    extractionError,
+  } = useThemeStore();
+  
+  const isApplied = useIsNftApplied(nft.tokenId);
+  const isPreviewing = useIsNftPreviewing(nft.tokenId);
+
+  const handlePreviewTheme = async () => {
+    await previewNft(nft);
+  };
+
+  const handleApplyTheme = async () => {
+    if (isPreviewing && previewTheme) {
+      applyCurrentPreview();
+    } else {
+      await applyThemeFromNft(nft);
+    }
+  };
+
+  const handleSetAsPfp = () => {
+    if (nft.image) {
+      setProfilePicture(nft);
+      setProfileImage(nft.image);
+    }
+  };
+
+  const handleClearPreview = () => {
+    clearPreview();
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="cyber-panel cyber-glow w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <h3 className="font-cyber text-lg text-cyber-purple">NFT DETAILS</h3>
+            {isApplied && (
+              <span className="px-2 py-0.5 rounded text-[10px] bg-cyber-green/20 text-cyber-green border border-cyber-green/50">
+                APPLIED
+              </span>
+            )}
+            {isPreviewing && !isApplied && (
+              <span className="px-2 py-0.5 rounded text-[10px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 animate-pulse">
+                PREVIEWING
+              </span>
+            )}
+          </div>
+          <button 
+            onClick={onClose}
+            className="p-2 hover:bg-cyber-purple/10 rounded transition-colors"
+          >
+            <XIcon size={20} className="text-cyber-muted" />
+          </button>
+        </div>
+
+        {/* NFT Image */}
+        <div className="w-full aspect-square rounded-lg overflow-hidden border border-cyber-purple/30 bg-cyber-darker mb-4 relative">
+          {nft.image ? (
+            <img 
+              src={nft.image} 
+              alt={nft.name || 'NFT'} 
+              className="w-full h-full object-contain"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ImageIcon size={48} className="text-cyber-purple/30" />
+            </div>
+          )}
+          {isExtracting && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 size={32} className="animate-spin text-cyber-glow" />
+                <span className="text-xs text-cyber-text">Extracting colors...</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Theme Preview Colors */}
+        {isPreviewing && previewTheme && (
+          <div className="mb-4 p-3 rounded-lg bg-cyber-darker/50 border border-cyber-glow/30">
+            <p className="text-xs text-cyber-muted mb-2 flex items-center gap-1">
+              <Palette size={12} />
+              Extracted Theme Colors
+            </p>
+            <div className="flex gap-2">
+              {[
+                { label: 'Primary', color: previewTheme.colors.primary },
+                { label: 'Accent', color: previewTheme.colors.accent },
+                { label: 'Surface', color: previewTheme.colors.surface },
+                { label: 'Background', color: previewTheme.colors.background },
+              ].map(({ label, color }) => (
+                <div key={label} className="flex-1 text-center">
+                  <div 
+                    className="w-full h-8 rounded border border-cyber-border mb-1"
+                    style={{ backgroundColor: color }}
+                  />
+                  <p className="text-[10px] text-cyber-muted">{label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {extractionError && (
+          <div className="mb-4 p-3 rounded-lg bg-cyber-red/10 border border-cyber-red/30">
+            <p className="text-xs text-cyber-red">{extractionError}</p>
+          </div>
+        )}
+
+        {/* Premium Theme Features */}
+        {(isPreviewing || !isApplied) && nft.image && (
+          <div className="mb-4 p-3 rounded-lg bg-gradient-to-br from-cyber-purple/10 to-cyber-glow/10 border border-cyber-purple/30">
+            <p className="text-xs text-cyber-glow font-cyber mb-2 flex items-center gap-2">
+              <Sparkles size={14} />
+              PREMIUM THEME INCLUDES
+            </p>
+            <div className="grid grid-cols-2 gap-2 text-[11px] text-cyber-muted">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyber-glow" />
+                Animated glow effects
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyber-purple" />
+                NFT watermark background
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyber-cyan" />
+                Floating particles
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyber-yellow" />
+                Custom color palette
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          {/* Preview Theme Button */}
+          {isPreviewing ? (
+            <button
+              onClick={handleClearPreview}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-cyber-yellow/50 text-cyber-yellow hover:bg-cyber-yellow/10 transition-colors text-sm font-cyber"
+            >
+              <XIcon size={16} />
+              Clear Preview
+            </button>
+          ) : (
+            <button
+              onClick={handlePreviewTheme}
+              disabled={!nft.image || isExtracting}
+              className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-cyber-glow/50 text-cyber-glow hover:bg-cyber-glow/10 transition-colors text-sm font-cyber disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Palette size={16} />
+              Preview Theme
+            </button>
+          )}
+
+          {/* Apply Theme Button */}
+          <button
+            onClick={handleApplyTheme}
+            disabled={!nft.image || isExtracting || isApplied}
+            className={`flex items-center justify-center gap-2 py-3 px-4 rounded-lg text-sm font-cyber transition-colors ${
+              isApplied 
+                ? 'bg-cyber-green/20 border border-cyber-green/50 text-cyber-green cursor-default'
+                : 'bg-gradient-to-r from-cyber-purple/30 to-cyber-glow/30 border border-cyber-purple/50 text-cyber-text hover:border-cyber-glow/70 disabled:opacity-50 disabled:cursor-not-allowed'
+            }`}
+          >
+            {isApplied ? (
+              <>
+                <Check size={16} />
+                Theme Applied
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                Apply Premium Theme
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Set as Profile Picture */}
+        <button
+          onClick={handleSetAsPfp}
+          disabled={!nft.image}
+          className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-gradient-to-r from-cyber-purple/20 to-cyber-glow/20 border border-cyber-purple/30 text-cyber-text hover:border-cyber-glow/50 transition-colors text-sm font-cyber mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <UserCircle size={16} />
+          Set as Profile Picture
+        </button>
+
+        {/* NFT Info */}
+        <div className="space-y-3 pt-3 border-t border-cyber-border">
+          <div>
+            <p className="text-xs text-cyber-muted">Name</p>
+            <p className="text-cyber-text font-cyber">{nft.name || `NFT #${nft.serial}`}</p>
+          </div>
+          
+          {nft.description && (
+            <div>
+              <p className="text-xs text-cyber-muted">Description</p>
+              <p className="text-sm text-cyber-text">{nft.description}</p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-cyber-muted">Serial</p>
+              <p className="text-sm text-cyber-purple font-cyber">#{nft.serial}</p>
+            </div>
+            <div>
+              <p className="text-xs text-cyber-muted">Taxon</p>
+              <p className="text-sm text-cyber-text">{nft.taxon}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-cyber-muted">Issuer</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-cyber-text font-mono">{truncateAddress(nft.issuer)}</p>
+              <button 
+                onClick={() => copyAddress(nft.issuer)}
+                className="p-1 hover:bg-cyber-glow/10 rounded"
+              >
+                {copiedAddress === nft.issuer ? (
+                  <Check size={12} className="text-cyber-green" />
+                ) : (
+                  <Copy size={12} className="text-cyber-muted" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-cyber-muted">Token ID</p>
+            <div className="flex items-center gap-2">
+              <p className="text-[10px] text-cyber-text font-mono break-all">{nft.tokenId}</p>
+              <button 
+                onClick={() => copyAddress(nft.tokenId)}
+                className="p-1 hover:bg-cyber-glow/10 rounded shrink-0"
+              >
+                {copiedAddress === nft.tokenId ? (
+                  <Check size={12} className="text-cyber-green" />
+                ) : (
+                  <Copy size={12} className="text-cyber-muted" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs text-cyber-muted">Wallet</p>
+            <p className="text-sm text-cyber-glow">{nft.walletLabel}</p>
+          </div>
+        </div>
+
+        {/* View on Explorer */}
+        <a
+          href={`https://xrpscan.com/nft/${nft.tokenId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full mt-4 py-2 flex items-center justify-center gap-2 rounded border border-cyber-purple/50 text-cyber-purple hover:bg-cyber-purple/10 transition-colors text-sm"
+        >
+          <ExternalLink size={14} />
+          View on XRPScan
+        </a>
+      </motion.div>
+    </motion.div>
+  );
+}
 
 export default function Character() {
   const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle } = useProfileStore()
@@ -309,142 +676,194 @@ export default function Character() {
               <WalletConnect />
             </motion.div>
             
-            {/* NFTs & Memes Collection */}
-            <div className="cyber-panel p-4 mt-4">
-              {/* Tabs */}
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <button
-                  onClick={() => setActiveTab('nfts')}
-                  className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-cyber transition-all ${
-                    activeTab === 'nfts'
-                      ? 'bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/50'
-                      : 'text-cyber-muted hover:text-cyber-text'
-                  }`}
-                >
-                  <ImageIcon size={14} />
-                  NFTs ({nfts.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('memes')}
-                  className={`flex items-center gap-2 px-3 py-1 rounded text-xs font-cyber transition-all ${
-                    activeTab === 'memes'
-                      ? 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50'
-                      : 'text-cyber-muted hover:text-cyber-text'
-                  }`}
-                >
-                  <Coins size={14} />
-                  Memes ({memeTokens.length})
-                </button>
+            {/* Premium Theme Badge - Shows when custom theme is active */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mt-4"
+            >
+              <ThemeBadge />
+            </motion.div>
+            
+          </motion.div>
+          
+          {/* Center Column - NFTs/Memes (LARGE) + Contributors Grid (BELOW) */}
+          <motion.div 
+            className="lg:col-span-6 space-y-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            {/* NFTs & Memes Collection - LARGE CENTER DISPLAY */}
+            <div className="cyber-panel p-4 cyber-glow">
+              {/* Header with Tabs */}
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-cyber-border">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab('nfts')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-cyber transition-all ${
+                      activeTab === 'nfts'
+                        ? 'bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/50'
+                        : 'text-cyber-muted hover:text-cyber-text border border-transparent'
+                    }`}
+                  >
+                    <ImageIcon size={16} />
+                    <span>NFTs</span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      activeTab === 'nfts' ? 'bg-cyber-purple/30 text-cyber-purple' : 'bg-cyber-darker text-cyber-muted'
+                    }`}>
+                      {nfts.length}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('memes')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-cyber transition-all ${
+                      activeTab === 'memes'
+                        ? 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50'
+                        : 'text-cyber-muted hover:text-cyber-text border border-transparent'
+                    }`}
+                  >
+                    <Coins size={16} />
+                    <span>Memes</span>
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      activeTab === 'memes' ? 'bg-cyber-yellow/30 text-cyber-yellow' : 'bg-cyber-darker text-cyber-muted'
+                    }`}>
+                      {memeTokens.length}
+                    </span>
+                  </button>
+                </div>
                 <button
                   onClick={() => fetchAllAssets()}
                   disabled={isLoading}
-                  className="ml-auto p-1 hover:bg-cyber-glow/10 rounded transition-colors"
+                  className="p-2 hover:bg-cyber-glow/10 rounded-lg transition-colors border border-cyber-border hover:border-cyber-glow/50"
                   title="Refresh"
                 >
-                  <RefreshCw size={14} className={`text-cyber-muted ${isLoading ? 'animate-spin' : ''}`} />
+                  <RefreshCw size={16} className={`text-cyber-muted ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
               
               {/* Content */}
               {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 size={24} className="animate-spin text-cyber-glow" />
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 size={32} className="animate-spin text-cyber-glow" />
                 </div>
               ) : wallets.filter(w => w.provider !== 'demo').length === 0 ? (
-                <div className="text-center py-6">
-                  <ImageIcon size={32} className="mx-auto text-cyber-muted/50 mb-2" />
-                  <p className="text-sm text-cyber-muted">Connect a wallet to see your collection</p>
+                <div className="text-center py-16">
+                  <ImageIcon size={48} className="mx-auto text-cyber-muted/50 mb-3" />
+                  <p className="text-cyber-muted">Connect a wallet to see your collection</p>
                 </div>
               ) : activeTab === 'nfts' ? (
-                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
-                  {nfts.length === 0 ? (
-                    <div className="col-span-3 text-center py-6">
-                      <p className="text-sm text-cyber-muted">No NFTs found</p>
-                    </div>
-                  ) : (
-                    nfts.map((nft) => (
-                      <motion.div
-                        key={nft.tokenId}
-                        onClick={() => setSelectedNFT(nft)}
-                        className="aspect-square rounded-lg border border-cyber-purple/30 bg-cyber-darker/50 cursor-pointer overflow-hidden hover:border-cyber-purple transition-all group"
-                        whileHover={{ scale: 1.05 }}
-                      >
-                        {nft.isLoading ? (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Loader2 size={16} className="animate-spin text-cyber-purple/50" />
-                          </div>
-                        ) : nft.image ? (
-                          <img 
-                            src={nft.image} 
-                            alt={nft.name || 'NFT'} 
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center p-1">
-                            <ImageIcon size={16} className="text-cyber-purple/50 mb-1" />
-                            <span className="text-[8px] text-cyber-muted text-center">#{nft.serial}</span>
-                          </div>
-                        )}
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {memeTokens.length === 0 ? (
-                    <div className="text-center py-6">
-                      <p className="text-sm text-cyber-muted">No meme tokens found</p>
-                    </div>
-                  ) : (
-                    memeTokens.map((token, idx) => (
-                      <motion.div
-                        key={`${token.currency}-${token.issuer}-${idx}`}
-                        onClick={() => setSelectedMeme(token)}
-                        className="p-2 rounded-lg border border-cyber-border/50 bg-cyber-darker/50 cursor-pointer hover:border-cyber-yellow/50 transition-all"
-                        whileHover={{ x: 4 }}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div 
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-lg"
-                            style={{ backgroundColor: `${token.color}20` }}
+                <>
+                  {/* NFT Grid - Scrollable to show ALL NFTs */}
+                  <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
+                      {nfts.length === 0 ? (
+                        <div className="col-span-full text-center py-12">
+                          <ImageIcon size={40} className="mx-auto text-cyber-muted/30 mb-2" />
+                          <p className="text-sm text-cyber-muted">No NFTs found</p>
+                        </div>
+                      ) : (
+                        nfts.map((nft, idx) => (
+                          <motion.div
+                            key={nft.tokenId}
+                            onClick={() => setSelectedNFT(nft)}
+                            className="aspect-square rounded-lg border-2 border-cyber-purple/30 bg-cyber-darker/50 cursor-pointer overflow-hidden hover:border-cyber-purple hover:shadow-lg hover:shadow-cyber-purple/20 transition-all group"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: Math.min(idx * 0.02, 0.5) }}
+                            whileHover={{ scale: 1.05, y: -2 }}
                           >
-                            {token.icon || '🪙'}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-cyber-text font-medium truncate">{token.displayName}</p>
-                            <p className="text-[10px] text-cyber-muted truncate">from {token.walletLabel}</p>
+                            {nft.isLoading ? (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Loader2 size={20} className="animate-spin text-cyber-purple/50" />
+                              </div>
+                            ) : nft.image ? (
+                              <div className="relative w-full h-full">
+                                <img 
+                                  src={nft.image} 
+                                  alt={nft.name || 'NFT'} 
+                                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none'
+                                  }}
+                                />
+                                {/* Hover overlay with name */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-cyber-darker/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                                  <p className="text-[10px] text-cyber-text truncate w-full">{nft.name || `#${nft.serial}`}</p>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2">
+                                <ImageIcon size={20} className="text-cyber-purple/50 mb-1" />
+                                <span className="text-[9px] text-cyber-muted text-center">#{nft.serial}</span>
+                              </div>
+                            )}
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  
+                  {lastUpdated && (
+                    <p className="text-[10px] text-cyber-muted/50 mt-4 text-center">
+                      Updated {new Date(lastUpdated).toLocaleTimeString()}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Meme Tokens Grid - LARGER */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {memeTokens.length === 0 ? (
+                      <div className="col-span-full text-center py-12">
+                        <Coins size={40} className="mx-auto text-cyber-muted/30 mb-2" />
+                        <p className="text-sm text-cyber-muted">No meme tokens found</p>
+                      </div>
+                    ) : (
+                      memeTokens.map((token, idx) => (
+                        <motion.div
+                          key={`${token.currency}-${token.issuer}-${idx}`}
+                          onClick={() => setSelectedMeme(token)}
+                          className="p-4 rounded-lg border border-cyber-border/50 bg-cyber-darker/50 cursor-pointer hover:border-cyber-yellow/50 hover:shadow-lg hover:shadow-cyber-yellow/10 transition-all"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: idx * 0.05 }}
+                          whileHover={{ y: -2 }}
+                        >
+                          <div className="flex items-center gap-3 mb-3">
+                            <div 
+                              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                              style={{ backgroundColor: `${token.color}20` }}
+                            >
+                              {token.icon || '🪙'}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-cyber-text font-cyber truncate">{token.displayName}</p>
+                              <p className="text-[10px] text-cyber-muted truncate">{token.symbol}</p>
+                            </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-cyber" style={{ color: token.color }}>
+                            <p className="text-lg font-cyber" style={{ color: token.color }}>
                               {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                             </p>
-                            <p className="text-[10px] text-cyber-muted">{token.symbol}</p>
+                            <p className="text-[10px] text-cyber-muted">from {token.walletLabel}</p>
                           </div>
-                        </div>
-                      </motion.div>
-                    ))
+                        </motion.div>
+                      ))
+                    )}
+                  </div>
+                  
+                  {lastUpdated && (
+                    <p className="text-[10px] text-cyber-muted/50 mt-4 text-center">
+                      Updated {new Date(lastUpdated).toLocaleTimeString()}
+                    </p>
                   )}
-                </div>
-              )}
-              
-              {lastUpdated && (
-                <p className="text-[10px] text-cyber-muted/50 mt-2 text-center">
-                  Updated {new Date(lastUpdated).toLocaleTimeString()}
-                </p>
+                </>
               )}
             </div>
-          </motion.div>
-          
-          {/* Center Column - Contributors Grid */}
-          <motion.div 
-            className="lg:col-span-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+            
+            {/* Top Contributors - NOW BELOW NFTs/Memes */}
             <div className="cyber-panel p-4">
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-cyber-border">
                 <div className="flex items-center gap-2">
@@ -633,125 +1052,15 @@ export default function Character() {
         </div>
       </div>
 
-      {/* NFT Detail Modal */}
+      {/* NFT Detail Modal - Enhanced with Theme/PFP Actions */}
       <AnimatePresence>
         {selectedNFT && (
-          <motion.div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedNFT(null)}
-          >
-            <motion.div
-              className="cyber-panel cyber-glow w-full max-w-md p-6"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-cyber text-lg text-cyber-purple">NFT DETAILS</h3>
-                <button 
-                  onClick={() => setSelectedNFT(null)}
-                  className="p-2 hover:bg-cyber-purple/10 rounded transition-colors"
-                >
-                  <XIcon size={20} className="text-cyber-muted" />
-                </button>
-              </div>
-
-              {/* NFT Image */}
-              <div className="w-full aspect-square rounded-lg overflow-hidden border border-cyber-purple/30 bg-cyber-darker mb-4">
-                {selectedNFT.image ? (
-                  <img 
-                    src={selectedNFT.image} 
-                    alt={selectedNFT.name || 'NFT'} 
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon size={48} className="text-cyber-purple/30" />
-                  </div>
-                )}
-              </div>
-
-              {/* NFT Info */}
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-cyber-muted">Name</p>
-                  <p className="text-cyber-text font-cyber">{selectedNFT.name || `NFT #${selectedNFT.serial}`}</p>
-                </div>
-                
-                {selectedNFT.description && (
-                  <div>
-                    <p className="text-xs text-cyber-muted">Description</p>
-                    <p className="text-sm text-cyber-text">{selectedNFT.description}</p>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-cyber-muted">Serial</p>
-                    <p className="text-sm text-cyber-purple font-cyber">#{selectedNFT.serial}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-cyber-muted">Taxon</p>
-                    <p className="text-sm text-cyber-text">{selectedNFT.taxon}</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs text-cyber-muted">Issuer</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs text-cyber-text font-mono">{truncateAddress(selectedNFT.issuer)}</p>
-                    <button 
-                      onClick={() => copyAddress(selectedNFT.issuer)}
-                      className="p-1 hover:bg-cyber-glow/10 rounded"
-                    >
-                      {copiedAddress === selectedNFT.issuer ? (
-                        <Check size={12} className="text-cyber-green" />
-                      ) : (
-                        <Copy size={12} className="text-cyber-muted" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs text-cyber-muted">Token ID</p>
-                  <div className="flex items-center gap-2">
-                    <p className="text-[10px] text-cyber-text font-mono break-all">{selectedNFT.tokenId}</p>
-                    <button 
-                      onClick={() => copyAddress(selectedNFT.tokenId)}
-                      className="p-1 hover:bg-cyber-glow/10 rounded shrink-0"
-                    >
-                      {copiedAddress === selectedNFT.tokenId ? (
-                        <Check size={12} className="text-cyber-green" />
-                      ) : (
-                        <Copy size={12} className="text-cyber-muted" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs text-cyber-muted">Wallet</p>
-                  <p className="text-sm text-cyber-glow">{selectedNFT.walletLabel}</p>
-                </div>
-              </div>
-
-              {/* View on Explorer */}
-              <a
-                href={`https://xrpscan.com/nft/${selectedNFT.tokenId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full mt-4 py-2 flex items-center justify-center gap-2 rounded border border-cyber-purple/50 text-cyber-purple hover:bg-cyber-purple/10 transition-colors text-sm"
-              >
-                <ExternalLink size={14} />
-                View on XRPScan
-              </a>
-            </motion.div>
-          </motion.div>
+          <NftDetailModal 
+            nft={selectedNFT} 
+            onClose={() => setSelectedNFT(null)}
+            copyAddress={copyAddress}
+            copiedAddress={copiedAddress}
+          />
         )}
       </AnimatePresence>
 

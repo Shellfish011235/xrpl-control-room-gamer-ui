@@ -138,11 +138,24 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
         lastUpdated: Date.now(),
       });
 
-      // Fetch NFT metadata in the background
-      for (const nft of allNFTs) {
-        if (nft.uri) {
-          get().fetchNFTMetadata(nft.tokenId);
+      // Fetch NFT metadata in the background with batching to avoid rate limits
+      const nftsWithUri = allNFTs.filter(nft => nft.uri);
+      const batchSize = 5; // Fetch 5 at a time
+      const delayBetweenBatches = 200; // 200ms between batches
+
+      const fetchBatch = async (startIndex: number) => {
+        const batch = nftsWithUri.slice(startIndex, startIndex + batchSize);
+        await Promise.all(batch.map(nft => get().fetchNFTMetadata(nft.tokenId)));
+        
+        // If there are more, schedule next batch
+        if (startIndex + batchSize < nftsWithUri.length) {
+          setTimeout(() => fetchBatch(startIndex + batchSize), delayBetweenBatches);
         }
+      };
+
+      if (nftsWithUri.length > 0) {
+        console.log(`[Assets] Starting metadata fetch for ${nftsWithUri.length} NFTs in batches of ${batchSize}`);
+        fetchBatch(0);
       }
     } catch (error) {
       set({

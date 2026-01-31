@@ -347,24 +347,63 @@ export async function getAccountNFTs(address: string): Promise<Array<{
   serial: number;
   flags: number;
 }>> {
+  const allNFTs: Array<{
+    tokenId: string;
+    issuer: string;
+    taxon: number;
+    uri?: string;
+    serial: number;
+    flags: number;
+  }> = [];
+
+  let marker: unknown = undefined;
+  let pageCount = 0;
+  const maxPages = 20; // Safety limit to prevent infinite loops (20 pages * ~100 NFTs = 2000 max)
+
   try {
-    const result = await xrplRequest<AccountNFTsResult>('account_nfts', [
-      {
+    do {
+      const params: Record<string, unknown> = {
         account: address,
         ledger_index: 'validated',
-      },
-    ]);
+        limit: 100, // Request max per page
+      };
 
-    return result.account_nfts.map((nft) => ({
-      tokenId: nft.NFTokenID,
-      issuer: nft.Issuer,
-      taxon: nft.NFTokenTaxon,
-      uri: nft.URI ? decodeHex(nft.URI) : undefined,
-      serial: nft.nft_serial,
-      flags: nft.Flags,
-    }));
-  } catch {
-    return [];
+      // Add marker for pagination if we have one
+      if (marker) {
+        params.marker = marker;
+      }
+
+      const result = await xrplRequest<AccountNFTsResult & { marker?: unknown }>('account_nfts', [params]);
+
+      // Map and add NFTs from this page
+      const pageNFTs = result.account_nfts.map((nft) => ({
+        tokenId: nft.NFTokenID,
+        issuer: nft.Issuer,
+        taxon: nft.NFTokenTaxon,
+        uri: nft.URI ? decodeHex(nft.URI) : undefined,
+        serial: nft.nft_serial,
+        flags: nft.Flags,
+      }));
+
+      allNFTs.push(...pageNFTs);
+      
+      // Get marker for next page (if any)
+      marker = result.marker;
+      pageCount++;
+
+      console.log(`[XRPL] Fetched NFT page ${pageCount}: ${pageNFTs.length} NFTs (total: ${allNFTs.length})`);
+
+    } while (marker && pageCount < maxPages);
+
+    if (marker) {
+      console.warn(`[XRPL] NFT fetch stopped at ${maxPages} pages. There may be more NFTs.`);
+    }
+
+    console.log(`[XRPL] Total NFTs fetched for ${address}: ${allNFTs.length}`);
+    return allNFTs;
+  } catch (error) {
+    console.error(`[XRPL] Error fetching NFTs:`, error);
+    return allNFTs; // Return whatever we got before the error
   }
 }
 

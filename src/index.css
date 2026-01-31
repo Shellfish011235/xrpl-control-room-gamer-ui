@@ -272,44 +272,82 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2300d4ff' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
+/* CSS Variables for NFT Theme System */
+:root {
+  /* Default cyber theme colors */
+  --cyber-glow: #00d4ff;
+  --cyber-purple: #a855f7;
+  --cyber-cyan: #00ffff;
+  --cyber-blue: #00aaff;
+  
+  /* Theme overridable colors */
+  --theme-primary: var(--cyber-glow);
+  --theme-accent: var(--cyber-purple);
+  --theme-surface: #111827;
+  --theme-background: #050810;
+  --theme-text: #e0e7ff;
+  --theme-glow: var(--cyber-glow);
+  
+  /* Safety colors - LOCKED, never themed */
+  --color-danger: #ff4444;
+  --color-warning: #ffd700;
+  --color-confirm: #00ff88;
+}
+
 /* Custom utility classes for dynamic colors */
 @layer utilities {
-  .text-cyber-glow { color: #00d4ff; }
-  .text-cyber-purple { color: #a855f7; }
-  .text-cyber-green { color: #00ff88; }
-  .text-cyber-yellow { color: #ffd700; }
+  /* Primary colors - these respond to theme changes */
+  .text-cyber-glow { color: var(--cyber-glow); }
+  .text-cyber-purple { color: var(--cyber-purple); }
+  .text-cyber-cyan { color: var(--cyber-cyan); }
+  .text-cyber-blue { color: var(--cyber-blue); }
+  
+  /* Safety colors - LOCKED */
+  .text-cyber-green { color: var(--color-confirm); }
+  .text-cyber-yellow { color: var(--color-warning); }
+  .text-cyber-red { color: var(--color-danger); }
   .text-cyber-orange { color: #ff8c00; }
-  .text-cyber-red { color: #ff4444; }
-  .text-cyber-cyan { color: #00ffff; }
-  .text-cyber-blue { color: #00aaff; }
-  .text-cyber-text { color: #e0e7ff; }
+  
+  /* Semantic colors */
+  .text-cyber-text { color: var(--theme-text, #e0e7ff); }
   .text-cyber-muted { color: #64748b; }
   
-  .bg-cyber-glow { background-color: #00d4ff; }
-  .bg-cyber-purple { background-color: #a855f7; }
-  .bg-cyber-green { background-color: #00ff88; }
-  .bg-cyber-yellow { background-color: #ffd700; }
+  /* Backgrounds */
+  .bg-cyber-glow { background-color: var(--cyber-glow); }
+  .bg-cyber-purple { background-color: var(--cyber-purple); }
+  .bg-cyber-cyan { background-color: var(--cyber-cyan); }
+  .bg-cyber-blue { background-color: var(--cyber-blue); }
+  
+  /* Safety backgrounds - LOCKED */
+  .bg-cyber-green { background-color: var(--color-confirm); }
+  .bg-cyber-yellow { background-color: var(--color-warning); }
+  .bg-cyber-red { background-color: var(--color-danger); }
   .bg-cyber-orange { background-color: #ff8c00; }
-  .bg-cyber-red { background-color: #ff4444; }
-  .bg-cyber-cyan { background-color: #00ffff; }
-  .bg-cyber-blue { background-color: #00aaff; }
-  .bg-cyber-darker { background-color: #050810; }
+  
+  /* Panel backgrounds */
+  .bg-cyber-darker { background-color: var(--theme-background, #050810); }
   .bg-cyber-dark { background-color: #0a0f1a; }
   .bg-cyber-navy { background-color: #0d1526; }
-  .bg-cyber-panel { background-color: #111827; }
+  .bg-cyber-panel { background-color: var(--theme-surface, #111827); }
   
+  /* Borders */
   .border-cyber-border { border-color: #1e3a5f; }
-  .border-cyber-glow { border-color: #00d4ff; }
-  .border-cyber-purple { border-color: #a855f7; }
-  .border-cyber-green { border-color: #00ff88; }
-  .border-cyber-yellow { border-color: #ffd700; }
-  .border-cyber-red { border-color: #ff4444; }
-  .border-cyber-cyan { border-color: #00ffff; }
+  .border-cyber-glow { border-color: var(--cyber-glow); }
+  .border-cyber-purple { border-color: var(--cyber-purple); }
+  .border-cyber-cyan { border-color: var(--cyber-cyan); }
   
-  .shadow-cyber-glow { box-shadow: 0 0 20px rgba(0, 212, 255, 0.5); }
+  /* Safety borders - LOCKED */
+  .border-cyber-green { border-color: var(--color-confirm); }
+  .border-cyber-yellow { border-color: var(--color-warning); }
+  .border-cyber-red { border-color: var(--color-danger); }
+  
+  /* Shadows */
+  .shadow-cyber-glow { 
+    box-shadow: 0 0 20px color-mix(in srgb, var(--cyber-glow) 50%, transparent); 
+  }
   
   .drop-shadow-cyber-glow {
-    filter: drop-shadow(0 0 8px #00d4ff);
+    filter: drop-shadow(0 0 8px var(--cyber-glow));
   }
 }
 
