@@ -332,9 +332,9 @@ export function applyThemeToCssVars(theme: ThemeProfile | null): void {
     : theme.effects.animationSpeed === 'slow' ? '30s' : '20s';
   root.style.setProperty('--theme-animation-speed', animSpeed);
 
-  // Create watermark background if enabled
+  // Create immersive NFT background if enabled
   if (theme.effects.enableWatermark && theme.nftImageUrl) {
-    createWatermark(theme.nftImageUrl, theme.colors.primary);
+    createWatermark(theme.nftImageUrl, theme.colors);
   }
 
   // Create floating particles if enabled
@@ -372,12 +372,14 @@ function resetToCyberpunkDefaults(root: HTMLElement): void {
 }
 
 /**
- * Create ambient NFT watermark background
+ * Create immersive NFT-inspired background
+ * Multiple layers for a rich, dimensional ambient effect
  */
-function createWatermark(imageUrl: string, tintColor: string): void {
-  const watermark = document.createElement('div');
-  watermark.id = 'theme-watermark';
-  watermark.style.cssText = `
+function createWatermark(imageUrl: string, colors: ThemeProfile['colors']): void {
+  // Create container for all background layers
+  const bgContainer = document.createElement('div');
+  bgContainer.id = 'theme-watermark';
+  bgContainer.style.cssText = `
     position: fixed;
     top: 0;
     left: 0;
@@ -385,26 +387,175 @@ function createWatermark(imageUrl: string, tintColor: string): void {
     bottom: 0;
     pointer-events: none;
     z-index: 0;
-    opacity: 0.04;
-    background-image: url(${imageUrl});
-    background-size: 60% auto;
-    background-position: center center;
-    background-repeat: no-repeat;
-    filter: blur(40px) saturate(1.5);
-    mix-blend-mode: screen;
-    animation: watermarkFloat 30s ease-in-out infinite;
+    overflow: hidden;
   `;
-  
+
+  // Layer 1: Base gradient from NFT colors
+  const gradientLayer = document.createElement('div');
+  gradientLayer.style.cssText = `
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    right: -50%;
+    bottom: -50%;
+    background: 
+      radial-gradient(ellipse at 20% 20%, ${colors.primary}15 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, ${colors.accent}12 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, ${colors.highlight}10 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, ${colors.primary}08 0%, transparent 40%),
+      linear-gradient(180deg, ${colors.background} 0%, ${colors.backgroundAlt} 100%);
+    animation: gradientRotate 60s linear infinite;
+  `;
+  bgContainer.appendChild(gradientLayer);
+
+  // Layer 2: Large blurred NFT image (main ambient)
+  const nftAmbient = document.createElement('div');
+  nftAmbient.style.cssText = `
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    height: 150%;
+    transform: translate(-50%, -50%);
+    background-image: url(${imageUrl});
+    background-size: cover;
+    background-position: center;
+    filter: blur(100px) saturate(1.8) brightness(0.6);
+    opacity: 0.35;
+    mix-blend-mode: screen;
+    animation: ambientPulse 20s ease-in-out infinite;
+  `;
+  bgContainer.appendChild(nftAmbient);
+
+  // Layer 3: Secondary NFT (offset, different blur)
+  const nftSecondary = document.createElement('div');
+  nftSecondary.style.cssText = `
+    position: absolute;
+    top: 30%;
+    right: -20%;
+    width: 80%;
+    height: 80%;
+    background-image: url(${imageUrl});
+    background-size: cover;
+    background-position: center;
+    filter: blur(80px) saturate(2) hue-rotate(15deg);
+    opacity: 0.2;
+    mix-blend-mode: overlay;
+    animation: ambientDrift 30s ease-in-out infinite;
+  `;
+  bgContainer.appendChild(nftSecondary);
+
+  // Layer 4: Animated color orbs
+  const orbColors = [colors.primary, colors.accent, colors.highlight];
+  orbColors.forEach((color, i) => {
+    const orb = document.createElement('div');
+    const size = 300 + i * 100;
+    const positions = [
+      { top: '20%', left: '10%' },
+      { top: '60%', right: '5%' },
+      { bottom: '10%', left: '30%' }
+    ];
+    orb.style.cssText = `
+      position: absolute;
+      ${Object.entries(positions[i]).map(([k, v]) => `${k}: ${v}`).join('; ')};
+      width: ${size}px;
+      height: ${size}px;
+      background: radial-gradient(circle, ${color}40 0%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(60px);
+      animation: orbFloat${i} ${25 + i * 5}s ease-in-out infinite;
+    `;
+    bgContainer.appendChild(orb);
+  });
+
+  // Layer 5: Vignette overlay
+  const vignette = document.createElement('div');
+  vignette.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 0%, transparent 40%, ${colors.background}90 100%);
+    pointer-events: none;
+  `;
+  bgContainer.appendChild(vignette);
+
+  // Layer 6: Subtle scanlines for cyber effect
+  const scanlines = document.createElement('div');
+  scanlines.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      ${colors.background}08 2px,
+      ${colors.background}08 4px
+    );
+    pointer-events: none;
+    opacity: 0.5;
+  `;
+  bgContainer.appendChild(scanlines);
+
   // Add animation keyframes
   if (!document.getElementById('theme-animations')) {
     const style = document.createElement('style');
     style.id = 'theme-animations';
     style.textContent = `
-      @keyframes watermarkFloat {
-        0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.04; }
-        25% { transform: scale(1.05) translate(2%, 1%); opacity: 0.05; }
-        50% { transform: scale(1.1) translate(0, 2%); opacity: 0.06; }
-        75% { transform: scale(1.05) translate(-2%, 1%); opacity: 0.05; }
+      @keyframes gradientRotate {
+        0% { transform: rotate(0deg) scale(1); }
+        50% { transform: rotate(180deg) scale(1.1); }
+        100% { transform: rotate(360deg) scale(1); }
+      }
+      
+      @keyframes ambientPulse {
+        0%, 100% { 
+          transform: translate(-50%, -50%) scale(1); 
+          opacity: 0.35;
+          filter: blur(100px) saturate(1.8) brightness(0.6);
+        }
+        50% { 
+          transform: translate(-50%, -50%) scale(1.1); 
+          opacity: 0.4;
+          filter: blur(120px) saturate(2) brightness(0.7);
+        }
+      }
+      
+      @keyframes ambientDrift {
+        0%, 100% { 
+          transform: translate(0, 0) scale(1);
+          opacity: 0.2;
+        }
+        33% { 
+          transform: translate(-5%, 3%) scale(1.05);
+          opacity: 0.25;
+        }
+        66% { 
+          transform: translate(3%, -2%) scale(0.98);
+          opacity: 0.18;
+        }
+      }
+      
+      @keyframes orbFloat0 {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        25% { transform: translate(30px, -20px) scale(1.1); }
+        50% { transform: translate(-20px, 30px) scale(0.95); }
+        75% { transform: translate(15px, 15px) scale(1.05); }
+      }
+      
+      @keyframes orbFloat1 {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        33% { transform: translate(-40px, 20px) scale(1.15); }
+        66% { transform: translate(25px, -30px) scale(0.9); }
+      }
+      
+      @keyframes orbFloat2 {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(50px, -40px) scale(1.2); }
       }
       
       @keyframes particleFloat {
@@ -432,10 +583,11 @@ function createWatermark(imageUrl: string, tintColor: string): void {
       body.themed .cyber-panel {
         background: linear-gradient(
           135deg, 
-          color-mix(in srgb, var(--theme-surface) 90%, transparent) 0%, 
-          color-mix(in srgb, var(--theme-background-alt) 95%, transparent) 100%
+          color-mix(in srgb, var(--theme-surface) 85%, transparent) 0%, 
+          color-mix(in srgb, var(--theme-background-alt) 90%, transparent) 100%
         );
-        border-color: color-mix(in srgb, var(--theme-primary) 30%, transparent);
+        border-color: color-mix(in srgb, var(--theme-primary) 40%, transparent);
+        backdrop-filter: blur(10px);
       }
       
       body.themed .cyber-panel::before {
@@ -444,35 +596,49 @@ function createWatermark(imageUrl: string, tintColor: string): void {
       
       body.themed .cyber-glow {
         box-shadow: 
-          0 0 10px color-mix(in srgb, var(--theme-glow) calc(var(--theme-glow-opacity) * 100%), transparent),
-          0 0 20px color-mix(in srgb, var(--theme-glow) calc(var(--theme-glow-opacity) * 50%), transparent),
-          inset 0 0 20px color-mix(in srgb, var(--theme-glow) 10%, transparent);
+          0 0 15px color-mix(in srgb, var(--theme-glow) calc(var(--theme-glow-opacity) * 100%), transparent),
+          0 0 30px color-mix(in srgb, var(--theme-glow) calc(var(--theme-glow-opacity) * 60%), transparent),
+          inset 0 0 30px color-mix(in srgb, var(--theme-glow) 15%, transparent);
         animation: glowPulse 4s ease-in-out infinite;
       }
       
       body.themed .cyber-progress-bar {
-        background: linear-gradient(90deg, var(--theme-primary), var(--theme-accent));
-        box-shadow: 0 0 10px var(--theme-glow);
+        background: linear-gradient(90deg, var(--theme-primary), var(--theme-accent), var(--theme-highlight));
+        background-size: 200% 100%;
+        animation: gradientShift 3s ease infinite;
+        box-shadow: 0 0 15px var(--theme-glow);
       }
       
       body.themed .cyber-btn {
         background: linear-gradient(135deg, var(--theme-surface-light) 0%, var(--theme-surface) 100%);
         border-color: var(--theme-primary);
+        backdrop-filter: blur(5px);
       }
       
       body.themed .cyber-btn:hover {
-        box-shadow: 0 0 20px var(--theme-glow);
+        box-shadow: 0 0 25px var(--theme-glow);
         border-color: var(--theme-highlight);
+      }
+      
+      /* Ensure content stays above background */
+      body.themed > *:not(#theme-watermark):not(#theme-particles) {
+        position: relative;
+        z-index: 1;
+      }
+      
+      body.themed #root {
+        position: relative;
+        z-index: 1;
       }
     `;
     document.head.appendChild(style);
   }
   
-  document.body.appendChild(watermark);
+  document.body.appendChild(bgContainer);
 }
 
 /**
- * Create floating particle effects
+ * Create floating particle effects with variety
  */
 function createParticles(primaryColor: string, accentColor: string, count: number): void {
   const container = document.createElement('div');
@@ -484,33 +650,129 @@ function createParticles(primaryColor: string, accentColor: string, count: numbe
     right: 0;
     bottom: 0;
     pointer-events: none;
-    z-index: 1;
+    z-index: 2;
     overflow: hidden;
   `;
 
+  // Mix of particle types
+  const particleTypes = [
+    { shape: 'circle', sizeRange: [2, 5], glowMultiplier: 2 },
+    { shape: 'circle', sizeRange: [1, 3], glowMultiplier: 3 },
+    { shape: 'diamond', sizeRange: [3, 6], glowMultiplier: 1.5 },
+  ];
+
   for (let i = 0; i < count; i++) {
     const particle = document.createElement('div');
-    const size = Math.random() * 4 + 2;
-    const color = Math.random() > 0.5 ? primaryColor : accentColor;
+    const type = particleTypes[i % particleTypes.length];
+    const size = Math.random() * (type.sizeRange[1] - type.sizeRange[0]) + type.sizeRange[0];
+    const color = Math.random() > 0.6 ? primaryColor : accentColor;
     const left = Math.random() * 100;
-    const delay = Math.random() * 20;
-    const duration = Math.random() * 20 + 15;
+    const delay = Math.random() * 25;
+    const duration = Math.random() * 25 + 20;
+    const drift = (Math.random() - 0.5) * 200; // Horizontal drift
+    
+    let shapeStyles = '';
+    if (type.shape === 'diamond') {
+      shapeStyles = `
+        width: ${size}px;
+        height: ${size}px;
+        transform: rotate(45deg);
+        border-radius: 2px;
+      `;
+    } else {
+      shapeStyles = `
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+      `;
+    }
     
     particle.style.cssText = `
       position: absolute;
-      width: ${size}px;
-      height: ${size}px;
+      ${shapeStyles}
       background: ${color};
-      border-radius: 50%;
       left: ${left}%;
-      bottom: -10px;
+      bottom: -20px;
       opacity: 0;
-      box-shadow: 0 0 ${size * 2}px ${color};
-      animation: particleFloat ${duration}s ease-in-out ${delay}s infinite;
+      box-shadow: 
+        0 0 ${size * type.glowMultiplier}px ${color},
+        0 0 ${size * type.glowMultiplier * 2}px ${color}40;
+      animation: particleRise${i % 3} ${duration}s ease-out ${delay}s infinite;
+      --drift: ${drift}px;
     `;
     
     container.appendChild(particle);
   }
+  
+  // Add particle animation variants
+  const particleStyles = document.createElement('style');
+  particleStyles.id = 'theme-particle-animations';
+  particleStyles.textContent = `
+    @keyframes particleRise0 {
+      0% { 
+        transform: translateY(0) translateX(0) scale(0); 
+        opacity: 0; 
+      }
+      10% { 
+        opacity: 0.9;
+        transform: translateY(-10vh) translateX(calc(var(--drift) * 0.1)) scale(1);
+      }
+      90% { 
+        opacity: 0.6;
+        transform: translateY(-90vh) translateX(calc(var(--drift) * 0.9)) scale(0.8);
+      }
+      100% { 
+        transform: translateY(-100vh) translateX(var(--drift)) scale(0); 
+        opacity: 0; 
+      }
+    }
+    
+    @keyframes particleRise1 {
+      0% { 
+        transform: translateY(0) translateX(0) rotate(0deg) scale(0); 
+        opacity: 0; 
+      }
+      15% { 
+        opacity: 1;
+        transform: translateY(-15vh) translateX(calc(var(--drift) * 0.15)) rotate(90deg) scale(1);
+      }
+      85% { 
+        opacity: 0.5;
+        transform: translateY(-85vh) translateX(calc(var(--drift) * 0.85)) rotate(270deg) scale(0.6);
+      }
+      100% { 
+        transform: translateY(-100vh) translateX(var(--drift)) rotate(360deg) scale(0); 
+        opacity: 0; 
+      }
+    }
+    
+    @keyframes particleRise2 {
+      0% { 
+        transform: translateY(0) translateX(0) scale(0); 
+        opacity: 0; 
+      }
+      5% { 
+        opacity: 0.7;
+        transform: translateY(-5vh) translateX(calc(var(--drift) * 0.05)) scale(1.2);
+      }
+      50% {
+        opacity: 0.8;
+        transform: translateY(-50vh) translateX(calc(var(--drift) * 0.5 + 20px)) scale(1);
+      }
+      95% { 
+        opacity: 0.3;
+        transform: translateY(-95vh) translateX(calc(var(--drift) * 0.95)) scale(0.5);
+      }
+      100% { 
+        transform: translateY(-100vh) translateX(var(--drift)) scale(0); 
+        opacity: 0; 
+      }
+    }
+  `;
+  
+  // Remove old particle animations if they exist
+  document.getElementById('theme-particle-animations')?.remove();
+  document.head.appendChild(particleStyles);
   
   document.body.appendChild(container);
 }
