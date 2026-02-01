@@ -2,11 +2,11 @@
 // Track your earnings from OpenClaw/Moltbot agent economy integration
 // "Watch the money roll in as AI agents pay for skills"
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Bot, DollarSign, TrendingUp, Zap, Users, Activity,
   Play, Pause, Settings, ExternalLink, Copy, Check,
-  ArrowUpRight, Layers, Code
+  ArrowUpRight, Layers, Code, RefreshCw
 } from 'lucide-react';
 
 // =============================================================================
@@ -55,7 +55,7 @@ const AGENT_NAMES = [
 // =============================================================================
 
 export function OpenClawDashboard() {
-  const [isLive, setIsLive] = useState(false);
+  const [isLive, setIsLive] = useState(false); // Simulation OFF by default
   const [activities, setActivities] = useState<AgentActivity[]>([]);
   const [stats, setStats] = useState<RevenueStats>({
     totalRevenue: 0,
@@ -66,9 +66,62 @@ export function OpenClawDashboard() {
   });
   const [copiedWallet, setCopiedWallet] = useState(false);
   const [feePercent, setFeePercent] = useState(3);
+  const [realBalance, setRealBalance] = useState<string | null>(null);
+  const [realTxCount, setRealTxCount] = useState<number | null>(null);
+  const [loadingReal, setLoadingReal] = useState(false);
 
   // Your wallet address
   const YOUR_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
+
+  // Fetch REAL wallet balance from XRPL Mainnet
+  const fetchRealBalance = useCallback(async () => {
+    setLoadingReal(true);
+    try {
+      // Get account info
+      const response = await fetch('https://xrplcluster.com/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          method: 'account_info',
+          params: [{ account: YOUR_WALLET, ledger_index: 'validated' }],
+        }),
+      });
+      const data = await response.json();
+      
+      if (data.result?.account_data?.Balance) {
+        const balanceXRP = (parseInt(data.result.account_data.Balance) / 1_000_000).toFixed(2);
+        setRealBalance(balanceXRP);
+      } else if (data.result?.error === 'actNotFound') {
+        setRealBalance('Not activated');
+      } else {
+        setRealBalance('0.00');
+      }
+
+      // Get transaction count
+      const txResponse = await fetch('https://xrplcluster.com/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          method: 'account_tx',
+          params: [{ account: YOUR_WALLET, limit: 100 }],
+        }),
+      });
+      const txData = await txResponse.json();
+      setRealTxCount(txData.result?.transactions?.length || 0);
+    } catch (error) {
+      console.error('Failed to fetch real balance:', error);
+      setRealBalance('Error');
+    } finally {
+      setLoadingReal(false);
+    }
+  }, [YOUR_WALLET]);
+
+  // Fetch real balance on mount and every 30 seconds
+  useEffect(() => {
+    fetchRealBalance();
+    const interval = setInterval(fetchRealBalance, 30000);
+    return () => clearInterval(interval);
+  }, [fetchRealBalance]);
 
   // Simulate live agent activity
   useEffect(() => {
@@ -143,7 +196,7 @@ export function OpenClawDashboard() {
             </div>
             <div>
               <h2 className="font-cyber text-cyber-text">OPENCLAW REVENUE</h2>
-              <p className="text-[10px] text-cyber-muted">AI Agent Economy Dashboard</p>
+              <p className="text-[10px] text-cyber-green">🔴 MAINNET LIVE - Real XRP</p>
             </div>
           </div>
           
@@ -151,12 +204,12 @@ export function OpenClawDashboard() {
             onClick={() => setIsLive(!isLive)}
             className={`flex items-center gap-2 px-4 py-2 rounded transition-colors ${
               isLive 
-                ? 'bg-cyber-green text-cyber-darker' 
+                ? 'bg-red-500 text-white animate-pulse' 
                 : 'bg-cyber-border text-cyber-muted hover:text-cyber-text'
             }`}
           >
             {isLive ? <Pause size={14} /> : <Play size={14} />}
-            {isLive ? 'LIVE' : 'Start Demo'}
+            {isLive ? '🔴 MAINNET LIVE' : 'Start'}
           </button>
         </div>
 
@@ -170,8 +223,45 @@ export function OpenClawDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* REAL MAINNET BALANCE */}
+      <div className="mx-4 mt-4 p-4 rounded bg-gradient-to-r from-green-500/20 to-cyan-500/20 border-2 border-green-500">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-green-400 font-cyber">💰 REAL MAINNET BALANCE</span>
+          <button 
+            onClick={fetchRealBalance} 
+            disabled={loadingReal}
+            className="p-1 rounded hover:bg-green-500/20"
+          >
+            <RefreshCw size={14} className={`text-green-400 ${loadingReal ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+        <div className="flex items-end gap-4">
+          <div>
+            <p className="text-3xl font-cyber text-green-400">
+              {realBalance !== null ? `${realBalance} XRP` : 'Loading...'}
+            </p>
+            <p className="text-[10px] text-cyber-muted">Actual wallet balance on XRPL Mainnet</p>
+          </div>
+          <div className="text-right">
+            <p className="text-lg font-cyber text-cyan-400">{realTxCount ?? '-'}</p>
+            <p className="text-[10px] text-cyber-muted">Real transactions</p>
+          </div>
+        </div>
+        <a 
+          href={`https://livenet.xrpl.org/accounts/${YOUR_WALLET}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-flex items-center gap-1 text-xs text-cyan-400 hover:underline"
+        >
+          View on XRPL Explorer <ExternalLink size={10} />
+        </a>
+      </div>
+
+      {/* Stats Grid (Simulated Activity Below) */}
       <div className="grid grid-cols-4 gap-3 p-4">
+        <div className="col-span-4 mb-2">
+          <p className="text-[10px] text-yellow-500">⚠️ Below stats are SIMULATED - Real fees appear in green box above</p>
+        </div>
         <div className="p-3 rounded bg-cyber-green/10 border border-cyber-green/30">
           <div className="flex items-center justify-between mb-1">
             <DollarSign size={14} className="text-cyber-green" />
@@ -234,21 +324,28 @@ export function OpenClawDashboard() {
 
       {/* Two Column Layout */}
       <div className="grid md:grid-cols-2 gap-4 p-4 pt-0">
-        {/* Live Activity Feed */}
-        <div className="rounded border border-cyber-border">
-          <div className="p-2 border-b border-cyber-border flex items-center justify-between">
-            <span className="text-xs text-cyber-text font-cyber">LIVE ACTIVITY</span>
-            {isLive && (
-              <span className="flex items-center gap-1 text-[10px] text-cyber-green">
-                <span className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
-                STREAMING
-              </span>
-            )}
+        {/* Activity Feed - CLEARLY MARKED AS SIMULATION */}
+        <div className="rounded border border-yellow-500/50">
+          <div className="p-2 border-b border-yellow-500/50 bg-yellow-500/10 flex items-center justify-between">
+            <span className="text-xs text-yellow-400 font-cyber">⚠️ SIMULATED PREVIEW</span>
+            <span className="text-[9px] text-yellow-500">NOT REAL TRANSACTIONS</span>
           </div>
           <div className="max-h-64 overflow-y-auto">
             {activities.length === 0 ? (
-              <div className="p-4 text-center text-cyber-muted text-xs">
-                {isLive ? 'Waiting for activity...' : 'Click "Start Demo" to simulate agent activity'}
+              <div className="p-4 text-center text-xs">
+                <p className="text-yellow-400 mb-2">No real transactions yet</p>
+                <p className="text-cyber-muted text-[10px]">
+                  Real fees appear when OpenClaw users integrate your plugin.
+                  <br/>Push to GitHub → Post to community → Get adoption
+                </p>
+                {!isLive && (
+                  <button 
+                    onClick={() => setIsLive(true)}
+                    className="mt-2 px-3 py-1 bg-yellow-500/20 text-yellow-400 text-[10px] rounded"
+                  >
+                    Show simulation preview
+                  </button>
+                )}
               </div>
             ) : (
               activities.map(activity => (
@@ -371,9 +468,9 @@ export function OpenClawDashboard() {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-cyber-border text-center bg-cyber-darker/50">
-        <p className="text-[8px] text-cyber-muted">
-          "Every time an AI agent uses a skill, you earn {feePercent}%"
+      <div className="p-2 border-t border-cyber-border text-center bg-red-500/10">
+        <p className="text-[10px] text-red-400 font-bold">
+          🔴 MAINNET LIVE - Earning {feePercent}% on every transaction
         </p>
       </div>
     </div>

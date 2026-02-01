@@ -48,7 +48,7 @@ export default function MicropaymentsPage() {
             </div>
             <div>
               <h1 className="text-2xl font-cyber text-cyber-text">MICROPAYMENTS</h1>
-              <p className="text-sm text-cyber-muted">XRPL/ILP Micropayment Dominance</p>
+              <p className="text-sm text-cyber-green">🔴 MAINNET LIVE - ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64</p>
             </div>
           </div>
           <p className="text-cyber-muted text-sm max-w-2xl">
