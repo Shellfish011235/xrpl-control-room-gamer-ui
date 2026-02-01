@@ -4,9 +4,9 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Bot, DollarSign, TrendingUp, Zap, Users, Activity,
+  Bot, Zap, Users, Activity,
   ExternalLink, Copy, Check,
-  ArrowUpRight, Layers, Code, RefreshCw
+  Layers, Code, RefreshCw
 } from 'lucide-react';
 
 // =============================================================================
@@ -41,38 +41,17 @@ export function OpenClawDashboard() {
     totalTransactions: 0,
   });
   const [copiedWallet, setCopiedWallet] = useState(false);
-  const [realBalance, setRealBalance] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   // Platform fee wallet - XRPL Control Room earns 1% on all transactions
   const PLATFORM_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
 
-  // Fetch REAL data from XRPL Mainnet
+  // Fetch REAL transaction data from XRPL Mainnet (no balance - privacy)
   const fetchRealData = useCallback(async () => {
     setLoading(true);
     try {
-      // Get account info (balance)
-      const balanceResponse = await fetch('https://xrplcluster.com/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: 'account_info',
-          params: [{ account: PLATFORM_WALLET, ledger_index: 'validated' }],
-        }),
-      });
-      const balanceData = await balanceResponse.json();
-      
-      if (balanceData.result?.account_data?.Balance) {
-        const balanceXRP = (parseInt(balanceData.result.account_data.Balance) / 1_000_000).toFixed(2);
-        setRealBalance(balanceXRP);
-      } else if (balanceData.result?.error === 'actNotFound') {
-        setRealBalance('Not activated');
-      } else {
-        setRealBalance('0.00');
-      }
-
-      // Get REAL transactions
+      // Get REAL transactions only (not balance)
       const txResponse = await fetch('https://xrplcluster.com/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,55 +178,42 @@ export function OpenClawDashboard() {
         )}
       </div>
 
-      {/* REAL MAINNET BALANCE */}
+      {/* PLATFORM STATUS */}
       <div className="mx-4 mt-4 p-4 rounded bg-gradient-to-r from-green-500/20 to-cyan-500/20 border-2 border-green-500">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-green-400 font-cyber">💰 LIVE MAINNET BALANCE</span>
+          <span className="text-xs text-green-400 font-cyber">🟢 PLATFORM ACTIVE</span>
           <a 
             href={`https://livenet.xrpl.org/accounts/${PLATFORM_WALLET}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:underline"
           >
-            XRPL Explorer <ExternalLink size={10} />
+            Verify on XRPL Explorer <ExternalLink size={10} />
           </a>
         </div>
-        <div className="flex items-end gap-4">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-3xl font-cyber text-green-400">
-              {realBalance !== null ? `${realBalance} XRP` : 'Loading...'}
-            </p>
-            <p className="text-[10px] text-cyber-muted">Actual wallet balance on XRPL Mainnet</p>
+            <p className="text-xl font-cyber text-green-400">XRPL Mainnet</p>
+            <p className="text-[10px] text-cyber-muted">Live production network</p>
           </div>
           <div className="text-right">
-            <p className="text-lg font-cyber text-cyan-400">{stats.totalTransactions}</p>
-            <p className="text-[10px] text-cyber-muted">Incoming payments</p>
+            <p className="text-2xl font-cyber text-cyan-400">{stats.totalTransactions}</p>
+            <p className="text-[10px] text-cyber-muted">Total transactions</p>
           </div>
         </div>
       </div>
 
-      {/* Stats Grid - ALL REAL DATA */}
-      <div className="grid grid-cols-4 gap-3 p-4">
-        <div className="p-3 rounded bg-cyber-green/10 border border-cyber-green/30">
-          <div className="flex items-center justify-between mb-1">
-            <DollarSign size={14} className="text-cyber-green" />
-            <ArrowUpRight size={12} className="text-cyber-green" />
-          </div>
-          <p className="text-xl font-cyber text-cyber-green">
-            {stats.totalRevenue.toFixed(4)}
-          </p>
-          <p className="text-[9px] text-cyber-muted">TOTAL XRP RECEIVED</p>
-        </div>
-
+      {/* Stats Grid - PUBLIC METRICS ONLY (no amounts) */}
+      <div className="grid grid-cols-3 gap-3 p-4">
         <div className="p-3 rounded bg-cyber-cyan/10 border border-cyber-cyan/30">
           <div className="flex items-center justify-between mb-1">
             <Activity size={14} className="text-cyber-cyan" />
             <span className="text-[9px] text-cyber-cyan">TODAY</span>
           </div>
           <p className="text-xl font-cyber text-cyber-cyan">
-            {stats.todayRevenue.toFixed(4)}
+            {transactions.filter(tx => tx.timestamp >= new Date().setHours(0,0,0,0)).length}
           </p>
-          <p className="text-[9px] text-cyber-muted">XRP TODAY</p>
+          <p className="text-[9px] text-cyber-muted">TRANSACTIONS TODAY</p>
         </div>
 
         <div className="p-3 rounded bg-cyber-purple/10 border border-cyber-purple/30">
@@ -257,7 +223,7 @@ export function OpenClawDashboard() {
           <p className="text-xl font-cyber text-cyber-purple">
             {stats.uniqueSenders}
           </p>
-          <p className="text-[9px] text-cyber-muted">UNIQUE SENDERS</p>
+          <p className="text-[9px] text-cyber-muted">UNIQUE USERS</p>
         </div>
 
         <div className="p-3 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
@@ -267,7 +233,7 @@ export function OpenClawDashboard() {
           <p className="text-xl font-cyber text-cyber-yellow">
             {stats.totalTransactions}
           </p>
-          <p className="text-[9px] text-cyber-muted">TRANSACTIONS</p>
+          <p className="text-[9px] text-cyber-muted">TOTAL TRANSACTIONS</p>
         </div>
       </div>
 
@@ -283,7 +249,7 @@ export function OpenClawDashboard() {
               <div className="p-6 text-center text-xs">
                 <p className="text-cyber-cyan mb-2">No incoming payments yet</p>
                 <p className="text-cyber-muted text-[10px]">
-                  When someone uses the OpenClaw plugin, 1% platform fee appears here.
+                  When someone uses the OpenClaw plugin, platform fees appear here.
                   <br/>Share your plugin → Get adoption → Earn real XRP
                 </p>
               </div>
@@ -295,7 +261,7 @@ export function OpenClawDashboard() {
                       <Bot size={12} className="text-green-400" />
                       <span className="text-[10px] text-cyber-text">{shortenAddress(tx.from)}</span>
                     </div>
-                    <span className="text-[10px] text-green-400 font-bold">+{tx.amount.toFixed(6)} XRP</span>
+                    <span className="text-[10px] text-green-400 font-bold">✓ Received</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <a 
@@ -320,36 +286,24 @@ export function OpenClawDashboard() {
         </div>
       </div>
 
-      {/* Revenue Projection */}
+      {/* Platform Info */}
       <div className="p-4 border-t border-cyber-border">
-        <p className="text-[10px] text-cyber-muted mb-2">Revenue projections (based on today's activity)</p>
+        <p className="text-[10px] text-cyber-muted mb-2">How it works</p>
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 rounded bg-gradient-to-br from-cyber-green/20 to-transparent">
-            <p className="text-[9px] text-cyber-muted mb-1">DAILY (projected)</p>
-            <p className="text-lg font-cyber text-cyber-green">
-              {(stats.todayRevenue || 0).toFixed(4)} XRP
-            </p>
-            <p className="text-[9px] text-cyber-muted">
-              ≈ ${((stats.todayRevenue || 0) * 0.50).toFixed(2)} USD
-            </p>
+            <p className="text-[9px] text-cyber-muted mb-1">RECIPIENT</p>
+            <p className="text-lg font-cyber text-cyber-green">97%</p>
+            <p className="text-[9px] text-cyber-muted">To service provider</p>
           </div>
           <div className="p-3 rounded bg-gradient-to-br from-cyber-cyan/20 to-transparent">
-            <p className="text-[9px] text-cyber-muted mb-1">MONTHLY (projected)</p>
-            <p className="text-lg font-cyber text-cyber-cyan">
-              {((stats.todayRevenue || 0) * 30).toFixed(2)} XRP
-            </p>
-            <p className="text-[9px] text-cyber-muted">
-              ≈ ${((stats.todayRevenue || 0) * 30 * 0.50).toFixed(0)} USD
-            </p>
+            <p className="text-[9px] text-cyber-muted mb-1">CREATOR</p>
+            <p className="text-lg font-cyber text-cyber-cyan">2%</p>
+            <p className="text-[9px] text-cyber-muted">To skill developer</p>
           </div>
           <div className="p-3 rounded bg-gradient-to-br from-cyber-purple/20 to-transparent">
-            <p className="text-[9px] text-cyber-muted mb-1">YEARLY (projected)</p>
-            <p className="text-lg font-cyber text-cyber-purple">
-              {((stats.todayRevenue || 0) * 365).toFixed(0)} XRP
-            </p>
-            <p className="text-[9px] text-cyber-muted">
-              ≈ ${((stats.todayRevenue || 0) * 365 * 0.50).toFixed(0)} USD
-            </p>
+            <p className="text-[9px] text-cyber-muted mb-1">PLATFORM</p>
+            <p className="text-lg font-cyber text-cyber-purple">1%</p>
+            <p className="text-[9px] text-cyber-muted">Infrastructure fee</p>
           </div>
         </div>
       </div>
