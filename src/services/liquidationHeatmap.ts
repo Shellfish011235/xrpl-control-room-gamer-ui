@@ -99,90 +99,35 @@ const BINANCE_FUTURES_SYMBOLS: Record<string, string> = {
 
 /**
  * Fetch real open interest from Binance Futures API
+ * NOTE: Disabled due to CORS restrictions - Binance blocks browser requests
+ * Using estimated data instead
  */
 async function fetchBinanceOpenInterest(symbol: string): Promise<{ openInterest: number; openInterestValue: number } | null> {
-  const binanceSymbol = BINANCE_FUTURES_SYMBOLS[symbol];
-  if (!binanceSymbol) return null;
-  
-  try {
-    const response = await fetch(
-      `https://fapi.binance.com/fapi/v1/openInterest?symbol=${binanceSymbol}`
-    );
-    if (!response.ok) return null;
-    
-    const data = await response.json();
-    const priceResp = await fetch(
-      `https://fapi.binance.com/fapi/v1/ticker/price?symbol=${binanceSymbol}`
-    );
-    const priceData = await priceResp.json();
-    const price = parseFloat(priceData.price) || 1;
-    
-    return {
-      openInterest: parseFloat(data.openInterest),
-      openInterestValue: parseFloat(data.openInterest) * price,
-    };
-  } catch (error) {
-    console.error('[Liquidation] Binance OI error:', error);
-    return null;
-  }
+  // Binance Futures API blocks CORS from browsers and returns 451 in some regions
+  // Return null to use fallback estimated data
+  return null;
 }
 
 /**
  * Fetch real funding rate from Binance Futures API
+ * NOTE: Disabled due to CORS restrictions - Binance blocks browser requests
+ * Using estimated data instead
  */
 async function fetchBinanceFundingRate(symbol: string): Promise<FundingRate | null> {
-  const binanceSymbol = BINANCE_FUTURES_SYMBOLS[symbol];
-  if (!binanceSymbol) return null;
-  
-  try {
-    const response = await fetch(
-      `https://fapi.binance.com/fapi/v1/premiumIndex?symbol=${binanceSymbol}`
-    );
-    if (!response.ok) return null;
-    
-    const data = await response.json();
-    
-    return {
-      symbol,
-      fundingRate: parseFloat(data.lastFundingRate),
-      fundingRatePercent: parseFloat(data.lastFundingRate) * 100,
-      predictedRate: parseFloat(data.lastFundingRate) * 0.95, // Approximate
-      nextFundingTime: parseInt(data.nextFundingTime),
-      markPrice: parseFloat(data.markPrice),
-      indexPrice: parseFloat(data.indexPrice),
-      timestamp: Date.now(),
-    };
-  } catch (error) {
-    console.error('[Liquidation] Binance funding error:', error);
-    return null;
-  }
+  // Binance Futures API blocks CORS from browsers and returns 451 in some regions
+  // Return null to use fallback estimated data
+  return null;
 }
 
 /**
  * Fetch real long/short ratio from Binance Futures API
+ * NOTE: Disabled due to CORS restrictions - Binance blocks browser requests
+ * Using estimated data instead
  */
 async function fetchBinanceLongShortRatio(symbol: string): Promise<{ longRatio: number; shortRatio: number } | null> {
-  const binanceSymbol = BINANCE_FUTURES_SYMBOLS[symbol];
-  if (!binanceSymbol) return null;
-  
-  try {
-    const response = await fetch(
-      `https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=${binanceSymbol}&period=5m&limit=1`
-    );
-    if (!response.ok) return null;
-    
-    const data = await response.json();
-    if (!data || data.length === 0) return null;
-    
-    const latest = data[0];
-    const longRatio = parseFloat(latest.longAccount);
-    const shortRatio = parseFloat(latest.shortAccount);
-    
-    return { longRatio, shortRatio };
-  } catch (error) {
-    console.error('[Liquidation] Binance L/S ratio error:', error);
-    return null;
-  }
+  // Binance Futures API blocks CORS from browsers and returns 451 in some regions
+  // Return null to use fallback estimated data
+  return null;
 }
 
 // ==================== LIQUIDATION LEVELS (estimated from OI and ratios) ====================
