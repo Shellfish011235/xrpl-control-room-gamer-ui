@@ -112,7 +112,6 @@ export function OpenClawDashboard() {
       setLastUpdate(new Date());
     } catch (error) {
       console.error('Failed to fetch XRPL data:', error);
-      setRealBalance('Error');
     } finally {
       setLoading(false);
     }
