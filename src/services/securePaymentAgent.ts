@@ -26,7 +26,8 @@ export interface AuditLogEntry {
   timestamp: Date;
   action: 'payment_requested' | 'payment_confirmed' | 'payment_signed' | 'payment_rejected' | 
           'trade_requested' | 'trade_confirmed' | 'trade_signed' | 'trade_rejected' |
-          'limit_exceeded' | 'whitelist_blocked' | 'cooldown_blocked' | 'error';
+          'limit_exceeded' | 'whitelist_blocked' | 'cooldown_blocked' | 'error' |
+          'config_updated' | 'wallet_connected' | 'wallet_connect_failed' | 'payment_cancelled';
   details: Record<string, unknown>;
   status: 'success' | 'failed' | 'pending';
   txHash?: string;

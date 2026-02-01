@@ -41,6 +41,7 @@ export interface Ledger {
     explorer?: string;
     documentation?: string;
     logo_url?: string;
+    description?: string;
   };
   // Visual positioning
   position?: { x: number; y: number; z?: number };
@@ -51,7 +52,7 @@ export interface Ledger {
 // ==================== CONNECTOR ====================
 
 export type LiquidityStatus = 'live' | 'simulated' | 'unknown' | 'depleted';
-export type SettlementMechanism = 'escrow' | 'htlc' | 'atomic_swap' | 'api' | 'bridge' | 'multisig';
+export type SettlementMechanism = 'escrow' | 'htlc' | 'atomic_swap' | 'api' | 'bridge' | 'multisig' | 'custodial';
 
 export interface AssetPair {
   from: string;
@@ -148,11 +149,20 @@ export interface Route {
   expires_at?: string;
 }
 
+export interface RouteResult {
+  success: boolean;
+  route?: Route;
+  error?: string;
+  alternatives?: Route[];
+  confidence: number;
+}
+
 // ==================== UI LENSES ====================
 
 export type UILens = 
   | 'domain'      // Ledger Domain View - on/off/hybrid classification
   | 'trust'       // Connector Trust View - trust scores and verification
+  | 'heat'        // Heat View - activity and throughput
   | 'fog'         // Risk Fog View - uncertainty and risk visualization
   | 'flow';       // Asset Flow View - directional value movement
 

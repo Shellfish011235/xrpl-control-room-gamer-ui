@@ -126,6 +126,7 @@ type ILPStore = ILPStoreState & ILPStoreActions;
 const initialLensConfigs: Record<UILens, LensConfig> = {
   domain: { lens: 'domain', enabled: true, opacity: 1 },
   trust: { lens: 'trust', enabled: true, opacity: 1 },
+  heat: { lens: 'heat', enabled: false, opacity: 0.8 },
   fog: { lens: 'fog', enabled: true, opacity: 0.5 },
   flow: { lens: 'flow', enabled: false, opacity: 0.8 },
 };

@@ -329,8 +329,8 @@ class XamanService {
       const PAYLOAD_TIMEOUT = 30000; // 30 seconds to create payload
       
       const createPromise = this.xumm.payload?.createAndSubscribe({
-        ...payload,
-      }, (event) => {
+        txjson: payload,
+      } as any, (event: any) => {
         // Real-time event handler
         console.log('[Xaman] WebSocket Event:', event);
         

@@ -539,7 +539,7 @@ export function HighPerfCytoscapeMap({
 // CYTOSCAPE STYLES
 // =============================================================================
 
-function getCytoscapeStyles(): cytoscape.Stylesheet[] {
+function getCytoscapeStyles(): any[] {
   return [
     {
       selector: 'node',
