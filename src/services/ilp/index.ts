@@ -1,8 +1,18 @@
 // ILP Multi-Ledger Connector Map Engine
 // Main Service Index
 
+// Core Types & Topology
 export * from './types';
 export * from './topology';
+
+// CAR Pathfinding & Validation
+export * from './carPathfinding';
+
+// Time-Series Replay
+export * from './timeSeriesReplay';
+
+// CAR Decision Logging
+export * from './carDecisionLog';
 
 import { useState, useEffect, useCallback } from 'react';
 import { TopologyService, getTopology } from './topology';

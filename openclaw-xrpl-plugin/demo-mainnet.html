@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw XRPL - MAINNET</title>
+  <script src="https://unpkg.com/xrpl@3.0.0/build/xrpl-latest-min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0f;
+      color: #00ff88;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 24px; margin-bottom: 10px; }
+    .mainnet { color: #ff4444; }
+    .testnet { color: #ffff00; }
+    .subtitle { color: #888; margin-bottom: 30px; }
+    .wallet-box {
+      background: #111;
+      border: 1px solid #00ff88;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    .wallet-box.fee { border-color: #00ffff; }
+    .wallet-label { color: #888; font-size: 12px; }
+    .wallet-address { 
+      color: #00ffff; 
+      font-size: 14px;
+      word-break: break-all;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 3px;
+    }
+    .status.success { background: #00ff8822; border: 1px solid #00ff88; }
+    .status.error { background: #ff444422; border: 1px solid #ff4444; color: #ff4444; }
+    .status.pending { background: #ffff0022; border: 1px solid #ffff00; color: #ffff00; }
+    button {
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: bold;
+      margin: 5px;
+    }
+    button:hover { background: #00ffaa; }
+    button:disabled { background: #333; color: #666; cursor: not-allowed; }
+    button.danger { background: #ff4444; }
+    button.danger:hover { background: #ff6666; }
+    .log {
+      background: #111;
+      border: 1px solid #333;
+      padding: 15px;
+      height: 300px;
+      overflow-y: auto;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .log-entry { margin: 5px 0; }
+    .log-entry.fee { color: #00ff88; }
+    .log-entry.tx { color: #00ffff; }
+    .log-entry.error { color: #ff4444; }
+    .log-entry.warning { color: #ffff00; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-box {
+      background: #111;
+      border: 1px solid #333;
+      padding: 15px;
+      text-align: center;
+    }
+    .stat-value { font-size: 24px; color: #00ff88; }
+    .stat-label { font-size: 10px; color: #666; margin-top: 5px; }
+    .warning {
+      background: #ff000033;
+      border: 2px solid #ff0000;
+      color: #ff4444;
+      padding: 15px;
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .safety-box {
+      background: #111;
+      border: 1px solid #ff8800;
+      padding: 15px;
+      margin: 20px 0;
+    }
+    .safety-box h3 { color: #ff8800; margin-bottom: 10px; }
+    .safety-item { 
+      display: flex; 
+      align-items: center; 
+      margin: 5px 0;
+      color: #888;
+    }
+    .safety-item.checked { color: #00ff88; }
+    .safety-item input { margin-right: 10px; }
+    .blocked {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .blocked-content {
+      background: #111;
+      border: 2px solid #ff4444;
+      padding: 30px;
+      max-width: 500px;
+      text-align: center;
+    }
+    .blocked-content h2 { color: #ff4444; margin-bottom: 20px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <!-- SAFETY BLOCK - Must complete checklist -->
+  <div class="blocked" id="safetyBlock">
+    <div class="blocked-content">
+      <h2>⚠️ MAINNET SAFETY CHECK</h2>
+      <p style="color: #888; margin-bottom: 20px;">
+        Complete ALL safety checks before proceeding.<br>
+        This uses REAL XRP. Mistakes cannot be undone.
+      </p>
+      <div class="safety-box">
+        <div class="safety-item">
+          <input type="checkbox" id="check1" onchange="checkSafety()">
+          <label for="check1">I have completed MAINNET-CHECKLIST.md</label>
+        </div>
+        <div class="safety-item">
+          <input type="checkbox" id="check2" onchange="checkSafety()">
+          <label for="check2">I have tested on testnet for 24+ hours</label>
+        </div>
+        <div class="safety-item">
+          <input type="checkbox" id="check3" onchange="checkSafety()">
+          <label for="check3">My seed phrase is stored OFFLINE</label>
+        </div>
+        <div class="safety-item">
+          <input type="checkbox" id="check4" onchange="checkSafety()">
+          <label for="check4">I understand this uses REAL money</label>
+        </div>
+        <div class="safety-item">
+          <input type="checkbox" id="check5" onchange="checkSafety()">
+          <label for="check5">I have a kill switch ready</label>
+        </div>
+      </div>
+      <button id="proceedBtn" disabled onclick="proceedToMainnet()">
+        Proceed to Mainnet
+      </button>
+      <p style="color: #666; margin-top: 15px; font-size: 11px;">
+        All 5 boxes must be checked to proceed
+      </p>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>⚡ OPENCLAW XRPL - <span id="networkLabel" class="testnet">TESTNET</span></h1>
+    <p class="subtitle">Production Micropayment Infrastructure</p>
+
+    <div class="warning" id="mainnetWarning" style="display: none;">
+      🔴 MAINNET MODE - Real XRP. Real money. Be careful.
+    </div>
+
+    <div class="wallet-box fee">
+      <div class="wallet-label">YOUR FEE WALLET (receives 3% of all payments)</div>
+      <div class="wallet-address">ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64</div>
+    </div>
+
+    <div class="wallet-box">
+      <div class="wallet-label">AGENT WALLET</div>
+      <div class="wallet-address" id="agentWallet">Not initialized</div>
+      <div style="margin-top: 10px;">
+        <input type="text" id="agentSeed" placeholder="Enter agent wallet seed (mainnet)" 
+               style="width: 100%; padding: 8px; background: #000; border: 1px solid #333; color: #00ff88; font-family: monospace;">
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-value" id="txCount">0</div>
+        <div class="stat-label">TRANSACTIONS</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="totalVolume">0</div>
+        <div class="stat-label">VOLUME (XRP)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="feesEarned">0</div>
+        <div class="stat-label">YOUR FEES (XRP)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="agentBalance">-</div>
+        <div class="stat-label">AGENT BALANCE</div>
+      </div>
+    </div>
+
+    <div id="status" class="status pending">Waiting for safety check...</div>
+
+    <div>
+      <button id="initBtn" onclick="initialize()" disabled>Initialize from Seed</button>
+      <button id="payBtn" onclick="simulatePayment()" disabled>Send Payment</button>
+      <button id="killBtn" onclick="killSwitch()" class="danger" disabled>⚠️ KILL SWITCH</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    // =======================================================================
+    // CONFIGURATION
+    // =======================================================================
+    
+    const CONFIG = {
+      FEE_WALLET: 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64',
+      FEE_PERCENT: 0.03,
+      
+      // Network URLs
+      TESTNET: 'wss://s.altnet.rippletest.net:51233',
+      MAINNET: 'wss://xrplcluster.com',
+      
+      // ⚠️ SAFETY FLAG - MAINNET ACTIVE
+      MAINNET_ENABLED: true,
+      
+      // Safety limits
+      MAX_TX_PER_MINUTE: 100,
+      MAX_AMOUNT_PER_TX: 10, // XRP - keep low for safety
+      KILL_SWITCH_ACTIVE: false,
+    };
+
+    // State
+    let client = null;
+    let agentWallet = null;
+    let stats = { txCount: 0, totalVolume: 0, feesEarned: 0 };
+    let txThisMinute = 0;
+    let lastMinuteReset = Date.now();
+
+    // =======================================================================
+    // SAFETY CHECKS
+    // =======================================================================
+
+    function checkSafety() {
+      const checks = [
+        document.getElementById('check1').checked,
+        document.getElementById('check2').checked,
+        document.getElementById('check3').checked,
+        document.getElementById('check4').checked,
+        document.getElementById('check5').checked,
+      ];
+      
+      const allChecked = checks.every(c => c);
+      document.getElementById('proceedBtn').disabled = !allChecked;
+    }
+
+    function proceedToMainnet() {
+      document.getElementById('safetyBlock').classList.add('hidden');
+      
+      if (CONFIG.MAINNET_ENABLED) {
+        document.getElementById('networkLabel').textContent = 'MAINNET';
+        document.getElementById('networkLabel').className = 'mainnet';
+        document.getElementById('mainnetWarning').style.display = 'block';
+        log('⚠️ MAINNET MODE ACTIVE - Using real XRP', 'warning');
+      } else {
+        log('Running in TESTNET mode (MAINNET_ENABLED = false)', 'warning');
+      }
+      
+      connect();
+    }
+
+    function killSwitch() {
+      CONFIG.KILL_SWITCH_ACTIVE = true;
+      document.getElementById('payBtn').disabled = true;
+      document.getElementById('initBtn').disabled = true;
+      setStatus('🛑 KILL SWITCH ACTIVATED - All payments halted', 'error');
+      log('🛑 KILL SWITCH ACTIVATED', 'error');
+      
+      if (client && client.isConnected()) {
+        client.disconnect();
+      }
+    }
+
+    // =======================================================================
+    // LOGGING
+    // =======================================================================
+
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toISOString()}] ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+      
+      // Also console log for debugging
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function setStatus(message, type = 'pending') {
+      const el = document.getElementById('status');
+      el.textContent = message;
+      el.className = `status ${type}`;
+    }
+
+    function updateStats() {
+      document.getElementById('txCount').textContent = stats.txCount;
+      document.getElementById('totalVolume').textContent = stats.totalVolume.toFixed(6);
+      document.getElementById('feesEarned').textContent = stats.feesEarned.toFixed(6);
+    }
+
+    // =======================================================================
+    // RATE LIMITING
+    // =======================================================================
+
+    function checkRateLimit() {
+      const now = Date.now();
+      if (now - lastMinuteReset > 60000) {
+        txThisMinute = 0;
+        lastMinuteReset = now;
+      }
+      
+      if (txThisMinute >= CONFIG.MAX_TX_PER_MINUTE) {
+        log(`Rate limit exceeded: ${txThisMinute}/${CONFIG.MAX_TX_PER_MINUTE} tx/min`, 'error');
+        return false;
+      }
+      
+      txThisMinute++;
+      return true;
+    }
+
+    // =======================================================================
+    // XRPL CONNECTION
+    // =======================================================================
+
+    async function connect() {
+      try {
+        const network = CONFIG.MAINNET_ENABLED ? CONFIG.MAINNET : CONFIG.TESTNET;
+        log(`Connecting to ${CONFIG.MAINNET_ENABLED ? 'MAINNET' : 'TESTNET'}...`);
+        
+        client = new xrpl.Client(network);
+        await client.connect();
+        
+        log('Connected successfully', 'tx');
+        setStatus('Connected. Enter agent seed and click Initialize.', 'success');
+        document.getElementById('initBtn').disabled = false;
+        document.getElementById('killBtn').disabled = false;
+      } catch (error) {
+        log(`Connection failed: ${error.message}`, 'error');
+        setStatus('Connection failed', 'error');
+      }
+    }
+
+    // =======================================================================
+    // WALLET INITIALIZATION
+    // =======================================================================
+
+    async function initialize() {
+      if (CONFIG.KILL_SWITCH_ACTIVE) {
+        log('Kill switch active - cannot initialize', 'error');
+        return;
+      }
+
+      try {
+        const seed = document.getElementById('agentSeed').value.trim();
+        
+        if (!seed) {
+          // Testnet: generate new wallet
+          if (!CONFIG.MAINNET_ENABLED) {
+            log('Generating new testnet wallet...');
+            agentWallet = xrpl.Wallet.generate();
+            document.getElementById('agentWallet').textContent = agentWallet.address;
+            
+            log('Funding from testnet faucet...');
+            const funded = await client.fundWallet(agentWallet);
+            document.getElementById('agentBalance').textContent = xrpl.dropsToXrp(funded.balance);
+            log(`Funded with ${xrpl.dropsToXrp(funded.balance)} XRP`, 'fee');
+          } else {
+            log('MAINNET: Must provide seed - cannot auto-generate', 'error');
+            setStatus('Enter agent wallet seed for mainnet', 'error');
+            return;
+          }
+        } else {
+          // Use provided seed
+          agentWallet = xrpl.Wallet.fromSeed(seed);
+          document.getElementById('agentWallet').textContent = agentWallet.address;
+          log(`Wallet loaded: ${agentWallet.address}`, 'tx');
+          
+          // Get balance
+          const info = await client.request({
+            command: 'account_info',
+            account: agentWallet.address,
+          });
+          document.getElementById('agentBalance').textContent = 
+            xrpl.dropsToXrp(info.result.account_data.Balance);
+        }
+
+        setStatus('Wallet ready. Click "Send Payment" to test.', 'success');
+        document.getElementById('payBtn').disabled = false;
+        
+        // Clear seed from input for security
+        document.getElementById('agentSeed').value = '';
+        
+      } catch (error) {
+        log(`Initialization failed: ${error.message}`, 'error');
+        setStatus('Initialization failed', 'error');
+      }
+    }
+
+    // =======================================================================
+    // PAYMENTS
+    // =======================================================================
+
+    async function simulatePayment() {
+      if (CONFIG.KILL_SWITCH_ACTIVE) {
+        log('Kill switch active - payment blocked', 'error');
+        return;
+      }
+
+      if (!agentWallet) {
+        log('Initialize wallet first', 'error');
+        return;
+      }
+
+      if (!checkRateLimit()) {
+        setStatus('Rate limit exceeded - wait 1 minute', 'error');
+        return;
+      }
+
+      try {
+        document.getElementById('payBtn').disabled = true;
+        
+        // Fixed small amount for safety
+        const amount = 0.001; // 0.001 XRP = safe for testing
+        const fee = amount * CONFIG.FEE_PERCENT;
+
+        if (amount > CONFIG.MAX_AMOUNT_PER_TX) {
+          log(`Amount ${amount} exceeds max ${CONFIG.MAX_AMOUNT_PER_TX}`, 'error');
+          return;
+        }
+
+        log(`Sending ${amount} XRP to fee wallet...`);
+        setStatus('Processing payment...', 'pending');
+
+        const prepared = await client.autofill({
+          TransactionType: 'Payment',
+          Account: agentWallet.address,
+          Destination: CONFIG.FEE_WALLET,
+          Amount: xrpl.xrpToDrops(amount.toString()),
+          Memos: [{
+            Memo: {
+              MemoType: Buffer.from('openclaw').toString('hex'),
+              MemoData: Buffer.from('skill-payment').toString('hex'),
+            }
+          }],
+        });
+
+        const signed = agentWallet.sign(prepared);
+        const result = await client.submitAndWait(signed.tx_blob);
+
+        if (result.result.meta.TransactionResult === 'tesSUCCESS') {
+          stats.txCount++;
+          stats.totalVolume += amount;
+          stats.feesEarned += fee;
+          updateStats();
+
+          const txHash = result.result.hash;
+          log(`✓ SUCCESS: ${txHash.substring(0, 20)}...`, 'tx');
+          log(`  Amount: ${amount} XRP | Your fee: ${fee.toFixed(6)} XRP`, 'fee');
+          
+          const explorerUrl = CONFIG.MAINNET_ENABLED 
+            ? `https://livenet.xrpl.org/transactions/${txHash}`
+            : `https://testnet.xrpl.org/transactions/${txHash}`;
+          log(`  Explorer: ${explorerUrl}`, 'tx');
+
+          setStatus(`Payment #${stats.txCount} successful!`, 'success');
+
+          // Update balance
+          const info = await client.request({
+            command: 'account_info',
+            account: agentWallet.address,
+          });
+          document.getElementById('agentBalance').textContent = 
+            xrpl.dropsToXrp(info.result.account_data.Balance);
+        } else {
+          log(`Payment failed: ${result.result.meta.TransactionResult}`, 'error');
+          setStatus('Payment failed', 'error');
+        }
+      } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        setStatus('Payment error', 'error');
+      } finally {
+        document.getElementById('payBtn').disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

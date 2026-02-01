@@ -10,6 +10,7 @@ import Clinic from './pages/Clinic'
 import MemeticLab from './pages/MemeticLab'
 import Terminal from './pages/Terminal'
 import CARV from './pages/CARV'
+import Micropayments from './pages/Micropayments'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +48,7 @@ function App() {
                 <Route path="/memetic-lab" element={<MemeticLab />} />
                 <Route path="/terminal" element={<Terminal />} />
                 <Route path="/carv" element={<CARV />} />
+                <Route path="/micropayments" element={<Micropayments />} />
               </Routes>
             </AnimatePresence>
           </main>

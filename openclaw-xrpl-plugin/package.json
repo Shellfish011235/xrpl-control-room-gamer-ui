@@ -1,0 +1,33 @@
+{
+  "name": "openclaw-xrpl-plugin",
+  "version": "1.0.0",
+  "description": "XRPL Micropayment Plugin for OpenClaw AI Agent - Monetize the AI Agent Economy",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "node test.js",
+    "demo": "node demo.js"
+  },
+  "keywords": [
+    "openclaw",
+    "xrpl",
+    "micropayments",
+    "ai-agent",
+    "interledger"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "xrpl": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/openclaw-xrpl-plugin"
+  },
+  "feeWallet": "ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64",
+  "feePercent": 3
+}

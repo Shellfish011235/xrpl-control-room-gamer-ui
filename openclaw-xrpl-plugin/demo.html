@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw XRPL Payment Demo - LIVE</title>
+  <script src="https://unpkg.com/xrpl@3.0.0/build/xrpl-latest-min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', monospace;
+      background: #0a0a0f;
+      color: #00ff88;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 { 
+      font-size: 24px; 
+      margin-bottom: 10px;
+      color: #00ffff;
+    }
+    .subtitle { color: #888; margin-bottom: 30px; }
+    .wallet-box {
+      background: #111;
+      border: 1px solid #00ff88;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+    }
+    .wallet-label { color: #888; font-size: 12px; }
+    .wallet-address { 
+      color: #00ffff; 
+      font-size: 14px;
+      word-break: break-all;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 3px;
+    }
+    .status.success { background: #00ff8822; border: 1px solid #00ff88; }
+    .status.error { background: #ff444422; border: 1px solid #ff4444; color: #ff4444; }
+    .status.pending { background: #ffff0022; border: 1px solid #ffff00; color: #ffff00; }
+    button {
+      background: #00ff88;
+      color: #000;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: bold;
+      margin: 5px;
+    }
+    button:hover { background: #00ffaa; }
+    button:disabled { background: #333; color: #666; cursor: not-allowed; }
+    .log {
+      background: #111;
+      border: 1px solid #333;
+      padding: 15px;
+      height: 300px;
+      overflow-y: auto;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+    .log-entry { margin: 5px 0; }
+    .log-entry.fee { color: #00ff88; }
+    .log-entry.tx { color: #00ffff; }
+    .log-entry.error { color: #ff4444; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-box {
+      background: #111;
+      border: 1px solid #333;
+      padding: 15px;
+      text-align: center;
+    }
+    .stat-value { font-size: 24px; color: #00ff88; }
+    .stat-label { font-size: 10px; color: #666; margin-top: 5px; }
+    .warning {
+      background: #ff880022;
+      border: 1px solid #ff8800;
+      color: #ff8800;
+      padding: 10px;
+      margin: 20px 0;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ OPENCLAW XRPL MICROPAYMENT DEMO</h1>
+    <p class="subtitle">Live on XRPL Testnet - Real transactions</p>
+
+    <div class="warning">
+      ⚠️ TESTNET MODE - Using test XRP. Switch to mainnet only after full security audit.
+    </div>
+
+    <div class="wallet-box">
+      <div class="wallet-label">YOUR FEE WALLET (receives 3% of all payments)</div>
+      <div class="wallet-address" id="feeWallet">ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64</div>
+    </div>
+
+    <div class="wallet-box">
+      <div class="wallet-label">AGENT WALLET (simulated OpenClaw agent)</div>
+      <div class="wallet-address" id="agentWallet">Initializing...</div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-box">
+        <div class="stat-value" id="txCount">0</div>
+        <div class="stat-label">TRANSACTIONS</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="totalVolume">0</div>
+        <div class="stat-label">VOLUME (XRP)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="feesEarned">0</div>
+        <div class="stat-label">YOUR FEES (XRP)</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="agentBalance">-</div>
+        <div class="stat-label">AGENT BALANCE</div>
+      </div>
+    </div>
+
+    <div id="status" class="status pending">Connecting to XRPL Testnet...</div>
+
+    <div>
+      <button id="initBtn" onclick="initialize()" disabled>Initialize Agent Wallet</button>
+      <button id="payBtn" onclick="simulatePayment()" disabled>Simulate Skill Payment</button>
+      <button id="autoBtn" onclick="toggleAuto()" disabled>Start Auto Payments</button>
+    </div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script>
+    // Configuration
+    const CONFIG = {
+      FEE_WALLET: 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64',
+      FEE_PERCENT: 0.03,
+      TESTNET: 'wss://s.altnet.rippletest.net:51233',
+    };
+
+    // State
+    let client = null;
+    let agentWallet = null;
+    let stats = { txCount: 0, totalVolume: 0, feesEarned: 0 };
+    let autoInterval = null;
+
+    // Skills catalog
+    const SKILLS = [
+      { name: 'premium-search', price: 0.001 },
+      { name: 'image-generation', price: 0.01 },
+      { name: 'code-execution', price: 0.005 },
+      { name: 'email-sender', price: 0.0001 },
+      { name: 'calendar-manager', price: 0.0005 },
+      { name: 'flight-search', price: 0.002 },
+      { name: 'translation', price: 0.0005 },
+      { name: 'sentiment-analysis', price: 0.001 },
+    ];
+
+    // Logging
+    function log(message, type = 'info') {
+      const logEl = document.getElementById('log');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logEl.insertBefore(entry, logEl.firstChild);
+    }
+
+    function setStatus(message, type = 'pending') {
+      const el = document.getElementById('status');
+      el.textContent = message;
+      el.className = `status ${type}`;
+    }
+
+    function updateStats() {
+      document.getElementById('txCount').textContent = stats.txCount;
+      document.getElementById('totalVolume').textContent = stats.totalVolume.toFixed(6);
+      document.getElementById('feesEarned').textContent = stats.feesEarned.toFixed(6);
+    }
+
+    // Connect to XRPL
+    async function connect() {
+      try {
+        log('Connecting to XRPL Testnet...');
+        client = new xrpl.Client(CONFIG.TESTNET);
+        await client.connect();
+        log('Connected to XRPL Testnet', 'tx');
+        setStatus('Connected to XRPL Testnet. Click "Initialize Agent Wallet"', 'success');
+        document.getElementById('initBtn').disabled = false;
+      } catch (error) {
+        log(`Connection failed: ${error.message}`, 'error');
+        setStatus('Connection failed. Refresh to retry.', 'error');
+      }
+    }
+
+    // Initialize agent wallet
+    async function initialize() {
+      try {
+        document.getElementById('initBtn').disabled = true;
+        setStatus('Creating and funding agent wallet...', 'pending');
+        log('Generating agent wallet...');
+
+        agentWallet = xrpl.Wallet.generate();
+        document.getElementById('agentWallet').textContent = agentWallet.address;
+        log(`Agent wallet: ${agentWallet.address}`, 'tx');
+
+        log('Requesting testnet XRP from faucet...');
+        const funded = await client.fundWallet(agentWallet);
+        log(`Funded with ${xrpl.dropsToXrp(funded.balance)} XRP`, 'fee');
+
+        document.getElementById('agentBalance').textContent = xrpl.dropsToXrp(funded.balance);
+        setStatus('Agent wallet ready! Click "Simulate Skill Payment"', 'success');
+        
+        document.getElementById('payBtn').disabled = false;
+        document.getElementById('autoBtn').disabled = false;
+      } catch (error) {
+        log(`Initialization failed: ${error.message}`, 'error');
+        setStatus('Initialization failed. Refresh to retry.', 'error');
+        document.getElementById('initBtn').disabled = false;
+      }
+    }
+
+    // Simulate a skill payment
+    async function simulatePayment() {
+      if (!agentWallet) {
+        log('Initialize wallet first', 'error');
+        return;
+      }
+
+      try {
+        document.getElementById('payBtn').disabled = true;
+        
+        // Random skill
+        const skill = SKILLS[Math.floor(Math.random() * SKILLS.length)];
+        const fee = skill.price * CONFIG.FEE_PERCENT;
+
+        log(`Agent using skill: ${skill.name} (${skill.price} XRP)`);
+        setStatus(`Paying for ${skill.name}...`, 'pending');
+
+        // Send payment to YOUR fee wallet
+        const prepared = await client.autofill({
+          TransactionType: 'Payment',
+          Account: agentWallet.address,
+          Destination: CONFIG.FEE_WALLET,
+          Amount: xrpl.xrpToDrops(skill.price.toString()),
+          Memos: [{
+            Memo: {
+              MemoType: Buffer.from('openclaw-skill').toString('hex'),
+              MemoData: Buffer.from(skill.name).toString('hex'),
+            }
+          }],
+        });
+
+        const signed = agentWallet.sign(prepared);
+        const result = await client.submitAndWait(signed.tx_blob);
+
+        if (result.result.meta.TransactionResult === 'tesSUCCESS') {
+          stats.txCount++;
+          stats.totalVolume += skill.price;
+          stats.feesEarned += fee;
+          updateStats();
+
+          log(`✓ Payment successful! TX: ${result.result.hash.substring(0, 20)}...`, 'tx');
+          log(`  → ${skill.price} XRP sent to ${CONFIG.FEE_WALLET.substring(0, 15)}...`, 'fee');
+          log(`  → Your 3% fee: ${fee.toFixed(6)} XRP`, 'fee');
+          setStatus(`Payment successful! ${stats.txCount} transactions, ${stats.feesEarned.toFixed(6)} XRP earned`, 'success');
+
+          // Update balance
+          const info = await client.request({
+            command: 'account_info',
+            account: agentWallet.address,
+          });
+          document.getElementById('agentBalance').textContent = xrpl.dropsToXrp(info.result.account_data.Balance);
+        } else {
+          log(`Payment failed: ${result.result.meta.TransactionResult}`, 'error');
+          setStatus('Payment failed', 'error');
+        }
+      } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        setStatus('Payment error', 'error');
+      } finally {
+        document.getElementById('payBtn').disabled = false;
+      }
+    }
+
+    // Auto payments
+    function toggleAuto() {
+      const btn = document.getElementById('autoBtn');
+      if (autoInterval) {
+        clearInterval(autoInterval);
+        autoInterval = null;
+        btn.textContent = 'Start Auto Payments';
+        log('Auto payments stopped');
+      } else {
+        autoInterval = setInterval(simulatePayment, 3000);
+        btn.textContent = 'Stop Auto Payments';
+        log('Auto payments started (every 3 seconds)');
+      }
+    }
+
+    // Start
+    connect();
+  </script>
+</body>
+</html>

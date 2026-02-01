@@ -1,5 +1,17 @@
 // XRPL Control Room Type Definitions
 
+// Re-export DNA Protocol types for convenience
+export type {
+  GenomicProof,
+  GenomicProofIntent,
+  GenomeType,
+  GenomicHashAlgorithm,
+  GenerateProofRequest,
+  XDNAMeteringState,
+  OODAEvaluation,
+  GenomicProofResult,
+} from '../services/dna';
+
 export type TabId = 
   | 'overworld'
   | 'contributors'
