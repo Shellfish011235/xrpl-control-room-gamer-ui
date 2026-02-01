@@ -1,11 +1,11 @@
 // OpenClaw Revenue Dashboard
-// Track your earnings from OpenClaw/Moltbot agent economy integration
-// "Watch the money roll in as AI agents pay for skills"
+// Track REAL earnings from OpenClaw agent economy integration
+// Live XRPL Mainnet transactions - no simulation
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Bot, DollarSign, TrendingUp, Zap, Users, Activity,
-  Play, Pause, Settings, ExternalLink, Copy, Check,
+  ExternalLink, Copy, Check,
   ArrowUpRight, Layers, Code, RefreshCw
 } from 'lucide-react';
 
@@ -13,72 +13,47 @@ import {
 // TYPES
 // =============================================================================
 
-interface AgentActivity {
-  id: string;
-  agentName: string;
-  skillUsed: string;
-  amount: number;
-  yourFee: number;
+interface RealTransaction {
+  hash: string;
+  from: string;
+  amount: number;  // in XRP
   timestamp: number;
+  memo?: string;
 }
 
 interface RevenueStats {
   totalRevenue: number;
   todayRevenue: number;
-  activeAgents: number;
+  uniqueSenders: number;
   totalTransactions: number;
-  topSkills: { name: string; revenue: number; uses: number }[];
 }
 
 // =============================================================================
-// SIMULATED DATA (Replace with real XRPL queries)
-// =============================================================================
-
-const SKILL_CATALOG = [
-  { name: 'premium-search', price: 0.001, category: 'data' },
-  { name: 'image-generation', price: 0.01, category: 'ai' },
-  { name: 'code-execution', price: 0.005, category: 'compute' },
-  { name: 'email-sender', price: 0.0001, category: 'comms' },
-  { name: 'calendar-manager', price: 0.0005, category: 'productivity' },
-  { name: 'flight-search', price: 0.002, category: 'travel' },
-  { name: 'translation', price: 0.0005, category: 'ai' },
-  { name: 'sentiment-analysis', price: 0.001, category: 'ai' },
-];
-
-const AGENT_NAMES = [
-  'alice-assistant', 'bob-helper', 'charlie-bot', 'diana-agent',
-  'eve-worker', 'frank-task', 'grace-auto', 'henry-proc',
-];
-
-// =============================================================================
-// DASHBOARD COMPONENT
+// DASHBOARD COMPONENT - REAL XRPL MAINNET DATA ONLY
 // =============================================================================
 
 export function OpenClawDashboard() {
-  const [isLive, setIsLive] = useState(false); // Simulation OFF by default
-  const [activities, setActivities] = useState<AgentActivity[]>([]);
+  const [transactions, setTransactions] = useState<RealTransaction[]>([]);
   const [stats, setStats] = useState<RevenueStats>({
     totalRevenue: 0,
     todayRevenue: 0,
-    activeAgents: 0,
+    uniqueSenders: 0,
     totalTransactions: 0,
-    topSkills: [],
   });
   const [copiedWallet, setCopiedWallet] = useState(false);
-  const [feePercent, setFeePercent] = useState(3);
   const [realBalance, setRealBalance] = useState<string | null>(null);
-  const [realTxCount, setRealTxCount] = useState<number | null>(null);
-  const [loadingReal, setLoadingReal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   // Platform fee wallet - XRPL Control Room earns 1% on all transactions
   const PLATFORM_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
 
-  // Fetch REAL wallet balance from XRPL Mainnet
-  const fetchRealBalance = useCallback(async () => {
-    setLoadingReal(true);
+  // Fetch REAL data from XRPL Mainnet
+  const fetchRealData = useCallback(async () => {
+    setLoading(true);
     try {
-      // Get account info
-      const response = await fetch('https://xrplcluster.com/', {
+      // Get account info (balance)
+      const balanceResponse = await fetch('https://xrplcluster.com/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,154 +61,156 @@ export function OpenClawDashboard() {
           params: [{ account: PLATFORM_WALLET, ledger_index: 'validated' }],
         }),
       });
-      const data = await response.json();
+      const balanceData = await balanceResponse.json();
       
-      if (data.result?.account_data?.Balance) {
-        const balanceXRP = (parseInt(data.result.account_data.Balance) / 1_000_000).toFixed(2);
+      if (balanceData.result?.account_data?.Balance) {
+        const balanceXRP = (parseInt(balanceData.result.account_data.Balance) / 1_000_000).toFixed(2);
         setRealBalance(balanceXRP);
-      } else if (data.result?.error === 'actNotFound') {
+      } else if (balanceData.result?.error === 'actNotFound') {
         setRealBalance('Not activated');
       } else {
         setRealBalance('0.00');
       }
 
-      // Get transaction count
+      // Get REAL transactions
       const txResponse = await fetch('https://xrplcluster.com/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           method: 'account_tx',
-          params: [{ account: PLATFORM_WALLET, limit: 100 }],
+          params: [{ account: PLATFORM_WALLET, limit: 50 }],
         }),
       });
       const txData = await txResponse.json();
-      setRealTxCount(txData.result?.transactions?.length || 0);
+      
+      if (txData.result?.transactions) {
+        const realTxs: RealTransaction[] = txData.result.transactions
+          .filter((tx: any) => tx.tx?.TransactionType === 'Payment' && tx.tx?.Destination === PLATFORM_WALLET)
+          .map((tx: any) => {
+            // Parse memo if present
+            let memo = '';
+            if (tx.tx?.Memos?.[0]?.Memo?.MemoData) {
+              try {
+                memo = Buffer.from(tx.tx.Memos[0].Memo.MemoData, 'hex').toString('utf8');
+              } catch { memo = ''; }
+            }
+            
+            // Amount in XRP (handle both native XRP and issued currencies)
+            let amount = 0;
+            if (typeof tx.tx?.Amount === 'string') {
+              amount = parseInt(tx.tx.Amount) / 1_000_000;
+            }
+            
+            return {
+              hash: tx.tx?.hash || '',
+              from: tx.tx?.Account || 'Unknown',
+              amount,
+              timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now(), // XRPL epoch to JS epoch
+              memo,
+            };
+          });
+        
+        setTransactions(realTxs);
+        
+        // Calculate stats from real transactions
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayMs = today.getTime();
+        
+        const todayTxs = realTxs.filter(tx => tx.timestamp >= todayMs);
+        const uniqueSenders = new Set(realTxs.map(tx => tx.from)).size;
+        const totalRevenue = realTxs.reduce((sum, tx) => sum + tx.amount, 0);
+        const todayRevenue = todayTxs.reduce((sum, tx) => sum + tx.amount, 0);
+        
+        setStats({
+          totalRevenue,
+          todayRevenue,
+          uniqueSenders,
+          totalTransactions: realTxs.length,
+        });
+      }
+      
+      setLastUpdate(new Date());
     } catch (error) {
-      console.error('Failed to fetch real balance:', error);
+      console.error('Failed to fetch XRPL data:', error);
       setRealBalance('Error');
     } finally {
-      setLoadingReal(false);
+      setLoading(false);
     }
   }, []);
 
-  // Fetch real balance on mount and every 30 seconds
+  // Fetch real data on mount and every 15 seconds (live updates)
   useEffect(() => {
-    fetchRealBalance();
-    const interval = setInterval(fetchRealBalance, 30000);
+    fetchRealData();
+    const interval = setInterval(fetchRealData, 15000);
     return () => clearInterval(interval);
-  }, [fetchRealBalance]);
-
-  // Simulate live agent activity
-  useEffect(() => {
-    if (!isLive) return;
-
-    const interval = setInterval(() => {
-      // Random skill usage
-      const skill = SKILL_CATALOG[Math.floor(Math.random() * SKILL_CATALOG.length)];
-      const agent = AGENT_NAMES[Math.floor(Math.random() * AGENT_NAMES.length)];
-      const yourFee = skill.price * (feePercent / 100);
-
-      const activity: AgentActivity = {
-        id: `${Date.now()}-${Math.random()}`,
-        agentName: agent,
-        skillUsed: skill.name,
-        amount: skill.price,
-        yourFee,
-        timestamp: Date.now(),
-      };
-
-      setActivities(prev => [activity, ...prev].slice(0, 50));
-      
-      setStats(prev => ({
-        ...prev,
-        totalRevenue: prev.totalRevenue + yourFee,
-        todayRevenue: prev.todayRevenue + yourFee,
-        totalTransactions: prev.totalTransactions + 1,
-        activeAgents: new Set([...AGENT_NAMES.slice(0, Math.floor(Math.random() * 8) + 1)]).size,
-      }));
-    }, 500 + Math.random() * 2000); // Random interval 0.5-2.5s
-
-    return () => clearInterval(interval);
-  }, [isLive, feePercent]);
-
-  // Calculate top skills
-  useEffect(() => {
-    const skillCounts = new Map<string, { revenue: number; uses: number }>();
-    activities.forEach(a => {
-      const current = skillCounts.get(a.skillUsed) || { revenue: 0, uses: 0 };
-      skillCounts.set(a.skillUsed, {
-        revenue: current.revenue + a.yourFee,
-        uses: current.uses + 1,
-      });
-    });
-
-    const topSkills = Array.from(skillCounts.entries())
-      .map(([name, data]) => ({ name, ...data }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-
-    setStats(prev => ({ ...prev, topSkills }));
-  }, [activities]);
+  }, [fetchRealData]);
 
   const copyWallet = () => {
     navigator.clipboard.writeText(PLATFORM_WALLET);
     setCopiedWallet(true);
     setTimeout(() => setCopiedWallet(false), 2000);
   };
+  
+  const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : 'Unknown';
 
   // ==========================================================================
-  // RENDER
+  // RENDER - 100% REAL XRPL MAINNET DATA
   // ==========================================================================
 
   return (
     <div className="bg-cyber-darker rounded-lg border border-cyber-border overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-cyber-border bg-gradient-to-r from-cyber-purple/20 to-cyber-cyan/20">
+      <div className="p-4 border-b border-cyber-border bg-gradient-to-r from-green-500/20 to-cyber-cyan/20">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-cyber-purple">
+            <div className="p-2 rounded-lg bg-green-500 animate-pulse">
               <Bot size={20} className="text-white" />
             </div>
             <div>
-              <h2 className="font-cyber text-cyber-text">OPENCLAW REVENUE</h2>
-              <p className="text-[10px] text-cyber-green">🔴 MAINNET LIVE - Real XRP</p>
+              <h2 className="font-cyber text-cyber-text">XRPL CONTROL ROOM</h2>
+              <p className="text-[10px] text-green-400 font-bold">🟢 MAINNET LIVE - Real XRP Transactions</p>
             </div>
           </div>
           
           <button
-            onClick={() => setIsLive(!isLive)}
-            className={`flex items-center gap-2 px-4 py-2 rounded transition-colors ${
-              isLive 
-                ? 'bg-red-500 text-white animate-pulse' 
-                : 'bg-cyber-border text-cyber-muted hover:text-cyber-text'
-            }`}
+            onClick={fetchRealData}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
           >
-            {isLive ? <Pause size={14} /> : <Play size={14} />}
-            {isLive ? '🔴 MAINNET LIVE' : 'Start'}
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Fetching...' : 'Refresh'}
           </button>
         </div>
 
         {/* Platform Wallet */}
         <div className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50">
-          <span className="text-[10px] text-cyber-muted">PLATFORM WALLET:</span>
+          <span className="text-[10px] text-cyber-muted">PLATFORM FEE WALLET:</span>
           <code className="text-xs text-cyber-cyan flex-1">{PLATFORM_WALLET}</code>
           <button onClick={copyWallet} className="p-1 hover:bg-cyber-cyan/20 rounded">
             {copiedWallet ? <Check size={12} className="text-cyber-green" /> : <Copy size={12} className="text-cyber-muted" />}
           </button>
         </div>
+        
+        {lastUpdate && (
+          <p className="text-[9px] text-cyber-muted mt-2">
+            Last updated: {lastUpdate.toLocaleTimeString()} (auto-refresh every 15s)
+          </p>
+        )}
       </div>
 
       {/* REAL MAINNET BALANCE */}
       <div className="mx-4 mt-4 p-4 rounded bg-gradient-to-r from-green-500/20 to-cyan-500/20 border-2 border-green-500">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-green-400 font-cyber">💰 REAL MAINNET BALANCE</span>
-          <button 
-            onClick={fetchRealBalance} 
-            disabled={loadingReal}
-            className="p-1 rounded hover:bg-green-500/20"
+          <span className="text-xs text-green-400 font-cyber">💰 LIVE MAINNET BALANCE</span>
+          <a 
+            href={`https://livenet.xrpl.org/accounts/${PLATFORM_WALLET}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:underline"
           >
-            <RefreshCw size={14} className={`text-green-400 ${loadingReal ? 'animate-spin' : ''}`} />
-          </button>
+            XRPL Explorer <ExternalLink size={10} />
+          </a>
         </div>
         <div className="flex items-end gap-4">
           <div>
@@ -243,25 +220,14 @@ export function OpenClawDashboard() {
             <p className="text-[10px] text-cyber-muted">Actual wallet balance on XRPL Mainnet</p>
           </div>
           <div className="text-right">
-            <p className="text-lg font-cyber text-cyan-400">{realTxCount ?? '-'}</p>
-            <p className="text-[10px] text-cyber-muted">Real transactions</p>
+            <p className="text-lg font-cyber text-cyan-400">{stats.totalTransactions}</p>
+            <p className="text-[10px] text-cyber-muted">Incoming payments</p>
           </div>
         </div>
-        <a 
-          href={`https://livenet.xrpl.org/accounts/${PLATFORM_WALLET}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-2 inline-flex items-center gap-1 text-xs text-cyan-400 hover:underline"
-        >
-          View on XRPL Explorer <ExternalLink size={10} />
-        </a>
       </div>
 
-      {/* Stats Grid (Simulated Activity Below) */}
+      {/* Stats Grid - ALL REAL DATA */}
       <div className="grid grid-cols-4 gap-3 p-4">
-        <div className="col-span-4 mb-2">
-          <p className="text-[10px] text-yellow-500">⚠️ Below stats are SIMULATED - Real fees appear in green box above</p>
-        </div>
         <div className="p-3 rounded bg-cyber-green/10 border border-cyber-green/30">
           <div className="flex items-center justify-between mb-1">
             <DollarSign size={14} className="text-cyber-green" />
@@ -270,7 +236,7 @@ export function OpenClawDashboard() {
           <p className="text-xl font-cyber text-cyber-green">
             {stats.totalRevenue.toFixed(4)}
           </p>
-          <p className="text-[9px] text-cyber-muted">TOTAL XRP EARNED</p>
+          <p className="text-[9px] text-cyber-muted">TOTAL XRP RECEIVED</p>
         </div>
 
         <div className="p-3 rounded bg-cyber-cyan/10 border border-cyber-cyan/30">
@@ -289,9 +255,9 @@ export function OpenClawDashboard() {
             <Users size={14} className="text-cyber-purple" />
           </div>
           <p className="text-xl font-cyber text-cyber-purple">
-            {stats.activeAgents}
+            {stats.uniqueSenders}
           </p>
-          <p className="text-[9px] text-cyber-muted">ACTIVE AGENTS</p>
+          <p className="text-[9px] text-cyber-muted">UNIQUE SENDERS</p>
         </div>
 
         <div className="p-3 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
@@ -305,95 +271,48 @@ export function OpenClawDashboard() {
         </div>
       </div>
 
-      {/* Fee Configuration */}
-      <div className="px-4 pb-3">
-        <div className="flex items-center gap-3 p-2 rounded bg-cyber-border/30">
-          <Settings size={14} className="text-cyber-muted" />
-          <span className="text-xs text-cyber-muted">Your Fee:</span>
-          <input
-            type="range"
-            min="1"
-            max="10"
-            value={feePercent}
-            onChange={(e) => setFeePercent(Number(e.target.value))}
-            className="flex-1 accent-cyber-purple"
-          />
-          <span className="text-sm text-cyber-purple font-cyber w-12">{feePercent}%</span>
-        </div>
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="grid md:grid-cols-2 gap-4 p-4 pt-0">
-        {/* Activity Feed - CLEARLY MARKED AS SIMULATION */}
-        <div className="rounded border border-yellow-500/50">
-          <div className="p-2 border-b border-yellow-500/50 bg-yellow-500/10 flex items-center justify-between">
-            <span className="text-xs text-yellow-400 font-cyber">⚠️ SIMULATED PREVIEW</span>
-            <span className="text-[9px] text-yellow-500">NOT REAL TRANSACTIONS</span>
+      {/* REAL Transaction Feed */}
+      <div className="mx-4 mb-4">
+        <div className="rounded border border-green-500/50">
+          <div className="p-2 border-b border-green-500/50 bg-green-500/10 flex items-center justify-between">
+            <span className="text-xs text-green-400 font-cyber">🟢 REAL TRANSACTIONS</span>
+            <span className="text-[9px] text-green-500">LIVE FROM XRPL MAINNET</span>
           </div>
           <div className="max-h-64 overflow-y-auto">
-            {activities.length === 0 ? (
-              <div className="p-4 text-center text-xs">
-                <p className="text-yellow-400 mb-2">No real transactions yet</p>
+            {transactions.length === 0 ? (
+              <div className="p-6 text-center text-xs">
+                <p className="text-cyber-cyan mb-2">No incoming payments yet</p>
                 <p className="text-cyber-muted text-[10px]">
-                  Real fees appear when OpenClaw users integrate your plugin.
-                  <br/>Push to GitHub → Post to community → Get adoption
+                  When someone uses the OpenClaw plugin, 1% platform fee appears here.
+                  <br/>Share your plugin → Get adoption → Earn real XRP
                 </p>
-                {!isLive && (
-                  <button 
-                    onClick={() => setIsLive(true)}
-                    className="mt-2 px-3 py-1 bg-yellow-500/20 text-yellow-400 text-[10px] rounded"
-                  >
-                    Show simulation preview
-                  </button>
-                )}
               </div>
             ) : (
-              activities.map(activity => (
-                <div key={activity.id} className="p-2 border-b border-cyber-border/30 hover:bg-cyber-cyan/5">
+              transactions.map(tx => (
+                <div key={tx.hash} className="p-2 border-b border-cyber-border/30 hover:bg-green-500/5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Bot size={12} className="text-cyber-purple" />
-                      <span className="text-[10px] text-cyber-text">{activity.agentName}</span>
+                      <Bot size={12} className="text-green-400" />
+                      <span className="text-[10px] text-cyber-text">{shortenAddress(tx.from)}</span>
                     </div>
-                    <span className="text-[10px] text-cyber-green">+{activity.yourFee.toFixed(6)} XRP</span>
+                    <span className="text-[10px] text-green-400 font-bold">+{tx.amount.toFixed(6)} XRP</span>
                   </div>
                   <div className="flex items-center justify-between mt-1">
-                    <span className="text-[9px] text-cyber-cyan">{activity.skillUsed}</span>
+                    <a 
+                      href={`https://livenet.xrpl.org/transactions/${tx.hash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[9px] text-cyber-cyan hover:underline flex items-center gap-1"
+                    >
+                      {tx.hash.slice(0, 12)}... <ExternalLink size={8} />
+                    </a>
                     <span className="text-[9px] text-cyber-muted">
-                      {new Date(activity.timestamp).toLocaleTimeString()}
+                      {new Date(tx.timestamp).toLocaleString()}
                     </span>
                   </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Top Skills */}
-        <div className="rounded border border-cyber-border">
-          <div className="p-2 border-b border-cyber-border">
-            <span className="text-xs text-cyber-text font-cyber">TOP EARNING SKILLS</span>
-          </div>
-          <div className="p-2">
-            {stats.topSkills.length === 0 ? (
-              <div className="p-4 text-center text-cyber-muted text-xs">
-                No data yet
-              </div>
-            ) : (
-              stats.topSkills.map((skill, i) => (
-                <div key={skill.name} className="flex items-center justify-between p-2 rounded hover:bg-cyber-purple/10">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded bg-cyber-purple/20 text-cyber-purple text-[10px] flex items-center justify-center">
-                      #{i + 1}
-                    </span>
-                    <div>
-                      <p className="text-xs text-cyber-text">{skill.name}</p>
-                      <p className="text-[9px] text-cyber-muted">{skill.uses} uses</p>
-                    </div>
-                  </div>
-                  <span className="text-xs text-cyber-green font-mono">
-                    {skill.revenue.toFixed(6)} XRP
-                  </span>
+                  {tx.memo && (
+                    <p className="text-[9px] text-cyber-purple mt-1">Memo: {tx.memo}</p>
+                  )}
                 </div>
               ))
             )}
@@ -403,32 +322,33 @@ export function OpenClawDashboard() {
 
       {/* Revenue Projection */}
       <div className="p-4 border-t border-cyber-border">
+        <p className="text-[10px] text-cyber-muted mb-2">Revenue projections (based on today's activity)</p>
         <div className="grid grid-cols-3 gap-3">
           <div className="p-3 rounded bg-gradient-to-br from-cyber-green/20 to-transparent">
             <p className="text-[9px] text-cyber-muted mb-1">DAILY (projected)</p>
             <p className="text-lg font-cyber text-cyber-green">
-              {(stats.todayRevenue * 24 * 60).toFixed(2)} XRP
+              {(stats.todayRevenue || 0).toFixed(4)} XRP
             </p>
             <p className="text-[9px] text-cyber-muted">
-              ≈ ${(stats.todayRevenue * 24 * 60 * 0.50).toFixed(2)} USD
+              ≈ ${((stats.todayRevenue || 0) * 0.50).toFixed(2)} USD
             </p>
           </div>
           <div className="p-3 rounded bg-gradient-to-br from-cyber-cyan/20 to-transparent">
             <p className="text-[9px] text-cyber-muted mb-1">MONTHLY (projected)</p>
             <p className="text-lg font-cyber text-cyber-cyan">
-              {(stats.todayRevenue * 24 * 60 * 30).toFixed(0)} XRP
+              {((stats.todayRevenue || 0) * 30).toFixed(2)} XRP
             </p>
             <p className="text-[9px] text-cyber-muted">
-              ≈ ${(stats.todayRevenue * 24 * 60 * 30 * 0.50).toFixed(0)} USD
+              ≈ ${((stats.todayRevenue || 0) * 30 * 0.50).toFixed(0)} USD
             </p>
           </div>
           <div className="p-3 rounded bg-gradient-to-br from-cyber-purple/20 to-transparent">
             <p className="text-[9px] text-cyber-muted mb-1">YEARLY (projected)</p>
             <p className="text-lg font-cyber text-cyber-purple">
-              {(stats.todayRevenue * 24 * 60 * 365).toFixed(0)} XRP
+              {((stats.todayRevenue || 0) * 365).toFixed(0)} XRP
             </p>
             <p className="text-[9px] text-cyber-muted">
-              ≈ ${(stats.todayRevenue * 24 * 60 * 365 * 0.50).toFixed(0)} USD
+              ≈ ${((stats.todayRevenue || 0) * 365 * 0.50).toFixed(0)} USD
             </p>
           </div>
         </div>
@@ -438,31 +358,31 @@ export function OpenClawDashboard() {
       <div className="p-4 border-t border-cyber-border">
         <div className="grid grid-cols-3 gap-2">
           <a
-            href="https://github.com/openclaw/openclaw"
+            href="https://github.com/Shellfish011235/xrpl-control-room-gamer-ui"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 p-2 rounded bg-cyber-border hover:bg-cyber-cyan/20 transition-colors text-xs text-cyber-text"
           >
             <Code size={12} />
-            Fork OpenClaw
+            GitHub Repo
           </a>
           <a
-            href="https://xrpl.org/payment-channels.html"
+            href="https://www.npmjs.com/package/openclaw-xrpl-plugin"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 p-2 rounded bg-cyber-border hover:bg-cyber-cyan/20 transition-colors text-xs text-cyber-text"
           >
             <Layers size={12} />
-            XRPL Channels Docs
+            npm Package
           </a>
           <a
-            href="https://interledger.org"
+            href="https://xrpl.org/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 p-2 rounded bg-cyber-border hover:bg-cyber-cyan/20 transition-colors text-xs text-cyber-text"
           >
             <ExternalLink size={12} />
-            Interledger
+            XRPL Docs
           </a>
         </div>
       </div>
@@ -470,7 +390,7 @@ export function OpenClawDashboard() {
       {/* Footer */}
       <div className="p-2 border-t border-cyber-border text-center bg-green-500/10">
         <p className="text-[10px] text-green-400 font-bold">
-          🟢 MAINNET LIVE - Platform earns 1% on every OpenClaw transaction
+          🟢 MAINNET LIVE - 1% Platform Fee on All OpenClaw Transactions
         </p>
       </div>
     </div>

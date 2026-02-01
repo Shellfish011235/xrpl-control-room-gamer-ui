@@ -1,20 +1,23 @@
 // OpenClaw XRPL Payment Integration
-// "Be the payment rail for the AI agent economy"
+// Powered by XRPL Control Room (https://xrplcontrolroom.com)
 // 
-// This module integrates with OpenClaw (134k+ stars AI agent)
+// This module integrates with OpenClaw AI agents
 // to enable micropayment monetization via XRPL.
 //
-// MONETIZATION: Set YOUR_FEE_WALLET to your XRPL address
-// You'll earn 3% on every transaction agents make.
+// FEE STRUCTURE:
+// - 97% to skill/service recipient
+// - 2% to skill creator (set via creatorWallet parameter)
+// - 1% platform fee to XRPL Control Room
 
 // =============================================================================
-// CONFIGURATION - SET YOUR WALLET HERE
+// CONFIGURATION
 // =============================================================================
 
-// 🔑 YOUR XRPL WALLET - receives fees on EVERY transaction
-// Set VITE_OPENCLAW_FEE_WALLET in your environment variables
-export const YOUR_FEE_WALLET = import.meta.env.VITE_OPENCLAW_FEE_WALLET || '';
-export const FEE_PERCENT = 0.03; // 3% - adjust as needed
+// Platform fee wallet - XRPL Control Room earns 1% on ALL transactions
+export const PLATFORM_FEE_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
+export const PLATFORM_FEE_PERCENT = 0.01; // 1% to platform
+export const CREATOR_FEE_PERCENT = 0.02;  // 2% to skill creator
+export const TOTAL_FEE_PERCENT = 0.03;    // 3% total fees
 
 // Network configuration
 export const XRPL_MAINNET = 'wss://xrplcluster.com';
@@ -121,28 +124,33 @@ export class OpenClawXRPLPayments {
 
   /**
    * Pay for a skill/service/API
-   * Automatically splits payment: 97% to recipient, 3% to YOUR_FEE_WALLET
+   * Fee split: 97% recipient, 2% skill creator, 1% platform
    */
   async payForSkill(
     recipient: string,
     amountXRP: number,
     skillName: string,
+    creatorWallet?: string,
     memo?: string
-  ): Promise<{ success: boolean; txHash: string; feeCollected: number }> {
+  ): Promise<{ success: boolean; txHash: string; platformFee: number; creatorFee: number }> {
     if (!this.agentWallet) throw new Error('Initialize wallet first');
 
     // Calculate fee split
-    const yourFee = amountXRP * FEE_PERCENT;
-    const recipientAmount = amountXRP - yourFee;
+    const platformFee = amountXRP * PLATFORM_FEE_PERCENT;
+    const creatorFee = amountXRP * CREATOR_FEE_PERCENT;
+    const recipientAmount = amountXRP - platformFee - creatorFee;
+    const creatorAddress = creatorWallet || PLATFORM_FEE_WALLET;
 
     console.log(`[OpenClaw XRPL] Payment for skill "${skillName}":`);
     console.log(`  Total: ${amountXRP} XRP`);
-    console.log(`  To skill creator (${recipient}): ${recipientAmount} XRP`);
-    console.log(`  Platform fee (${YOUR_FEE_WALLET}): ${yourFee} XRP`);
+    console.log(`  To recipient: ${recipientAmount.toFixed(6)} XRP (97%)`);
+    console.log(`  To skill creator (${creatorAddress}): ${creatorFee.toFixed(6)} XRP (2%)`);
+    console.log(`  Platform fee (${PLATFORM_FEE_WALLET}): ${platformFee.toFixed(6)} XRP (1%)`);
 
-    // In real implementation, submit 2 transactions:
-    // 1. Pay recipient
-    // 2. Pay YOUR_FEE_WALLET
+    // In real implementation, submit 3 transactions:
+    // 1. Pay recipient (97%)
+    // 2. Pay skill creator (2%)
+    // 3. Pay PLATFORM_FEE_WALLET (1%)
     //
     // const recipientTx = await client.submitAndWait({
     //   TransactionType: 'Payment',
@@ -151,11 +159,20 @@ export class OpenClawXRPLPayments {
     //   Amount: xrpToDrops(recipientAmount),
     // }, { wallet });
     //
-    // const feeTx = await client.submitAndWait({
+    // if (creatorAddress !== PLATFORM_FEE_WALLET) {
+    //   await client.submitAndWait({
+    //     TransactionType: 'Payment',
+    //     Account: wallet.address,
+    //     Destination: creatorAddress,
+    //     Amount: xrpToDrops(creatorFee),
+    //   }, { wallet });
+    // }
+    //
+    // const platformTx = await client.submitAndWait({
     //   TransactionType: 'Payment',
     //   Account: wallet.address,
-    //   Destination: YOUR_FEE_WALLET,
-    //   Amount: xrpToDrops(yourFee),
+    //   Destination: PLATFORM_FEE_WALLET,
+    //   Amount: xrpToDrops(creatorAddress === PLATFORM_FEE_WALLET ? platformFee + creatorFee : platformFee),
     // }, { wallet });
 
     const txHash = this.generateTxHash();
@@ -172,7 +189,8 @@ export class OpenClawXRPLPayments {
     return {
       success: true,
       txHash,
-      feeCollected: yourFee,
+      platformFee,
+      creatorFee,
     };
   }
 
@@ -254,16 +272,21 @@ export class OpenClawXRPLPayments {
   /**
    * Wrap any function to require payment before execution
    * Use this to monetize your OpenClaw skills
+   * 
+   * @param skillFn - The function to wrap
+   * @param priceXRP - Price per execution in XRP
+   * @param skillName - Name for tracking
+   * @param creatorWallet - Your wallet to receive 2% creator fee (optional)
    */
   paidSkill<T extends (...args: any[]) => Promise<any>>(
     skillFn: T,
     priceXRP: number,
     skillName: string,
-    creatorWallet: string = YOUR_FEE_WALLET
+    creatorWallet?: string
   ): (...args: Parameters<T>) => Promise<ReturnType<T>> {
     return async (...args: Parameters<T>): Promise<ReturnType<T>> => {
-      // Charge for skill usage
-      await this.payForSkill(creatorWallet, priceXRP, skillName);
+      // Charge for skill usage (97% recipient, 2% creator, 1% platform)
+      await this.payForSkill(args[0], priceXRP, skillName, creatorWallet);
       
       // Execute the skill
       return skillFn(...args);
@@ -280,11 +303,13 @@ export class OpenClawXRPLPayments {
   getRevenueStats(): {
     totalTransactions: number;
     totalVolume: number;
-    totalFeesCollected: number;
+    platformFeesCollected: number;
+    creatorFeesCollected: number;
     topSkills: { name: string; revenue: number }[];
   } {
     const totalVolume = this.paymentHistory.reduce((sum, p) => sum + p.amount, 0);
-    const totalFees = totalVolume * FEE_PERCENT;
+    const platformFees = totalVolume * PLATFORM_FEE_PERCENT;
+    const creatorFees = totalVolume * CREATOR_FEE_PERCENT;
 
     // Aggregate by skill
     const skillRevenue = new Map<string, number>();
@@ -301,7 +326,8 @@ export class OpenClawXRPLPayments {
     return {
       totalTransactions: this.paymentHistory.length,
       totalVolume,
-      totalFeesCollected: totalFees,
+      platformFeesCollected: platformFees,
+      creatorFeesCollected: creatorFees,
       topSkills,
     };
   }
@@ -389,17 +415,19 @@ export async function exampleUsage() {
   await payments.fundWallet();
 
   // Wrap skills with payment requirements
+  // Fee split: 97% to recipient, 2% to YOUR wallet (creator), 1% to XRPL Control Room
   const paidSearch = payments.paidSkill(
     premiumWebSearch,
     0.001, // $0.001 per search
     'premium-search',
-    'rSkillCreatorWallet123' // Skill creator gets paid (minus your 3%)
+    'rYourCreatorWallet123' // YOUR wallet - you get 2% of every search
   );
 
   const paidImageGen = payments.paidSkill(
     generateImage,
     0.01, // $0.01 per image
-    'image-generation'
+    'image-generation',
+    'rYourCreatorWallet123' // YOUR wallet - you get 2% of every image
   );
 
   // Agent uses skills (automatically pays)
@@ -409,12 +437,13 @@ export async function exampleUsage() {
   const imageUrl = await paidImageGen('cyberpunk city at night');
   console.log('Generated image:', imageUrl);
 
-  // Check your revenue
+  // Check revenue
   const stats = payments.getRevenueStats();
-  console.log('\n=== YOUR REVENUE ===');
+  console.log('\n=== REVENUE BREAKDOWN ===');
   console.log(`Transactions: ${stats.totalTransactions}`);
   console.log(`Total Volume: ${stats.totalVolume} XRP`);
-  console.log(`Your Fees (${FEE_PERCENT * 100}%): ${stats.totalFeesCollected} XRP`);
+  console.log(`Creator Fees (2%): ${stats.creatorFeesCollected} XRP`);
+  console.log(`Platform Fees (1%): ${stats.platformFeesCollected} XRP`);
 }
 
 // Run example
