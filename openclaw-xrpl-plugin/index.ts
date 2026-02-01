@@ -1,16 +1,19 @@
 /**
  * OpenClaw XRPL Micropayment Plugin
+ * Powered by XRPL Control Room (https://xrplcontrolroom.com)
  * 
  * Drop this into any OpenClaw installation to enable micropayments.
- * Every agent transaction sends 3% fee to your wallet.
  * 
- * Set VITE_OPENCLAW_FEE_WALLET environment variable to your XRPL address.
+ * Fee Structure:
+ *   - 97% goes to skill/service recipient
+ *   - 2% goes to skill creator (set your wallet via creatorWallet param)
+ *   - 1% platform fee to XRPL Control Room
  * 
  * Usage:
  *   import { OpenClawPayments } from 'openclaw-xrpl-plugin';
  *   const payments = new OpenClawPayments();
  *   await payments.init();
- *   await payments.payForSkill('premium-search', 0.001);
+ *   await payments.payForSkill('premium-search', 0.001, 'rYourCreatorWallet...');
  */
 
 import { Client, Wallet, xrpToDrops, dropsToXrp } from 'xrpl';
@@ -20,10 +23,13 @@ import { Client, Wallet, xrpToDrops, dropsToXrp } from 'xrpl';
 // =============================================================================
 
 export const CONFIG = {
-  // YOUR WALLET - receives 3% of every transaction
-  // Set via environment variable for security
-  FEE_WALLET: typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_OPENCLAW_FEE_WALLET || '') : process.env.OPENCLAW_FEE_WALLET || '',
-  FEE_PERCENT: 0.03,
+  // XRPL Control Room Platform Fee Wallet
+  // This wallet receives 1% platform fee on every transaction
+  // Skill creators receive 2% - set via OPENCLAW_CREATOR_WALLET env var
+  PLATFORM_FEE_WALLET: 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64',
+  PLATFORM_FEE_PERCENT: 0.01,  // 1% to platform
+  CREATOR_FEE_PERCENT: 0.02,   // 2% to skill creator
+  TOTAL_FEE_PERCENT: 0.03,     // 3% total
   
   // Network
   TESTNET: 'wss://s.altnet.rippletest.net:51233',
@@ -120,31 +126,33 @@ export class OpenClawPayments {
     }
     
     try {
-      // Calculate fee split
-      const yourFee = priceXRP * CONFIG.FEE_PERCENT;
-      const creatorAmount = priceXRP - yourFee;
-      const recipient = creatorWallet || CONFIG.FEE_WALLET;
+      // Calculate fee split: 1% platform, 2% creator, 97% recipient
+      const platformFee = priceXRP * CONFIG.PLATFORM_FEE_PERCENT;
+      const creatorFee = priceXRP * CONFIG.CREATOR_FEE_PERCENT;
+      const recipientAmount = priceXRP - platformFee - creatorFee;
+      const creatorAddress = creatorWallet || CONFIG.PLATFORM_FEE_WALLET;
       
       console.log(`[OpenClaw XRPL] Paying for skill: ${skillName}`);
-      console.log(`  Creator (${recipient}): ${creatorAmount.toFixed(6)} XRP`);
-      console.log(`  Platform fee: ${yourFee.toFixed(6)} XRP`);
+      console.log(`  Recipient: ${recipientAmount.toFixed(6)} XRP (97%)`);
+      console.log(`  Creator (${creatorAddress}): ${creatorFee.toFixed(6)} XRP (2%)`);
+      console.log(`  Platform (${CONFIG.PLATFORM_FEE_WALLET}): ${platformFee.toFixed(6)} XRP (1%)`);
       
-      // Pay creator (if different from fee wallet)
-      if (recipient !== CONFIG.FEE_WALLET) {
+      // Pay skill creator their cut (if different from platform)
+      if (creatorAddress !== CONFIG.PLATFORM_FEE_WALLET) {
         await this.client.submitAndWait({
           TransactionType: 'Payment',
           Account: this.wallet.address,
-          Destination: recipient,
-          Amount: xrpToDrops(creatorAmount.toString()),
+          Destination: creatorAddress,
+          Amount: xrpToDrops(creatorFee.toString()),
         }, { wallet: this.wallet });
       }
       
-      // Pay platform fee
+      // ALWAYS pay platform fee to XRPL Control Room
       const feeTx = await this.client.submitAndWait({
         TransactionType: 'Payment',
         Account: this.wallet.address,
-        Destination: CONFIG.FEE_WALLET,
-        Amount: xrpToDrops((recipient === CONFIG.FEE_WALLET ? priceXRP : yourFee).toString()),
+        Destination: CONFIG.PLATFORM_FEE_WALLET,
+        Amount: xrpToDrops((creatorAddress === CONFIG.PLATFORM_FEE_WALLET ? platformFee + creatorFee : platformFee).toString()),
       }, { wallet: this.wallet });
       
       this.txCount++;
@@ -152,7 +160,7 @@ export class OpenClawPayments {
       return {
         success: true,
         txHash: feeTx.result.hash,
-        fee: yourFee,
+        fee: platformFee,
       };
       
     } catch (error) {

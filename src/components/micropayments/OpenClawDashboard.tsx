@@ -70,8 +70,8 @@ export function OpenClawDashboard() {
   const [realTxCount, setRealTxCount] = useState<number | null>(null);
   const [loadingReal, setLoadingReal] = useState(false);
 
-  // Your wallet address - loaded from environment variable
-  const YOUR_WALLET = import.meta.env.VITE_OPENCLAW_FEE_WALLET || '';
+  // Platform fee wallet - XRPL Control Room earns 1% on all transactions
+  const PLATFORM_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
 
   // Fetch REAL wallet balance from XRPL Mainnet
   const fetchRealBalance = useCallback(async () => {
@@ -83,7 +83,7 @@ export function OpenClawDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           method: 'account_info',
-          params: [{ account: YOUR_WALLET, ledger_index: 'validated' }],
+          params: [{ account: PLATFORM_WALLET, ledger_index: 'validated' }],
         }),
       });
       const data = await response.json();
@@ -103,7 +103,7 @@ export function OpenClawDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           method: 'account_tx',
-          params: [{ account: YOUR_WALLET, limit: 100 }],
+          params: [{ account: PLATFORM_WALLET, limit: 100 }],
         }),
       });
       const txData = await txResponse.json();
@@ -114,7 +114,7 @@ export function OpenClawDashboard() {
     } finally {
       setLoadingReal(false);
     }
-  }, [YOUR_WALLET]);
+  }, []);
 
   // Fetch real balance on mount and every 30 seconds
   useEffect(() => {
@@ -176,7 +176,7 @@ export function OpenClawDashboard() {
   }, [activities]);
 
   const copyWallet = () => {
-    navigator.clipboard.writeText(YOUR_WALLET);
+    navigator.clipboard.writeText(PLATFORM_WALLET);
     setCopiedWallet(true);
     setTimeout(() => setCopiedWallet(false), 2000);
   };
@@ -213,10 +213,10 @@ export function OpenClawDashboard() {
           </button>
         </div>
 
-        {/* Your Wallet */}
+        {/* Platform Wallet */}
         <div className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50">
-          <span className="text-[10px] text-cyber-muted">YOUR FEE WALLET:</span>
-          <code className="text-xs text-cyber-cyan flex-1">{YOUR_WALLET}</code>
+          <span className="text-[10px] text-cyber-muted">PLATFORM WALLET:</span>
+          <code className="text-xs text-cyber-cyan flex-1">{PLATFORM_WALLET}</code>
           <button onClick={copyWallet} className="p-1 hover:bg-cyber-cyan/20 rounded">
             {copiedWallet ? <Check size={12} className="text-cyber-green" /> : <Copy size={12} className="text-cyber-muted" />}
           </button>
@@ -248,7 +248,7 @@ export function OpenClawDashboard() {
           </div>
         </div>
         <a 
-          href={`https://livenet.xrpl.org/accounts/${YOUR_WALLET}`}
+          href={`https://livenet.xrpl.org/accounts/${PLATFORM_WALLET}`}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-2 inline-flex items-center gap-1 text-xs text-cyan-400 hover:underline"
@@ -468,9 +468,9 @@ export function OpenClawDashboard() {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-cyber-border text-center bg-red-500/10">
-        <p className="text-[10px] text-red-400 font-bold">
-          🔴 MAINNET LIVE - Earning {feePercent}% on every transaction
+      <div className="p-2 border-t border-cyber-border text-center bg-green-500/10">
+        <p className="text-[10px] text-green-400 font-bold">
+          🟢 MAINNET LIVE - Platform earns 1% on every OpenClaw transaction
         </p>
       </div>
     </div>

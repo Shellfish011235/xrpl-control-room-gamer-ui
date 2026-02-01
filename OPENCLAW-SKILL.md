@@ -60,7 +60,6 @@ const balance = await payments.getBalance();
 
 - **Live App**: https://xrplcontrolroom.com
 - **GitHub**: https://github.com/Shellfish011235/xrpl-control-room-gamer-ui
-- **Fee Wallet**: `ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64`
 
 ## Example Agent Prompt
 
@@ -70,9 +69,10 @@ Use the xrpl-micropayments skill to pay 0.001 XRP for a premium web search about
 
 ## Revenue Model
 
-Skill creators earn per-use:
-- 97% to skill creator
-- 3% infrastructure fee
+Every transaction splits:
+- **97%** to skill/service recipient
+- **2%** to skill creator (you!)
+- **1%** platform fee to XRPL Control Room
 
 At scale:
 - 10,000 uses/day × $0.001 = $10/day passive income

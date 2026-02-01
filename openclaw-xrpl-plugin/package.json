@@ -16,7 +16,7 @@
     "ai-agent",
     "interledger"
   ],
-  "author": "Your Name",
+  "author": "Shellfish011235",
   "license": "MIT",
   "dependencies": {
     "xrpl": "^3.0.0"
@@ -26,8 +26,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/openclaw-xrpl-plugin"
+    "url": "git+https://github.com/Shellfish011235/xrpl-control-room-gamer-ui.git"
   },
-  "feeWallet": "ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64",
-  "feePercent": 3
+  "bugs": {
+    "url": "https://github.com/Shellfish011235/xrpl-control-room-gamer-ui/issues"
+  },
+  "homepage": "https://xrplcontrolroom.com"
 }
