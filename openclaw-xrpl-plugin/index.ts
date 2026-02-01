@@ -4,7 +4,7 @@
  * Drop this into any OpenClaw installation to enable micropayments.
  * Every agent transaction sends 3% fee to your wallet.
  * 
- * YOUR WALLET: ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64
+ * Set VITE_OPENCLAW_FEE_WALLET environment variable to your XRPL address.
  * 
  * Usage:
  *   import { OpenClawPayments } from 'openclaw-xrpl-plugin';
@@ -21,7 +21,8 @@ import { Client, Wallet, xrpToDrops, dropsToXrp } from 'xrpl';
 
 export const CONFIG = {
   // YOUR WALLET - receives 3% of every transaction
-  FEE_WALLET: 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64',
+  // Set via environment variable for security
+  FEE_WALLET: typeof import.meta !== 'undefined' ? (import.meta.env?.VITE_OPENCLAW_FEE_WALLET || '') : process.env.OPENCLAW_FEE_WALLET || '',
   FEE_PERCENT: 0.03,
   
   // Network

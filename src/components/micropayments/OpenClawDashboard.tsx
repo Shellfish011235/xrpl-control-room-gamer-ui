@@ -70,8 +70,8 @@ export function OpenClawDashboard() {
   const [realTxCount, setRealTxCount] = useState<number | null>(null);
   const [loadingReal, setLoadingReal] = useState(false);
 
-  // Your wallet address
-  const YOUR_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
+  // Your wallet address - loaded from environment variable
+  const YOUR_WALLET = import.meta.env.VITE_OPENCLAW_FEE_WALLET || '';
 
   // Fetch REAL wallet balance from XRPL Mainnet
   const fetchRealBalance = useCallback(async () => {

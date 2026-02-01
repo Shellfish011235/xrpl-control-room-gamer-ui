@@ -12,7 +12,8 @@
 // =============================================================================
 
 // 🔑 YOUR XRPL WALLET - receives fees on EVERY transaction
-export const YOUR_FEE_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
+// Set VITE_OPENCLAW_FEE_WALLET in your environment variables
+export const YOUR_FEE_WALLET = import.meta.env.VITE_OPENCLAW_FEE_WALLET || '';
 export const FEE_PERCENT = 0.03; // 3% - adjust as needed
 
 // Network configuration
