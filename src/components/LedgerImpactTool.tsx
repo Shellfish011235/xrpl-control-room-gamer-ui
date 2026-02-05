@@ -3,9 +3,40 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Clock, Users, ExternalLink, ChevronRight,
   Cpu, HardDrive, Wifi, DollarSign, MemoryStick, RefreshCw,
-  X, FileText, AlertTriangle, Loader2, Timer
+  X, FileText, AlertTriangle, Loader2, Timer, Github, User
 } from 'lucide-react';
 import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFeeds';
+
+// ==================== RESPONSIVE LAYOUT HOOK ====================
+// Detects window size for responsive component behavior
+
+function useResponsiveLayout() {
+  const [layout, setLayout] = useState({
+    isMobile: false,
+    isMinimized: false,
+    isSmallHeight: false,
+    isTinyHeight: false,
+  });
+
+  useEffect(() => {
+    const updateLayout = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      setLayout({
+        isMobile: width < 640,
+        isMinimized: width < 400 || height < 500,
+        isSmallHeight: height < 600,
+        isTinyHeight: height < 450,
+      });
+    };
+
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, []);
+
+  return layout;
+}
 
 // ==================== COUNTDOWN TIMER COMPONENT ====================
 // Shows countdown until 2-week waiting period completes
@@ -103,21 +134,26 @@ function CountdownTimer({
     return { days: 0, hours: 0, minutes: 0, seconds: 0, isCountdown: false, isExpired: true, hasActivationDate: false };
   }, [activationDate, daysUntilEnabled, hoursUntilEnabled, minutesUntilEnabled, secondsUntilEnabled, currentTime, elapsedSeconds]);
 
-  // Compact inline display for list view
+  // Compact inline display for list view - BIGGER and MORE READABLE
   if (compact) {
     if (timeData.isExpired) {
       // Countdown complete - waiting for flag ledger activation
       return (
-        <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30 font-mono flex items-center gap-1 ${className}`}>
-          <span className="w-1.5 h-1.5 rounded-full bg-cyber-green animate-pulse" />
+        <span className={`px-2 py-1 rounded text-xs bg-cyber-green/20 text-cyber-green border border-cyber-green/40 font-mono font-bold flex items-center gap-1.5 ${className}`}>
+          <span className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
           ACTIVATING...
         </span>
       );
     }
-    // Show live countdown with days, hours, minutes, seconds
+    // Show live countdown - PURPLE background with WHITE text for contrast
     return (
-      <span className={`px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30 font-mono ${className}`}>
-        {timeData.days}d {String(timeData.hours).padStart(2, '0')}:{String(timeData.minutes).padStart(2, '0')}:{String(timeData.seconds).padStart(2, '0')}
+      <span className={`px-2 py-1 rounded text-xs bg-purple-900/80 border border-purple-500/50 font-mono font-bold tracking-wide ${className}`}>
+        <span className="text-white">{timeData.days}d</span>
+        <span className="text-cyan-300 ml-1">{String(timeData.hours).padStart(2, '0')}</span>
+        <span className="text-purple-300">:</span>
+        <span className="text-cyan-300">{String(timeData.minutes).padStart(2, '0')}</span>
+        <span className="text-purple-300">:</span>
+        <span className="text-cyan-300">{String(timeData.seconds).padStart(2, '0')}</span>
       </span>
     );
   }
@@ -138,28 +174,25 @@ function CountdownTimer({
   }
 
   // Full display - live countdown with days, hours, minutes, seconds
+  // COMPACT: Purple background with WHITE/CYAN text for contrast
   return (
     <div className={`${className}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <Timer size={14} className="text-cyber-yellow animate-pulse" />
-        <span className="text-cyber-yellow font-cyber text-sm">Time until activation</span>
-      </div>
-      <div className="flex gap-1">
-        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-lg text-cyber-yellow">{timeData.days}</p>
-          <p className="text-[8px] text-cyber-muted">DAYS</p>
+      <div className="flex gap-2 justify-center">
+        <div className="text-center px-3 py-2 rounded bg-purple-900/80 border border-purple-500/60">
+          <p className="font-mono text-xl font-bold text-white">{timeData.days}</p>
+          <p className="text-[9px] text-purple-300 font-cyber">DAYS</p>
         </div>
-        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-lg text-cyber-yellow">{String(timeData.hours).padStart(2, '0')}</p>
-          <p className="text-[8px] text-cyber-muted">HRS</p>
+        <div className="text-center px-3 py-2 rounded bg-purple-900/80 border border-purple-500/60">
+          <p className="font-mono text-xl font-bold text-white">{String(timeData.hours).padStart(2, '0')}</p>
+          <p className="text-[9px] text-purple-300 font-cyber">HRS</p>
         </div>
-        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-lg text-cyber-yellow">{String(timeData.minutes).padStart(2, '0')}</p>
-          <p className="text-[8px] text-cyber-muted">MIN</p>
+        <div className="text-center px-3 py-2 rounded bg-purple-900/80 border border-cyan-500/60">
+          <p className="font-mono text-xl font-bold text-cyan-300">{String(timeData.minutes).padStart(2, '0')}</p>
+          <p className="text-[9px] text-cyan-300 font-cyber">MIN</p>
         </div>
-        <div className="text-center px-2 py-1 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <p className="font-mono text-lg text-cyber-yellow">{String(timeData.seconds).padStart(2, '0')}</p>
-          <p className="text-[8px] text-cyber-muted">SEC</p>
+        <div className="text-center px-3 py-2 rounded bg-purple-900/80 border border-cyan-500/60">
+          <p className="font-mono text-xl font-bold text-cyan-300">{String(timeData.seconds).padStart(2, '0')}</p>
+          <p className="text-[9px] text-cyan-300 font-cyber">SEC</p>
         </div>
       </div>
     </div>
@@ -205,58 +238,65 @@ interface Amendment {
   activationDate?: Date;  // Calculated activation date (majority + 14 days)
   majorityDate?: string | null; // Date when majority was reached
   enabledOn?: string | null; // Date when amendment was enabled
+  // Author information
+  author?: string;  // Developer who proposed the amendment
+  github?: string;  // GitHub PR/spec link
 }
 
 // Amendment metadata (performance impact assessments)
-// Updated January 2026 with live data from xrpscan.com
+// Updated February 2026 with live data from xrpscan.com
+// Author information from GitHub XRPL repository
 const amendmentMetadata: Record<string, { 
   summary: string; 
   tier: Tier; 
   impact: PerformanceImpact;
   areas: AffectedArea[];
   rationale: string;
+  author?: string;  // Developer who proposed the amendment
+  github?: string;  // GitHub PR/spec link
 }> = {
-  // ==================== CURRENTLY AT MAJORITY (ETA ~5 days) ====================
-  'fixPriceOracleOrder': { summary: 'Fixes ordering issues in Price Oracle calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for price oracle ordering. Minimal performance impact, improves oracle reliability.' },
-  'fixMPTDeliveredAmount': { summary: 'Fixes delivered amount calculation for Multi-Purpose Tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for MPT amount calculations. Ensures accurate delivery amounts.' },
-  'fixIncludeKeyletFields': { summary: 'Fixes keylet field inclusion in ledger entries', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Internal fix for keylet field handling. No user-facing impact.' },
-  'fixAMMClawbackRounding': { summary: 'Fixes rounding issues in AMM clawback operations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Corrects edge-case rounding in AMM+Clawback interactions.' },
-  'fixTokenEscrowV1': { summary: 'Fixes edge cases in token escrow functionality', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for token escrow. Improves escrow reliability for issued tokens.' },
+  // ==================== CURRENTLY AT MAJORITY ====================
+  // Note: Only linking to official XLS specs or verified XRPL-Standards discussions
+  'fixPriceOracleOrder': { summary: 'Fixes ordering issues in Price Oracle calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for price oracle ordering. Minimal performance impact, improves oracle reliability.', author: 'Ripple Engineering' },
+  'fixMPTDeliveredAmount': { summary: 'Fixes delivered amount calculation for Multi-Purpose Tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for MPT amount calculations. Ensures accurate delivery amounts.', author: 'Ripple Engineering' },
+  'fixIncludeKeyletFields': { summary: 'Fixes keylet field inclusion in ledger entries', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Internal fix for keylet field handling. No user-facing impact.', author: 'Ripple Engineering' },
+  'fixAMMClawbackRounding': { summary: 'Fixes rounding issues in AMM clawback operations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Corrects edge-case rounding in AMM+Clawback interactions.', author: 'Ripple Engineering' },
+  'fixTokenEscrowV1': { summary: 'Fixes edge cases in token escrow functionality', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for token escrow. Improves escrow reliability for issued tokens.', author: 'Ripple Engineering' },
   
-  // ==================== AT MAJORITY (ETA ~12 days) ====================
-  'PermissionedDomains': { summary: 'Enables permissioned domains for institutional use cases', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'New ledger object type for domain permissions. Enables compliant institutional deployments.' },
+  // ==================== AT MAJORITY ====================
+  'PermissionedDomains': { summary: 'Enables permissioned domains for institutional use cases (XLS-80)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'New ledger object type for domain permissions. Enables compliant institutional deployments.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-80d-permissioned-domains' },
   
   // ==================== CURRENTLY VOTING ====================
-  'PermissionedDEX': { summary: 'Enables permissioned DEX trading for compliant assets', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory'], rationale: 'Adds permission checks to DEX operations. Moderate overhead for compliant trading.' },
-  'TokenEscrow': { summary: 'Native escrow support for issued tokens (not just XRP)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Disk IO'], rationale: 'Extends escrow functionality to all tokens. New transaction types and ledger objects.' },
-  'Batch': { summary: 'Enables batching multiple transactions atomically', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Fee pressure'], rationale: 'Allows atomic multi-transaction batches. Increases validation complexity but reduces fees.' },
-  'fixXChainRewardRounding': { summary: 'Fixes reward rounding in cross-chain bridge', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for XChain reward calculations. Minor validation overhead.' },
+  'PermissionedDEX': { summary: 'Enables permissioned DEX trading for compliant assets (XLS-81)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory'], rationale: 'Adds permission checks to DEX operations. Moderate overhead for compliant trading.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-81d-permissioned-dexes' },
+  'TokenEscrow': { summary: 'Native escrow support for issued tokens (XLS-85)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Disk IO'], rationale: 'Extends escrow functionality to all tokens. New transaction types and ledger objects.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-85-token-escrow' },
+  'Batch': { summary: 'Enables batching multiple transactions atomically (XLS-56)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Fee pressure'], rationale: 'Allows atomic multi-transaction batches. Increases validation complexity but reduces fees.', author: 'RichardAH', github: 'https://opensource.ripple.com/docs/xls-56-batch-transactions' },
+  'fixXChainRewardRounding': { summary: 'Fixes reward rounding in cross-chain bridge', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for XChain reward calculations. Minor validation overhead.', author: 'Ripple Engineering' },
   
   // ==================== ENABLED (for reference) ====================
-  'AMM': { summary: 'Native automated market maker functionality', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.' },
-  'Clawback': { summary: 'Enables token issuers to reclaim tokens from holders', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds flag check during token transfers. Only affects tokens with clawback enabled.' },
-  'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.' },
-  'DID': { summary: 'Decentralized Identifier support on XRPL', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.' },
-  'XChainBridge': { summary: 'Cross-chain bridge functionality', tier: 'C', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers. Low adoption so far.' },
-  'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.' },
-  'fixReducedOffersV1': { summary: 'Corrects offer reduction calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Minor calculation fix in DEX operations.' },
-  'fixReducedOffersV2': { summary: 'Additional offer reduction calculation fixes', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up fix for DEX offer calculations.' },
-  'fixAMMOverflowOffer': { summary: 'Fixes AMM overflow in offer calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Prevents integer overflow in AMM edge cases.' },
-  'fixAMMv1_1': { summary: 'AMM improvements and bug fixes (v1.1)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fixes for AMM functionality.' },
-  'fixAMMv1_2': { summary: 'AMM improvements and bug fixes (v1.2)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Additional bug fixes for AMM.' },
-  'fixAMMv1_3': { summary: 'AMM improvements and bug fixes (v1.3)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Latest AMM bug fixes.' },
-  'fixInnerObjTemplate2': { summary: 'Template fix for inner objects', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Internal template consistency fix.' },
-  'MPTokensV1': { summary: 'Multi-Purpose Token support', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New token type with additional metadata support.' },
-  'Credentials': { summary: 'On-chain credential verification', tier: 'B', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger entry type for credential storage.' },
-  'DeepFreeze': { summary: 'Enhanced freeze functionality for compliance', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds deep freeze capability. Minimal overhead.' },
-  'DynamicNFT': { summary: 'Mutable NFT metadata support', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'Allows NFT metadata updates. New transaction type.' },
-  'AMMClawback': { summary: 'Clawback support for AMM LP tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Extends clawback to AMM LP tokens. Minor validation overhead.' },
-  'NFTokenMintOffer': { summary: 'Combine NFT minting with sell offer', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Convenience feature. Reduces transaction count.' },
-  'fixDirectoryLimit': { summary: 'Fixes directory pagination limits', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Bug fix for directory handling. Improves large account support.' },
-  'fixEnforceNFTokenTrustline': { summary: 'Enforces NFToken trustline requirements', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Security fix for NFToken trustlines.' },
-  'fixEnforceNFTokenTrustlineV2': { summary: 'Additional NFToken trustline enforcement', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up security fix.' },
-  'fixPayChanCancelAfter': { summary: 'Fixes payment channel cancel timing', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for payment channel timing.' },
-  'fixNFTokenPageLinks': { summary: 'Fixes NFToken page linking issues', tier: 'A', impact: 'Low', areas: ['Disk IO'], rationale: 'Bug fix for NFToken pagination.' },
+  'AMM': { summary: 'Native automated market maker functionality (XLS-30)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.', author: 'Aanchal Malhotra & David Schwartz', github: 'https://opensource.ripple.com/docs/xls-30d-amm' },
+  'Clawback': { summary: 'Enables token issuers to reclaim tokens from holders (XLS-39)', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds flag check during token transfers. Only affects tokens with clawback enabled.', author: 'Shawn Xie', github: 'https://github.com/XRPLF/XRPL-Standards/tree/master/XLS-0039d-clawback' },
+  'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds (XLS-47)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-47d-price-oracles' },
+  'DID': { summary: 'Decentralized Identifier support on XRPL (XLS-40)', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-40d-decentralized-identity' },
+  'XChainBridge': { summary: 'Cross-chain bridge functionality (XLS-38)', tier: 'C', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers. Low adoption so far.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-38d-cross-chain-bridge' },
+  'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.', author: 'Ripple Engineering' },
+  'fixReducedOffersV1': { summary: 'Corrects offer reduction calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Minor calculation fix in DEX operations.', author: 'Ripple Engineering' },
+  'fixReducedOffersV2': { summary: 'Additional offer reduction calculation fixes', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up fix for DEX offer calculations.', author: 'Ripple Engineering' },
+  'fixAMMOverflowOffer': { summary: 'Fixes AMM overflow in offer calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Prevents integer overflow in AMM edge cases.', author: 'Ripple Engineering' },
+  'fixAMMv1_1': { summary: 'AMM improvements and bug fixes (v1.1)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fixes for AMM functionality.', author: 'Ripple Engineering' },
+  'fixAMMv1_2': { summary: 'AMM improvements and bug fixes (v1.2)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Additional bug fixes for AMM.', author: 'Ripple Engineering' },
+  'fixAMMv1_3': { summary: 'AMM improvements and bug fixes (v1.3)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Latest AMM bug fixes.', author: 'Ripple Engineering' },
+  'fixInnerObjTemplate2': { summary: 'Template fix for inner objects', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Internal template consistency fix.', author: 'Ripple Engineering' },
+  'MPTokensV1': { summary: 'Multi-Purpose Token support (XLS-33)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New token type with additional metadata support.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-33d-multi-purpose-tokens' },
+  'Credentials': { summary: 'On-chain credential verification (XLS-70)', tier: 'B', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger entry type for credential storage.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-70d-credentials' },
+  'DeepFreeze': { summary: 'Enhanced freeze functionality for compliance', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds deep freeze capability. Minimal overhead.', author: 'Ripple Engineering' },
+  'DynamicNFT': { summary: 'Mutable NFT metadata support (XLS-46)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'Allows NFT metadata updates. New transaction type.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-46d-dynamic-nfts' },
+  'AMMClawback': { summary: 'Clawback support for AMM LP tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Extends clawback to AMM LP tokens. Minor validation overhead.', author: 'Ripple Engineering' },
+  'NFTokenMintOffer': { summary: 'Combine NFT minting with sell offer (XLS-52)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Convenience feature. Reduces transaction count.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-52d-nftoken-mint-offer' },
+  'fixDirectoryLimit': { summary: 'Fixes directory pagination limits', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Bug fix for directory handling. Improves large account support.', author: 'Ripple Engineering' },
+  'fixEnforceNFTokenTrustline': { summary: 'Enforces NFToken trustline requirements', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Security fix for NFToken trustlines.', author: 'Ripple Engineering' },
+  'fixEnforceNFTokenTrustlineV2': { summary: 'Additional NFToken trustline enforcement', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up security fix.', author: 'Ripple Engineering' },
+  'fixPayChanCancelAfter': { summary: 'Fixes payment channel cancel timing', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for payment channel timing.', author: 'Ripple Engineering' },
+  'fixNFTokenPageLinks': { summary: 'Fixes NFToken page linking issues', tier: 'A', impact: 'Low', areas: ['Disk IO'], rationale: 'Bug fix for NFToken pagination.', author: 'Ripple Engineering' },
 };
 
 // Helper to convert XRPScan amendment to our Amendment type
@@ -271,6 +311,14 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
 
   // Use API-provided days (each amendment has its own individual countdown)
   const waitingDays = xrpAmendment.daysUntilEnabled || 0;
+  
+  // Build evidence links - include GitHub if available
+  const evidenceLinks: { label: string; url: string }[] = [
+    { label: 'View on XRPScan', url: `https://xrpscan.com/amendment/${xrpAmendment.name}` }
+  ];
+  if (metadata.github) {
+    evidenceLinks.push({ label: 'GitHub Spec/PR', url: metadata.github });
+  }
 
   return {
     id: xrpAmendment.amendment_id,
@@ -284,9 +332,7 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
       confidence: amendmentMetadata[xrpAmendment.name] ? 'High' : 'Low',
       affectedAreas: metadata.areas,
       rationale: metadata.rationale,
-      evidenceLinks: [
-        { label: 'View on XRPScan', url: `https://xrpscan.com/amendment/${xrpAmendment.name}` }
-      ]
+      evidenceLinks
     },
     validatorSupport: { 
       current: xrpAmendment.count, 
@@ -302,7 +348,10 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     secondsUntilEnabled: xrpAmendment.secondsUntilEnabled,
     activationDate: xrpAmendment.activationDate,  // Calculated from Ripple epoch majority timestamp
     majorityDate: xrpAmendment.majority ? String(xrpAmendment.majority) : null,
-    enabledOn: xrpAmendment.enabled_on || null
+    enabledOn: xrpAmendment.enabled_on || null,
+    // Author information
+    author: metadata.author,
+    github: metadata.github
   };
 }
 
@@ -334,6 +383,9 @@ export function LedgerImpactTool() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'enabled'>('pending');
   const [dataSource, setDataSource] = useState<'live' | 'fallback'>('fallback');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  
+  // Responsive layout detection
+  const { isSmallHeight, isTinyHeight, isMinimized } = useResponsiveLayout();
 
   // Fetch live amendments from XRPScan
   const fetchAmendments = useCallback(async () => {
@@ -585,51 +637,78 @@ export function LedgerImpactTool() {
       <AnimatePresence>
         {selectedAmendment && (
           <motion.div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-1"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedAmendment(null)}
           >
             <motion.div
-              className="cyber-panel cyber-glow w-full max-w-lg p-6 max-h-[80vh] overflow-y-auto"
+              className="cyber-panel cyber-glow w-full max-w-lg max-h-[98vh] flex flex-col"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 rounded text-xs font-cyber bg-${tierColors[selectedAmendment.tier]}/20 text-${tierColors[selectedAmendment.tier]} border border-${tierColors[selectedAmendment.tier]}/30`}>
-                      Tier {selectedAmendment.tier}
+              {/* COMPACT HEADER - Name, Author, X button */}
+              <div className="flex items-center justify-between gap-2 border-b border-cyber-border/50 px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-cyber bg-${tierColors[selectedAmendment.tier]}/20 text-${tierColors[selectedAmendment.tier]} border border-${tierColors[selectedAmendment.tier]}/30`}>
+                      {selectedAmendment.tier}
                     </span>
+                    <h3 className="font-cyber text-cyber-glow text-sm truncate">
+                      {selectedAmendment.name}
+                    </h3>
                     {selectedAmendment.enabled && (
-                      <span className="px-2 py-0.5 rounded text-xs font-cyber bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
-                        ENABLED
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-cyber bg-cyber-green/20 text-cyber-green">
+                        ✓
                       </span>
                     )}
                   </div>
-                  <h3 className="font-cyber text-lg text-cyber-glow">{selectedAmendment.name}</h3>
+                  {/* Author + GitHub Link */}
+                  {selectedAmendment.author && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <User size={12} className="text-cyber-purple" />
+                      <span className="text-xs text-cyber-purple">{selectedAmendment.author}</span>
+                      {selectedAmendment.github && (
+                        <a 
+                          href={selectedAmendment.github} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/40 border border-purple-500/50 text-[10px] text-purple-300 hover:text-white transition-all"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Github size={12} />
+                          <span>View Spec</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
+                {/* X BUTTON */}
                 <button
                   onClick={() => setSelectedAmendment(null)}
-                  className="p-2 hover:bg-cyber-glow/10 rounded transition-colors"
+                  className="p-1.5 bg-red-500/30 hover:bg-red-500/50 border border-red-500/50 rounded transition-colors shrink-0"
+                  title="Close"
                 >
-                  <X size={20} className="text-cyber-muted" />
+                  <X size={16} className="text-red-400" />
                 </button>
               </div>
 
-              {/* Summary */}
-              <p className="text-sm text-cyber-text mb-4">{selectedAmendment.summary}</p>
+              {/* SCROLLABLE CONTENT - More compact */}
+              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
+                {/* Summary */}
+                <p className="text-cyber-text text-xs">
+                  {selectedAmendment.summary}
+                </p>
 
               {/* Countdown Timer for Majority Amendments */}
               {selectedAmendment.status === 'majority' && (
-                <div className="mb-4 p-3 rounded-lg bg-cyber-yellow/10 border border-cyber-yellow/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock size={14} className="text-cyber-yellow" />
-                    <span className="text-xs font-cyber text-cyber-yellow">TIME UNTIL ACTIVATION</span>
+                <div className="p-2 rounded-lg bg-purple-900/30 border border-purple-500/40">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Clock size={12} className="text-purple-400" />
+                    <span className="text-xs font-cyber text-purple-300">TIME UNTIL ACTIVATION</span>
                   </div>
                   <CountdownTimer 
                     majorityDate={selectedAmendment.majorityDate} 
@@ -640,8 +719,8 @@ export function LedgerImpactTool() {
                     activationDate={selectedAmendment.activationDate}
                   />
                   {selectedAmendment.activationDate && (
-                    <p className="text-[10px] text-cyber-muted mt-2">
-                      Activates: {new Date(selectedAmendment.activationDate).toLocaleString()}
+                    <p className="text-[10px] text-purple-300/70 mt-2 text-center">
+                      Activates: {new Date(selectedAmendment.activationDate).toLocaleDateString()}
                     </p>
                   )}
                 </div>
@@ -649,106 +728,95 @@ export function LedgerImpactTool() {
 
               {/* Enabled Date for Already Activated Amendments */}
               {selectedAmendment.status === 'enabled' && selectedAmendment.enabledOn && (
-                <div className="mb-4 p-3 rounded-lg bg-cyber-green/10 border border-cyber-green/30">
-                  <div className="flex items-center gap-2">
-                    <Clock size={14} className="text-cyber-green" />
-                    <span className="text-xs font-cyber text-cyber-green">ACTIVATED</span>
-                  </div>
-                  <p className="text-sm text-cyber-green font-mono mt-1">
-                    {new Date(selectedAmendment.enabledOn).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
+                <div className="p-2 rounded bg-cyber-green/10 border border-cyber-green/30 flex items-center gap-2">
+                  <Clock size={12} className="text-cyber-green" />
+                  <span className="text-[10px] font-cyber text-cyber-green">ACTIVATED</span>
+                  <span className="text-cyber-green font-mono text-xs">
+                    {new Date(selectedAmendment.enabledOn).toLocaleDateString()}
+                  </span>
                 </div>
               )}
 
-              {/* Quick Stats */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                  <Clock size={14} className="text-cyber-muted mx-auto mb-1" />
-                  <p className="text-xs text-cyber-muted">Waiting</p>
-                  <p className="font-cyber text-sm text-cyber-text">{selectedAmendment.waitingDays}d</p>
+              {/* Quick Stats - Compact row */}
+              <div className="grid grid-cols-3 gap-1">
+                <div className="p-1.5 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
+                  <p className="text-[9px] text-cyber-muted">Waiting</p>
+                  <p className="font-cyber text-cyber-text text-xs">{selectedAmendment.waitingDays}d</p>
                 </div>
-                <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                  <Users size={14} className="text-cyber-muted mx-auto mb-1" />
-                  <p className="text-xs text-cyber-muted">Support</p>
-                  <p className="font-cyber text-sm text-cyber-text">
+                <div className="p-1.5 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
+                  <p className="text-[9px] text-cyber-muted">Support</p>
+                  <p className="font-cyber text-cyber-text text-xs">
                     {selectedAmendment.validatorSupport.current}/{selectedAmendment.validatorSupport.required}
                   </p>
                 </div>
-                <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                  <Zap size={14} className={`text-${impactColors[selectedAmendment.ledgerImpact.estimatedImpact]} mx-auto mb-1`} />
-                  <p className="text-xs text-cyber-muted">Impact</p>
-                  <p className={`font-cyber text-sm text-${impactColors[selectedAmendment.ledgerImpact.estimatedImpact]}`}>
+                <div className="p-1.5 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
+                  <p className="text-[9px] text-cyber-muted">Impact</p>
+                  <p className={`font-cyber text-${impactColors[selectedAmendment.ledgerImpact.estimatedImpact]} text-xs`}>
                     {selectedAmendment.ledgerImpact.estimatedImpact}
                   </p>
                 </div>
               </div>
 
-              {/* Ledger Impact Details */}
-              <div className="mb-4">
-                <h4 className="font-cyber text-sm text-cyber-cyan mb-2 flex items-center gap-2">
-                  <Zap size={14} />
-                  LEDGER IMPACT ANALYSIS
+              {/* Ledger Impact Details - Compact */}
+              <div>
+                <h4 className="font-cyber text-cyber-cyan flex items-center gap-1.5 text-xs mb-1.5">
+                  <Zap size={12} />
+                  IMPACT ANALYSIS
                 </h4>
                 
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30">
-                    <p className="text-[10px] text-cyber-muted mb-1">Estimated Impact</p>
-                    <p className={`font-cyber text-${impactColors[selectedAmendment.ledgerImpact.estimatedImpact]}`}>
-                      {selectedAmendment.ledgerImpact.estimatedImpact}
-                    </p>
-                  </div>
-                  <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30">
-                    <p className="text-[10px] text-cyber-muted mb-1">Confidence</p>
-                    <p className="font-cyber text-cyber-text">{selectedAmendment.ledgerImpact.confidence}</p>
-                  </div>
+                {/* Affected Areas - Inline */}
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {selectedAmendment.ledgerImpact.affectedAreas.map(area => (
+                    <span 
+                      key={area}
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/30 text-[10px]"
+                    >
+                      {areaIcons[area]}
+                      {area}
+                    </span>
+                  ))}
+                  <span className="px-1.5 py-0.5 rounded bg-cyber-darker/50 text-cyber-text border border-cyber-border/30 text-[10px]">
+                    {selectedAmendment.ledgerImpact.confidence} confidence
+                  </span>
                 </div>
 
-                {/* Affected Areas */}
-                <div className="mb-3">
-                  <p className="text-[10px] text-cyber-muted mb-2">Affected Areas</p>
-                  <div className="flex flex-wrap gap-1">
-                    {selectedAmendment.ledgerImpact.affectedAreas.map(area => (
-                      <span 
-                        key={area}
-                        className="flex items-center gap-1 px-2 py-1 rounded bg-cyber-purple/20 text-cyber-purple text-xs border border-cyber-purple/30"
-                      >
-                        {areaIcons[area]}
-                        {area}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Rationale */}
-                <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/30">
-                  <p className="text-[10px] text-cyber-muted mb-1">Technical Rationale</p>
-                  <p className="text-sm text-cyber-text">{selectedAmendment.ledgerImpact.rationale}</p>
+                {/* Rationale - Compact */}
+                <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30">
+                  <p className="text-[10px] text-cyber-text">{selectedAmendment.ledgerImpact.rationale}</p>
                 </div>
               </div>
 
-              {/* Evidence Links */}
-              {selectedAmendment.ledgerImpact.evidenceLinks && selectedAmendment.ledgerImpact.evidenceLinks.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[10px] text-cyber-muted mb-1">Evidence & References</p>
-                  {selectedAmendment.ledgerImpact.evidenceLinks.map((link, i) => (
-                    <a
-                      key={i}
-                      href={link.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/50 transition-all text-xs text-cyber-text group"
-                    >
-                      <ExternalLink size={12} className="text-cyber-glow" />
-                      <span>{link.label}</span>
-                      <ChevronRight size={12} className="ml-auto text-cyber-muted group-hover:text-cyber-glow" />
-                    </a>
-                  ))}
-                </div>
-              )}
+                {/* Evidence Links */}
+                {selectedAmendment.ledgerImpact.evidenceLinks && selectedAmendment.ledgerImpact.evidenceLinks.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-cyber-muted mb-1">Evidence & References</p>
+                    {selectedAmendment.ledgerImpact.evidenceLinks.map((link, i) => (
+                      <a
+                        key={i}
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/50 transition-all text-xs text-cyber-text group"
+                      >
+                        <ExternalLink size={12} className="text-cyber-glow" />
+                        <span>{link.label}</span>
+                        <ChevronRight size={12} className="ml-auto text-cyber-muted group-hover:text-cyber-glow" />
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* COMPACT FOOTER - Back Button */}
+              <div className="border-t border-cyber-border/50 px-3 py-2">
+                <button
+                  onClick={() => setSelectedAmendment(null)}
+                  className="w-full py-2 px-3 bg-cyber-darker hover:bg-cyber-glow/10 border border-cyber-border hover:border-cyber-glow/50 rounded transition-all text-xs font-cyber text-cyber-text flex items-center justify-center gap-2"
+                >
+                  <ChevronRight size={14} className="rotate-180" />
+                  Back
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}

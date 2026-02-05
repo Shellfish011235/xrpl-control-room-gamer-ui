@@ -16,12 +16,27 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting - relaxed for dev */
-    "strict": false,
-    "noImplicitAny": false,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noFallthroughCasesInSwitch": true
+    /* Type checking - gradual strictness */
+    "strict": true,
+    "noImplicitAny": false,              // Enable later after cleanup
+    "strictNullChecks": false,           // Enable later after cleanup
+    "noUnusedLocals": false,             // Enable later after cleanup
+    "noUnusedParameters": false,         // Enable later after cleanup
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    
+    /* Path aliases for cleaner imports */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@services/*": ["src/services/*"],
+      "@store/*": ["src/store/*"],
+      "@lib/*": ["src/lib/*"],
+      "@types/*": ["src/types/*"]
+    }
   },
   "include": ["src"]
 }
