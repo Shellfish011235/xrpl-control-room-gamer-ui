@@ -199,6 +199,7 @@ export default function Network() {
   // ILP data state
   const [ilpFilter, setIlpFilter] = useState<'all' | 'connectors' | 'repos' | 'corridors'>('all')
   const [selectedConnector, setSelectedConnector] = useState<ILPConnectorInstance | null>(null)
+  const [selectedILPCorridor, setSelectedILPCorridor] = useState<ILPCorridor | null>(null)
   const ilpStats = useMemo(() => getILPStats(), [])
   
   // Corridor data state
@@ -206,6 +207,7 @@ export default function Network() {
   const [selectedBridge, setSelectedBridge] = useState<CrossChainBridge | null>(null)
   const [selectedChain, setSelectedChain] = useState<XRPLConnectedChain | null>(null)
   const [selectedPartner, setSelectedPartner] = useState<ODLPartner | null>(null)
+  const [selectedPaymentCorridor, setSelectedPaymentCorridor] = useState<PaymentCorridor | null>(null)
   const corridorStats = useMemo(() => getCorridorStats(), [])
   
   // Community & Projects data state
@@ -1062,116 +1064,369 @@ export default function Network() {
                 {/* Connectors List */}
                 {(ilpFilter === 'all' || ilpFilter === 'connectors') && (
                   <div className="mb-4">
-                    <p className="text-[10px] text-cyber-muted mb-2">Active Connectors ({ilpStats.activeConnectors})</p>
-                    <div className="max-h-[150px] overflow-y-auto space-y-1.5 custom-scrollbar">
-                      {ilpConnectorInstances.filter(c => c.status === 'online').slice(0, 6).map((connector) => (
+                    <p className="text-[10px] text-cyber-muted mb-2">Rafiki/ILP Connectors ({ilpStats.activeConnectors} online) - Click to expand</p>
+                    <div className="max-h-[180px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                      {ilpConnectorInstances.filter(c => c.status === 'online').map((connector) => (
                         <button
                           key={connector.id}
                           onClick={() => setSelectedConnector(selectedConnector?.id === connector.id ? null : connector)}
-                          className={`w-full text-left p-2 rounded bg-cyber-darker/50 border transition-all ${
+                          className={`w-full text-left p-2 rounded bg-cyber-darker/50 border-l-2 transition-all ${
                             selectedConnector?.id === connector.id 
-                              ? 'border-cyber-green/50 bg-cyber-green/10' 
-                              : 'border-cyber-border/30 hover:border-cyber-purple/30'
+                              ? 'border-l-4 border-cyber-green bg-cyber-green/10' 
+                              : 'border-cyber-green/50 hover:bg-cyber-darker/80'
                           }`}
                         >
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: getILPStatusColor(connector.status) }}
-                            />
-                            <span className="text-xs text-cyber-text font-medium truncate">{connector.name}</span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: getILPStatusColor(connector.status) }}
+                              />
+                              <span className="text-xs text-cyber-text font-medium truncate">{connector.name}</span>
+                            </div>
+                            {connector.monthlyVolume && (
+                              <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-glow/20 text-cyber-glow">
+                                {connector.monthlyVolume}/mo
+                              </span>
+                            )}
                           </div>
                           <p className="text-[9px] text-cyber-muted mt-0.5 truncate">
                             {connector.operator} • {connector.location?.city || 'Global'}
                           </p>
+                          {connector.dailyTransactions && (
+                            <p className="text-[10px] text-cyber-green mt-1">{connector.dailyTransactions} txns/day</p>
+                          )}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
                 
-                {/* Selected Connector Details */}
+                {/* Selected Connector Expanded Details */}
                 {selectedConnector && (
                   <motion.div 
-                    className="mb-4 p-3 rounded bg-cyber-purple/10 border border-cyber-purple/30"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mb-4 p-4 rounded-lg bg-cyber-green/10 border border-cyber-green/30"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-cyber text-sm text-cyber-purple">{selectedConnector.name}</span>
-                      <button onClick={() => setSelectedConnector(null)} className="text-cyber-muted hover:text-cyber-text">
-                        <X size={12} />
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-cyber text-lg text-cyber-green">{selectedConnector.name}</span>
+                      <button 
+                        onClick={() => setSelectedConnector(null)} 
+                        className="text-cyber-muted hover:text-cyber-text p-1 rounded hover:bg-cyber-darker/50"
+                      >
+                        <X size={16} />
                       </button>
                     </div>
-                    <p className="text-[10px] text-cyber-muted mb-2">{selectedConnector.operator}</p>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div>
-                        <p className="text-[9px] text-cyber-muted">Implementation</p>
-                        <p className="text-xs text-cyber-text">{selectedConnector.implementation}</p>
+                    
+                    {/* Main Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">Monthly Volume</p>
+                        <p className="text-xl font-cyber text-cyber-glow">
+                          {selectedConnector.monthlyVolume || 'N/A'}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-[9px] text-cyber-muted">Type</p>
-                        <p className="text-xs text-cyber-text capitalize">{selectedConnector.type}</p>
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">Daily Transactions</p>
+                        <p className="text-xl font-cyber text-cyber-green">
+                          {selectedConnector.dailyTransactions || 'N/A'}
+                        </p>
                       </div>
                     </div>
-                    <div className="mb-2">
-                      <p className="text-[9px] text-cyber-muted mb-1">Assets</p>
-                      <div className="flex flex-wrap gap-1">
+                    
+                    {/* Secondary Stats */}
+                    <div className="grid grid-cols-2 gap-2 mb-4">
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Avg Latency</p>
+                        <p className="text-sm font-cyber text-cyber-cyan">{selectedConnector.avgLatency || 'N/A'}</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Uptime</p>
+                        <p className="text-sm font-cyber text-cyber-green">{selectedConnector.uptime || 'N/A'}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Operator Info */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-1">OPERATOR</p>
+                      <p className="text-sm text-cyber-text">{selectedConnector.operator}</p>
+                      {selectedConnector.location && (
+                        <p className="text-xs text-cyber-muted mt-1">
+                          {selectedConnector.location.city}, {selectedConnector.location.country}
+                        </p>
+                      )}
+                    </div>
+                    
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Implementation</p>
+                        <p className="text-sm text-cyber-purple">{selectedConnector.implementation}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Type</p>
+                        <p className={`text-sm capitalize ${
+                          selectedConnector.type === 'production' ? 'text-cyber-green' :
+                          selectedConnector.type === 'testnet' ? 'text-cyber-cyan' :
+                          'text-cyber-yellow'
+                        }`}>
+                          {selectedConnector.type}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Supported Assets */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-2">SUPPORTED ASSETS</p>
+                      <div className="flex flex-wrap gap-2">
                         {selectedConnector.supportedAssets.map((asset) => (
-                          <span key={asset} className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-glow/20 text-cyber-glow">
+                          <span key={asset} className="px-2 py-1 rounded bg-cyber-glow/20 text-cyber-glow text-xs font-medium">
                             {asset}
                           </span>
                         ))}
                       </div>
                     </div>
-                    <div>
-                      <p className="text-[9px] text-cyber-muted mb-1">Features</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedConnector.features.slice(0, 3).map((feature) => (
-                          <span key={feature} className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-darker/50 text-cyber-text">
+                    
+                    {/* Features */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-2">FEATURES</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedConnector.features.map((feature) => (
+                          <span key={feature} className="px-2 py-1 rounded bg-cyber-darker/50 text-cyber-text text-xs border border-cyber-border/30">
                             {feature}
                           </span>
                         ))}
                       </div>
                     </div>
-                    {selectedConnector.url && (
-                      <a 
-                        href={selectedConnector.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 flex items-center gap-1 text-[10px] text-cyber-purple hover:text-cyber-glow"
-                      >
-                        <ExternalLink size={10} /> Visit Website
-                      </a>
+                    
+                    {/* Peering Connections */}
+                    {selectedConnector.peering.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-[10px] text-cyber-muted mb-2">PEERED WITH</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedConnector.peering.map((peerId) => {
+                            const peer = ilpConnectorInstances.find(c => c.id === peerId)
+                            return (
+                              <button
+                                key={peerId}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (peer) setSelectedConnector(peer)
+                                }}
+                                className="px-2 py-1 rounded bg-cyber-purple/20 text-cyber-purple text-xs hover:bg-cyber-purple/30 transition-all"
+                              >
+                                {peer?.name || peerId}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
                     )}
+                    
+                    {/* Links */}
+                    {selectedConnector.url && (
+                      <div className="pt-3 border-t border-cyber-border/30">
+                        <a 
+                          href={selectedConnector.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded bg-cyber-green/20 text-cyber-green text-xs hover:bg-cyber-green/30 transition-all w-fit"
+                        >
+                          <ExternalLink size={12} /> Visit Website
+                        </a>
+                      </div>
+                    )}
+                    
+                    {/* Data Disclaimer */}
+                    <div className="mt-4 pt-3 border-t border-cyber-border/30">
+                      <p className="text-[9px] text-cyber-muted italic">
+                        Note: Volume and performance metrics are estimates. Contact operators for real-time data.
+                      </p>
+                    </div>
                   </motion.div>
                 )}
                 
-                {/* Corridors List */}
+                {/* ILP Corridors List */}
                 {(ilpFilter === 'all' || ilpFilter === 'corridors') && (
                   <div className="mb-4">
-                    <p className="text-[10px] text-cyber-muted mb-2">Payment Corridors ({ilpCorridors.length})</p>
-                    <div className="max-h-[120px] overflow-y-auto space-y-1.5 custom-scrollbar">
-                      {ilpCorridors.slice(0, 5).map((corridor) => (
-                        <div 
+                    <p className="text-[10px] text-cyber-muted mb-2">ILP/Rafiki Corridors ({ilpCorridors.length}) - Click to expand</p>
+                    <div className="max-h-[180px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                      {ilpCorridors.map((corridor) => (
+                        <button 
                           key={corridor.id}
-                          className="p-2 rounded bg-cyber-darker/50 border-l-2 transition-all hover:bg-cyber-darker/80"
+                          onClick={() => setSelectedILPCorridor(selectedILPCorridor?.id === corridor.id ? null : corridor)}
+                          className={`w-full text-left p-2 rounded bg-cyber-darker/50 border-l-2 transition-all cursor-pointer ${
+                            selectedILPCorridor?.id === corridor.id 
+                              ? 'bg-cyber-purple/10 border-l-4' 
+                              : 'hover:bg-cyber-darker/80'
+                          }`}
                           style={{ borderColor: getILPTypeColor(corridor.type) }}
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-cyber-text font-medium">{corridor.name}</span>
-                            {corridor.xrplBacked && (
-                              <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-green/20 text-cyber-green">XRP</span>
-                            )}
+                            <div className="flex items-center gap-1">
+                              {corridor.xrplBacked && (
+                                <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-green/20 text-cyber-green">XRP</span>
+                              )}
+                              <span className={`text-[8px] px-1 py-0.5 rounded ${
+                                corridor.volume === 'high' ? 'bg-cyber-green/20 text-cyber-green' :
+                                corridor.volume === 'medium' ? 'bg-cyber-glow/20 text-cyber-glow' :
+                                corridor.volume === 'pilot' ? 'bg-cyber-yellow/20 text-cyber-yellow' :
+                                'bg-cyber-muted/20 text-cyber-muted'
+                              }`}>
+                                {corridor.volume}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-[9px] text-cyber-muted mt-0.5">{corridor.description}</p>
+                          <p className="text-[9px] text-cyber-muted mt-0.5">{corridor.type}</p>
                           {corridor.monthlyVolume && (
-                            <p className="text-[10px] text-cyber-glow mt-1">{corridor.monthlyVolume}/month</p>
+                            <p className="text-[10px] text-cyber-purple mt-1">{corridor.monthlyVolume}/month</p>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
+                )}
+                
+                {/* Selected ILP Corridor Expanded Details */}
+                {selectedILPCorridor && (
+                  <motion.div 
+                    className="mb-4 p-4 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-cyber text-lg text-cyber-purple">{selectedILPCorridor.name}</span>
+                      <button 
+                        onClick={() => setSelectedILPCorridor(null)} 
+                        className="text-cyber-muted hover:text-cyber-text p-1 rounded hover:bg-cyber-darker/50"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    
+                    {/* Main Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">Monthly Volume</p>
+                        <p className="text-xl font-cyber text-cyber-purple">
+                          {selectedILPCorridor.monthlyVolume || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">YoY Growth</p>
+                        <p className="text-xl font-cyber text-cyber-green">
+                          {selectedILPCorridor.growthYoY || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Secondary Stats */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Daily Txns</p>
+                        <p className="text-sm font-cyber text-cyber-cyan">{selectedILPCorridor.dailyTransactions || 'N/A'}</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Settlement</p>
+                        <p className="text-sm font-cyber text-cyber-green">{selectedILPCorridor.avgSettlementTime || 'N/A'}</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Fees</p>
+                        <p className="text-sm font-cyber text-cyber-yellow">{selectedILPCorridor.fees || 'N/A'}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Description */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-1">DESCRIPTION</p>
+                      <p className="text-sm text-cyber-text leading-relaxed">{selectedILPCorridor.description}</p>
+                    </div>
+                    
+                    {/* Route Visualization */}
+                    <div className="mb-4 p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                      <p className="text-[10px] text-cyber-muted mb-2">ILP ROUTE</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <p className="text-xs text-cyber-text font-medium">{selectedILPCorridor.from.country}</p>
+                          <p className="text-[10px] text-cyber-muted">{selectedILPCorridor.from.countryCode}</p>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center">
+                          <div className="w-full h-0.5 bg-gradient-to-r from-cyber-purple via-cyber-glow to-cyber-green" />
+                          <span className="mx-2 text-cyber-purple">→</span>
+                          <div className="w-full h-0.5 bg-gradient-to-r from-cyber-green via-cyber-glow to-cyber-purple" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-cyber-text font-medium">{selectedILPCorridor.to.country}</p>
+                          <p className="text-[10px] text-cyber-muted">{selectedILPCorridor.to.countryCode}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Corridor Type</p>
+                        <p className="text-sm text-cyber-text capitalize" style={{ color: getILPTypeColor(selectedILPCorridor.type) }}>
+                          {selectedILPCorridor.type}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Volume Level</p>
+                        <p className={`text-sm capitalize ${
+                          selectedILPCorridor.volume === 'high' ? 'text-cyber-green' :
+                          selectedILPCorridor.volume === 'medium' ? 'text-cyber-glow' :
+                          'text-cyber-yellow'
+                        }`}>
+                          {selectedILPCorridor.volume}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">XRP Settlement</p>
+                        <p className={`text-sm ${selectedILPCorridor.xrplBacked ? 'text-cyber-green' : 'text-cyber-muted'}`}>
+                          {selectedILPCorridor.xrplBacked ? 'Enabled' : 'Fiat Only'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Connectors in Route */}
+                    {selectedILPCorridor.connectorIds.length > 0 && (
+                      <div className="mb-4">
+                        <p className="text-[10px] text-cyber-muted mb-2">CONNECTORS IN ROUTE</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedILPCorridor.connectorIds.map((connectorId, idx) => {
+                            const connector = ilpConnectorInstances.find(c => c.id === connectorId)
+                            return (
+                              <span key={connectorId} className="flex items-center gap-1">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (connector) setSelectedConnector(connector)
+                                  }}
+                                  className="px-2 py-1 rounded bg-cyber-glow/20 text-cyber-glow text-xs hover:bg-cyber-glow/30 transition-all"
+                                >
+                                  {connector?.name || connectorId}
+                                </button>
+                                {idx < selectedILPCorridor.connectorIds.length - 1 && (
+                                  <span className="text-cyber-muted">→</span>
+                                )}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Data Disclaimer */}
+                    <div className="mt-4 pt-3 border-t border-cyber-border/30">
+                      <p className="text-[9px] text-cyber-muted italic">
+                        Note: Volume figures are estimates based on available data. For current metrics, refer to rafiki.dev or connector operators.
+                      </p>
+                    </div>
+                  </motion.div>
                 )}
                 
                 {/* GitHub Repos List */}
@@ -1261,12 +1516,17 @@ export default function Network() {
                 {/* Payment Corridors List */}
                 {(corridorFilter === 'all' || corridorFilter === 'corridors') && (
                   <div className="mb-4">
-                    <p className="text-[10px] text-cyber-muted mb-2">Top Corridors ({paymentCorridors.filter(c => c.volume === 'high').length} high volume)</p>
-                    <div className="max-h-[150px] overflow-y-auto space-y-1.5 custom-scrollbar">
-                      {paymentCorridors.filter(c => c.volume === 'high' || c.volume === 'medium').slice(0, 6).map((corridor) => (
-                        <div 
+                    <p className="text-[10px] text-cyber-muted mb-2">Top Corridors ({paymentCorridors.filter(c => c.volume === 'high').length} high volume) - Click to expand</p>
+                    <div className="max-h-[200px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                      {paymentCorridors.filter(c => c.volume === 'high' || c.volume === 'medium').slice(0, 8).map((corridor) => (
+                        <button
                           key={corridor.id}
-                          className="p-2 rounded bg-cyber-darker/50 border-l-2 transition-all hover:bg-cyber-darker/80"
+                          onClick={() => setSelectedPaymentCorridor(selectedPaymentCorridor?.id === corridor.id ? null : corridor)}
+                          className={`w-full text-left p-2 rounded bg-cyber-darker/50 border-l-2 transition-all cursor-pointer ${
+                            selectedPaymentCorridor?.id === corridor.id 
+                              ? 'bg-cyber-green/10 border-l-4' 
+                              : 'hover:bg-cyber-darker/80'
+                          }`}
                           style={{ borderColor: getVolumeColor(corridor.volume) }}
                         >
                           <div className="flex items-center justify-between">
@@ -1284,10 +1544,139 @@ export default function Network() {
                           {corridor.growthYoY && (
                             <span className="text-[9px] text-cyber-green">{corridor.growthYoY} YoY</span>
                           )}
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
+                )}
+                
+                {/* Selected Corridor Expanded Details */}
+                {selectedPaymentCorridor && (
+                  <motion.div 
+                    className="mb-4 p-4 rounded-lg bg-cyber-green/10 border border-cyber-green/30"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-cyber text-lg text-cyber-green">{selectedPaymentCorridor.name}</span>
+                      <button 
+                        onClick={() => setSelectedPaymentCorridor(null)} 
+                        className="text-cyber-muted hover:text-cyber-text p-1 rounded hover:bg-cyber-darker/50"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                    
+                    {/* Main Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">Monthly Volume</p>
+                        <p className="text-xl font-cyber text-cyber-glow">
+                          {selectedPaymentCorridor.monthlyVolume || 'N/A'}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">YoY Growth</p>
+                        <p className="text-xl font-cyber text-cyber-green">
+                          {selectedPaymentCorridor.growthYoY || 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Description */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-1">DESCRIPTION</p>
+                      <p className="text-sm text-cyber-text leading-relaxed">{selectedPaymentCorridor.description}</p>
+                    </div>
+                    
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Type</p>
+                        <p className="text-sm text-cyber-text capitalize">{selectedPaymentCorridor.type}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Volume Level</p>
+                        <p className="text-sm capitalize" style={{ color: getVolumeColor(selectedPaymentCorridor.volume) }}>
+                          {selectedPaymentCorridor.volume}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">XRP Settlement</p>
+                        <p className={`text-sm ${selectedPaymentCorridor.xrpSettlement ? 'text-cyber-green' : 'text-cyber-muted'}`}>
+                          {selectedPaymentCorridor.xrpSettlement ? 'Yes' : 'No'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">ODL Enabled</p>
+                        <p className={`text-sm ${selectedPaymentCorridor.odlEnabled ? 'text-cyber-green' : 'text-cyber-muted'}`}>
+                          {selectedPaymentCorridor.odlEnabled ? 'Yes' : 'No'}
+                        </p>
+                      </div>
+                      {selectedPaymentCorridor.launchDate && (
+                        <div>
+                          <p className="text-[10px] text-cyber-muted mb-1">Launch Date</p>
+                          <p className="text-sm text-cyber-text">{selectedPaymentCorridor.launchDate}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Route Info */}
+                    <div className="mb-4 p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                      <p className="text-[10px] text-cyber-muted mb-2">ROUTE</p>
+                      <div className="flex items-center gap-3">
+                        <div className="text-center">
+                          <p className="text-xs text-cyber-text font-medium">{selectedPaymentCorridor.from.country}</p>
+                          <p className="text-[10px] text-cyber-muted">{selectedPaymentCorridor.from.city || selectedPaymentCorridor.from.countryCode}</p>
+                        </div>
+                        <div className="flex-1 flex items-center justify-center">
+                          <div className="w-full h-0.5 bg-gradient-to-r from-cyber-glow via-cyber-purple to-cyber-green" />
+                          <span className="mx-2 text-cyber-glow">→</span>
+                          <div className="w-full h-0.5 bg-gradient-to-r from-cyber-green via-cyber-purple to-cyber-glow" />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-xs text-cyber-text font-medium">{selectedPaymentCorridor.to.country}</p>
+                          <p className="text-[10px] text-cyber-muted">{selectedPaymentCorridor.to.city || selectedPaymentCorridor.to.countryCode}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Partners */}
+                    {selectedPaymentCorridor.partners.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-2">ODL PARTNERS</p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedPaymentCorridor.partners.map((partnerId) => {
+                            const partner = getPartnerById(partnerId)
+                            return partner ? (
+                              <button
+                                key={partnerId}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedPartner(partner)
+                                }}
+                                className="px-3 py-1.5 rounded bg-cyber-glow/20 text-cyber-glow text-xs hover:bg-cyber-glow/30 transition-all"
+                              >
+                                {partner.name}
+                              </button>
+                            ) : (
+                              <span key={partnerId} className="px-3 py-1.5 rounded bg-cyber-darker/50 text-cyber-muted text-xs">
+                                {partnerId}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Data Disclaimer */}
+                    <div className="mt-4 pt-3 border-t border-cyber-border/30">
+                      <p className="text-[9px] text-cyber-muted italic">
+                        Note: Volume figures are estimates. For current data, refer to official Ripple ODL reports.
+                      </p>
+                    </div>
+                  </motion.div>
                 )}
                 
                 {/* ODL Partners List */}
@@ -1402,100 +1791,205 @@ export default function Network() {
                 {/* Cross-Chain Bridges List */}
                 {(corridorFilter === 'all' || corridorFilter === 'bridges') && (
                   <div className="mb-4">
-                    <p className="text-[10px] text-cyber-muted mb-2">Cross-Chain Bridges ({crossChainBridges.filter(b => b.status === 'mainnet').length} active)</p>
-                    <div className="max-h-[120px] overflow-y-auto space-y-1.5 custom-scrollbar">
-                      {crossChainBridges.filter(b => b.status !== 'deprecated').slice(0, 5).map((bridge) => (
+                    <p className="text-[10px] text-cyber-muted mb-2">Cross-Chain Bridges ({crossChainBridges.filter(b => b.status === 'mainnet').length} active) - Click to expand</p>
+                    <div className="max-h-[180px] overflow-y-auto space-y-1.5 custom-scrollbar">
+                      {crossChainBridges.filter(b => b.status !== 'deprecated').slice(0, 8).map((bridge) => (
                         <button
                           key={bridge.id}
                           onClick={() => setSelectedBridge(selectedBridge?.id === bridge.id ? null : bridge)}
-                          className={`w-full text-left p-2 rounded bg-cyber-darker/50 border transition-all ${
+                          className={`w-full text-left p-2 rounded bg-cyber-darker/50 border-l-2 transition-all ${
                             selectedBridge?.id === bridge.id 
-                              ? 'border-cyber-purple/50 bg-cyber-purple/10' 
-                              : 'border-cyber-border/30 hover:border-cyber-purple/30'
+                              ? 'border-l-4 border-cyber-purple bg-cyber-purple/10' 
+                              : 'border-cyber-purple/50 hover:bg-cyber-darker/80'
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-cyber-text font-medium truncate">{bridge.name}</span>
-                            <span className={`text-[8px] px-1 py-0.5 rounded ${
-                              bridge.status === 'mainnet' ? 'bg-cyber-green/20 text-cyber-green' :
-                              bridge.status === 'testnet' ? 'bg-cyber-cyan/20 text-cyber-cyan' :
-                              'bg-cyber-muted/20 text-cyber-muted'
-                            }`}>
-                              {bridge.status}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              {bridge.tvl && (
+                                <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-glow/20 text-cyber-glow">
+                                  TVL: {bridge.tvl}
+                                </span>
+                              )}
+                              <span className={`text-[8px] px-1 py-0.5 rounded ${
+                                bridge.status === 'mainnet' ? 'bg-cyber-green/20 text-cyber-green' :
+                                bridge.status === 'testnet' ? 'bg-cyber-cyan/20 text-cyber-cyan' :
+                                'bg-cyber-muted/20 text-cyber-muted'
+                              }`}>
+                                {bridge.status}
+                              </span>
+                            </div>
                           </div>
-                          <p className="text-[9px] text-cyber-muted mt-0.5 truncate">{bridge.type} • {bridge.chains.join(' ↔ ')}</p>
+                          <p className="text-[9px] text-cyber-muted mt-0.5 truncate">{bridge.type} • {bridge.chains.slice(0, 3).join(' ↔ ')}{bridge.chains.length > 3 ? '...' : ''}</p>
+                          {bridge.monthlyVolume && (
+                            <p className="text-[10px] text-cyber-purple mt-1">{bridge.monthlyVolume}/month</p>
+                          )}
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
                 
-                {/* Selected Bridge Details */}
+                {/* Selected Bridge Expanded Details */}
                 {selectedBridge && (
                   <motion.div 
-                    className="mb-4 p-3 rounded bg-cyber-purple/10 border border-cyber-purple/30"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
+                    className="mb-4 p-4 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-cyber text-sm text-cyber-purple">{selectedBridge.name}</span>
-                      <button onClick={() => setSelectedBridge(null)} className="text-cyber-muted hover:text-cyber-text">
-                        <X size={12} />
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="font-cyber text-lg text-cyber-purple">{selectedBridge.name}</span>
+                      <button 
+                        onClick={() => setSelectedBridge(null)} 
+                        className="text-cyber-muted hover:text-cyber-text p-1 rounded hover:bg-cyber-darker/50"
+                      >
+                        <X size={16} />
                       </button>
                     </div>
-                    <p className="text-[10px] text-cyber-muted mb-2">{selectedBridge.description}</p>
-                    <div className="grid grid-cols-2 gap-2 mb-2">
-                      <div>
-                        <p className="text-[9px] text-cyber-muted">Type</p>
-                        <p className="text-xs text-cyber-text capitalize">{selectedBridge.type.replace('-', ' ')}</p>
+                    
+                    {/* Main Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">Monthly Volume</p>
+                        <p className="text-xl font-cyber text-cyber-purple">
+                          {selectedBridge.monthlyVolume || 'N/A'}
+                        </p>
                       </div>
-                      <div>
-                        <p className="text-[9px] text-cyber-muted">Security</p>
-                        <p className="text-xs text-cyber-text truncate">{selectedBridge.securityModel.split(' ')[0]}</p>
+                      <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                        <p className="text-[10px] text-cyber-muted mb-1">Total Value Locked</p>
+                        <p className="text-xl font-cyber text-cyber-glow">
+                          {selectedBridge.tvl || 'N/A'}
+                        </p>
                       </div>
                     </div>
-                    <div className="mb-2">
-                      <p className="text-[9px] text-cyber-muted mb-1">Supported Assets</p>
-                      <div className="flex flex-wrap gap-1">
+                    
+                    {/* Secondary Stats */}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Daily Txns</p>
+                        <p className="text-sm font-cyber text-cyber-cyan">{selectedBridge.dailyTransactions || 'N/A'}</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Avg Time</p>
+                        <p className="text-sm font-cyber text-cyber-green">{selectedBridge.avgTransferTime || 'N/A'}</p>
+                      </div>
+                      <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                        <p className="text-[9px] text-cyber-muted">Fees</p>
+                        <p className="text-sm font-cyber text-cyber-yellow">{selectedBridge.fees || 'N/A'}</p>
+                      </div>
+                    </div>
+                    
+                    {/* Description */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-1">DESCRIPTION</p>
+                      <p className="text-sm text-cyber-text leading-relaxed">{selectedBridge.description}</p>
+                    </div>
+                    
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Bridge Type</p>
+                        <p className="text-sm text-cyber-text capitalize">{selectedBridge.type.replace(/-/g, ' ')}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-cyber-muted mb-1">Status</p>
+                        <p className={`text-sm capitalize ${
+                          selectedBridge.status === 'mainnet' ? 'text-cyber-green' :
+                          selectedBridge.status === 'testnet' ? 'text-cyber-cyan' :
+                          'text-cyber-muted'
+                        }`}>
+                          {selectedBridge.status}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Connected Chains */}
+                    <div className="mb-4 p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                      <p className="text-[10px] text-cyber-muted mb-2">CONNECTED CHAINS</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedBridge.chains.map((chain, idx) => (
+                          <span key={chain} className="flex items-center gap-1">
+                            <span className="px-2 py-1 rounded bg-cyber-purple/20 text-cyber-purple text-xs">
+                              {chain}
+                            </span>
+                            {idx < selectedBridge.chains.length - 1 && (
+                              <span className="text-cyber-muted">↔</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Supported Assets */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-2">SUPPORTED ASSETS</p>
+                      <div className="flex flex-wrap gap-2">
                         {selectedBridge.supportedAssets.map((asset) => (
-                          <span key={asset} className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-glow/20 text-cyber-glow">
+                          <span key={asset} className="px-2 py-1 rounded bg-cyber-glow/20 text-cyber-glow text-xs font-medium">
                             {asset}
                           </span>
                         ))}
                       </div>
                     </div>
-                    <div>
-                      <p className="text-[9px] text-cyber-muted mb-1">Features</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedBridge.features.slice(0, 4).map((feature) => (
-                          <span key={feature} className="px-1.5 py-0.5 rounded text-[9px] bg-cyber-darker/50 text-cyber-text">
+                    
+                    {/* Security Model */}
+                    <div className="mb-4 p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                      <p className="text-[10px] text-cyber-muted mb-1">SECURITY MODEL</p>
+                      <p className="text-sm text-cyber-text">{selectedBridge.securityModel}</p>
+                    </div>
+                    
+                    {/* Features */}
+                    <div className="mb-4">
+                      <p className="text-[10px] text-cyber-muted mb-2">FEATURES</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedBridge.features.map((feature) => (
+                          <span key={feature} className="px-2 py-1 rounded bg-cyber-darker/50 text-cyber-text text-xs border border-cyber-border/30">
                             {feature}
                           </span>
                         ))}
                       </div>
                     </div>
-                    <div className="flex gap-2 mt-2">
-                      {selectedBridge.githubUrl && (
-                        <a 
-                          href={selectedBridge.githubUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[10px] text-cyber-purple hover:text-cyber-glow"
-                        >
-                          <ExternalLink size={10} /> GitHub
-                        </a>
-                      )}
+                    
+                    {/* Links */}
+                    <div className="flex flex-wrap gap-3 pt-3 border-t border-cyber-border/30">
                       {selectedBridge.website && (
                         <a 
                           href={selectedBridge.website}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-[10px] text-cyber-purple hover:text-cyber-glow"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded bg-cyber-purple/20 text-cyber-purple text-xs hover:bg-cyber-purple/30 transition-all"
                         >
-                          <ExternalLink size={10} /> Website
+                          <ExternalLink size={12} /> Website
                         </a>
                       )}
+                      {selectedBridge.githubUrl && (
+                        <a 
+                          href={selectedBridge.githubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded bg-cyber-darker/50 text-cyber-text text-xs hover:bg-cyber-darker/80 transition-all border border-cyber-border/30"
+                        >
+                          <ExternalLink size={12} /> GitHub
+                        </a>
+                      )}
+                      {selectedBridge.docsUrl && (
+                        <a 
+                          href={selectedBridge.docsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded bg-cyber-cyan/20 text-cyber-cyan text-xs hover:bg-cyber-cyan/30 transition-all"
+                        >
+                          <ExternalLink size={12} /> Docs
+                        </a>
+                      )}
+                    </div>
+                    
+                    {/* Data Disclaimer */}
+                    <div className="mt-4 pt-3 border-t border-cyber-border/30">
+                      <p className="text-[9px] text-cyber-muted italic">
+                        Note: Volume and TVL figures are estimates. For current data, refer to official bridge dashboards.
+                      </p>
                     </div>
                   </motion.div>
                 )}
