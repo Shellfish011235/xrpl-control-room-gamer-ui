@@ -104,10 +104,10 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
     showLiveData,
   } = useGlobeStore();
   const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
-    coordinates: [0, 20],
-    zoom: 1
+    coordinates: [20, 15],  // Slightly offset to show more corridors
+    zoom: 1.2
   });
-  const [mapLocked, setMapLocked] = useState(true); // Map locked by default
+  const [mapLocked, setMapLocked] = useState(true); // Map locked by default - prevents accidental panning
   const [hoveredValidator, setHoveredValidator] = useState<LiveValidatorMarker | null>(null);
   const [hoveredNode, setHoveredNode] = useState<LiveNodeMarker | null>(null);
   const [hoveredConnector, setHoveredConnector] = useState<ILPConnectorInstance | null>(null);
@@ -367,22 +367,33 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
       />
       
       <ComposableMap
-        projection="geoMercator"
+        projection="geoEqualEarth"
         projectionConfig={{
-          scale: 120
+          scale: 140,
+          center: [0, 0]
         }}
-        style={{ width: '100%', height: '100%' }}
+        style={{ 
+          width: '100%', 
+          height: '100%',
+          maxHeight: '500px'
+        }}
       >
         <ZoomableGroup
           center={position.coordinates}
           zoom={position.zoom}
           onMoveEnd={({ coordinates, zoom }: { coordinates: [number, number]; zoom: number }) => {
             if (!mapLocked) {
-              setPosition({ coordinates, zoom });
+              // Limit movement range
+              const clampedCoords: [number, number] = [
+                Math.max(-180, Math.min(180, coordinates[0])),
+                Math.max(-60, Math.min(70, coordinates[1]))
+              ];
+              setPosition({ coordinates: clampedCoords, zoom: Math.min(zoom, 3) });
             }
           }}
           minZoom={1}
-          maxZoom={8}
+          maxZoom={3}
+          translateExtent={[[-200, -100], [1200, 600]]}
         >
           {/* Countries */}
           <Geographies geography={currentGeoUrl}>

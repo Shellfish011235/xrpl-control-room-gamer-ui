@@ -842,8 +842,8 @@ export default function Network() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="cyber-panel p-2 h-full min-h-[500px]">
-              <WorldGlobe className="h-full min-h-[480px]" />
+            <div className="cyber-panel p-2 h-full" style={{ minHeight: '400px', maxHeight: '550px' }}>
+              <WorldGlobe className="h-full" />
             </div>
           </motion.div>
           
