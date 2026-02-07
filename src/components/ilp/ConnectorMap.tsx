@@ -218,7 +218,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
       </div>
 
       {/* SVG Map */}
-      <svg width="100%" height="400" viewBox="0 0 800 400" className="bg-cyber-darker/50 rounded">
+      <svg width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet" className="bg-cyber-darker/50 rounded" style={{ maxHeight: '450px' }}>
         {/* Definitions */}
         <defs>
           {/* Background grid */}

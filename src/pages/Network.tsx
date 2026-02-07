@@ -842,7 +842,7 @@ export default function Network() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
           >
-            <div className="cyber-panel p-2 h-full" style={{ minHeight: '400px', maxHeight: '550px' }}>
+            <div className="cyber-panel p-2 h-full" style={{ minHeight: '400px', maxHeight: '500px' }}>
               <WorldGlobe className="h-full" />
             </div>
           </motion.div>
@@ -2722,7 +2722,7 @@ function NetworkTopologySection() {
       </div>
 
       {/* Connector Map */}
-      <div className="cyber-panel p-2" style={{ minHeight: '450px' }}>
+      <div className="cyber-panel p-2" style={{ minHeight: '400px', maxHeight: '500px' }}>
         <ConnectorMap
           onLedgerClick={(ledger) => console.log('Clicked ledger:', ledger.name)}
           onCorridorClick={(corridor) => console.log('Clicked corridor:', corridor.id)}
