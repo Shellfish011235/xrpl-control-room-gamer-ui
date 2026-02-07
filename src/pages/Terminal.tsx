@@ -1,22 +1,64 @@
 // Terminal Page - Institutional Trading Terminal
 // Combines all institutional-grade features into one powerful view
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component, ReactNode, Suspense, lazy } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Activity, Maximize2, Minimize2,
-  Bell, Clock
+  Bell, Clock, AlertTriangle
 } from 'lucide-react';
 
-import { LiquidationHeatmap } from '../components/institutional/LiquidationHeatmap';
-import { RiskDashboard } from '../components/institutional/RiskDashboard';
-import { AlertBuilder } from '../components/institutional/AlertBuilder';
-import { PositionLiquidationRisk } from '../components/institutional/PositionLiquidationRisk';
-import { PaperTradingPanel } from '../components/PaperTradingPanel';
-import { LedgerImpactTool } from '../components/LedgerImpactTool';
-import { PathfindingTool } from '../components/PathfindingTool';
-
 import { useAlertStore, useAlertInitialization } from '../services/alertNotifications';
+
+// Lazy load heavy components to prevent crashes
+const LiquidationHeatmap = lazy(() => import('../components/institutional/LiquidationHeatmap').then(m => ({ default: m.LiquidationHeatmap })));
+const RiskDashboard = lazy(() => import('../components/institutional/RiskDashboard').then(m => ({ default: m.RiskDashboard })));
+const AlertBuilder = lazy(() => import('../components/institutional/AlertBuilder').then(m => ({ default: m.AlertBuilder })));
+const PositionLiquidationRisk = lazy(() => import('../components/institutional/PositionLiquidationRisk').then(m => ({ default: m.PositionLiquidationRisk })));
+const PaperTradingPanel = lazy(() => import('../components/PaperTradingPanel').then(m => ({ default: m.PaperTradingPanel })));
+const LedgerImpactTool = lazy(() => import('../components/LedgerImpactTool').then(m => ({ default: m.LedgerImpactTool })));
+const PathfindingTool = lazy(() => import('../components/PathfindingTool').then(m => ({ default: m.PathfindingTool })));
+
+// Error Boundary to catch component crashes
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode; fallback?: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('[Terminal] Component error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return this.props.fallback || (
+        <div className="cyber-panel p-4 flex flex-col items-center justify-center min-h-[200px] text-center">
+          <AlertTriangle className="w-8 h-8 text-cyber-yellow mb-2" />
+          <p className="text-cyber-yellow text-sm">Component failed to load</p>
+          <p className="text-cyber-muted text-xs mt-1">Please refresh the page</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Loading placeholder
+const LoadingPanel = () => (
+  <div className="cyber-panel p-4 flex items-center justify-center min-h-[200px]">
+    <Activity className="w-6 h-6 text-cyber-cyan animate-spin" />
+  </div>
+);
 
 export default function Terminal() {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
@@ -149,19 +191,23 @@ export default function Terminal() {
                 <span className="ml-2 text-cyber-muted">Loading live price...</span>
               </div>
             ) : (
-              <div>
-                <LiquidationHeatmap 
-                  symbol="XRP" 
-                  currentPrice={xrpPrice}
-                  compact={expandedPanel !== 'heatmap'}
-                />
-                {priceSource && (
-                  <div className="text-[9px] text-cyber-muted text-right mt-1 pr-2">
-                    Price: {priceSource === 'coingecko' ? 'CoinGecko' : priceSource === 'binance' ? 'Binance' : 'Fallback'} 
-                    {priceSource === 'fallback' && ' (APIs unavailable)'}
+              <ErrorBoundary>
+                <Suspense fallback={<LoadingPanel />}>
+                  <div>
+                    <LiquidationHeatmap 
+                      symbol="XRP" 
+                      currentPrice={xrpPrice}
+                      compact={expandedPanel !== 'heatmap'}
+                    />
+                    {priceSource && (
+                      <div className="text-[9px] text-cyber-muted text-right mt-1 pr-2">
+                        Price: {priceSource === 'coingecko' ? 'CoinGecko' : priceSource === 'binance' ? 'Binance' : 'Fallback'} 
+                        {priceSource === 'fallback' && ' (APIs unavailable)'}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </Suspense>
+              </ErrorBoundary>
             )}
           </div>
         </motion.div>
@@ -181,7 +227,11 @@ export default function Terminal() {
               >
                 {expandedPanel === 'pathfinding' ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
               </button>
-              <PathfindingTool compact={expandedPanel !== 'pathfinding'} />
+              <ErrorBoundary>
+                <Suspense fallback={<LoadingPanel />}>
+                  <PathfindingTool compact={expandedPanel !== 'pathfinding'} />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           </motion.div>
         )}
@@ -201,7 +251,11 @@ export default function Terminal() {
               >
                 {expandedPanel === 'risk' ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
               </button>
-              <RiskDashboard compact={expandedPanel !== 'risk'} />
+              <ErrorBoundary>
+                <Suspense fallback={<LoadingPanel />}>
+                  <RiskDashboard compact={expandedPanel !== 'risk'} />
+                </Suspense>
+              </ErrorBoundary>
             </div>
           </motion.div>
         )}
@@ -215,7 +269,11 @@ export default function Terminal() {
           transition={{ delay: 0.35 }}
           className="mt-4"
         >
-          <PositionLiquidationRisk currentPrice={xrpPrice} />
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingPanel />}>
+              <PositionLiquidationRisk currentPrice={xrpPrice} />
+            </Suspense>
+          </ErrorBoundary>
         </motion.div>
       )}
       
@@ -227,7 +285,11 @@ export default function Terminal() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <AlertBuilder compact />
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingPanel />}>
+              <AlertBuilder compact />
+            </Suspense>
+          </ErrorBoundary>
         </motion.div>
         
         {/* Ledger Impact Tool with Amendment Countdown */}
@@ -236,7 +298,11 @@ export default function Terminal() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.45 }}
         >
-          <LedgerImpactTool />
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingPanel />}>
+              <LedgerImpactTool />
+            </Suspense>
+          </ErrorBoundary>
         </motion.div>
         
         {/* Paper Trading */}
@@ -245,7 +311,11 @@ export default function Terminal() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <PaperTradingPanel />
+          <ErrorBoundary>
+            <Suspense fallback={<LoadingPanel />}>
+              <PaperTradingPanel />
+            </Suspense>
+          </ErrorBoundary>
         </motion.div>
       </div>
       
