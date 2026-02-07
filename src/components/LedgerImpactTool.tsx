@@ -633,21 +633,34 @@ export function LedgerImpactTool() {
         </a>
       </div>
 
-      {/* Amendment Detail Modal */}
+      {/* Amendment Detail Modal - Fixed for iOS/mobile in-app browsers */}
       <AnimatePresence>
         {selectedAmendment && (
           <motion.div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-1"
+            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-2"
+            style={{ 
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden',
+              transform: 'translateZ(0)',
+            }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={() => setSelectedAmendment(null)}
           >
             <motion.div
-              className="cyber-panel cyber-glow w-full max-w-lg max-h-[98vh] flex flex-col"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              className="cyber-panel cyber-glow w-full max-w-lg flex flex-col overflow-hidden"
+              style={{ 
+                maxHeight: 'calc(100vh - 20px)',
+                maxHeight: 'calc(100dvh - 20px)', /* Dynamic viewport height for mobile */
+                WebkitOverflowScrolling: 'touch',
+                transform: 'translateZ(0)',
+              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.15 }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* COMPACT HEADER - Name, Author, X button */}
@@ -696,8 +709,14 @@ export function LedgerImpactTool() {
                 </button>
               </div>
 
-              {/* SCROLLABLE CONTENT - More compact */}
-              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
+              {/* SCROLLABLE CONTENT - More compact, iOS-friendly scrolling */}
+              <div 
+                className="flex-1 overflow-y-auto px-3 py-2 space-y-3"
+                style={{ 
+                  WebkitOverflowScrolling: 'touch',
+                  overscrollBehavior: 'contain',
+                }}
+              >
                 {/* Summary */}
                 <p className="text-cyber-text text-xs">
                   {selectedAmendment.summary}
