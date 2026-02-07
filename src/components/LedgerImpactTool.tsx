@@ -633,36 +633,27 @@ export function LedgerImpactTool() {
         </a>
       </div>
 
-      {/* Amendment Detail Modal - Fixed for iOS/mobile in-app browsers */}
-      <AnimatePresence>
-        {selectedAmendment && (
-          <motion.div
-            className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-2"
+      {/* Amendment Detail Modal - Simple CSS version for iOS/mobile compatibility */}
+      {selectedAmendment && (
+        <div
+          className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-2"
+          style={{ 
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+          onClick={() => setSelectedAmendment(null)}
+        >
+          <div
+            className="cyber-panel cyber-glow w-full max-w-lg flex flex-col overflow-hidden bg-cyber-dark border border-cyber-border"
             style={{ 
-              WebkitBackfaceVisibility: 'hidden',
-              backfaceVisibility: 'hidden',
-              transform: 'translateZ(0)',
+              maxHeight: '90vh',
+              position: 'relative',
             }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={() => setSelectedAmendment(null)}
+            onClick={(e) => e.stopPropagation()}
           >
-            <motion.div
-              className="cyber-panel cyber-glow w-full max-w-lg flex flex-col overflow-hidden"
-              style={{ 
-                maxHeight: 'calc(100vh - 20px)',
-                maxHeight: 'calc(100dvh - 20px)', /* Dynamic viewport height for mobile */
-                WebkitOverflowScrolling: 'touch',
-                transform: 'translateZ(0)',
-              }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.15 }}
-              onClick={(e) => e.stopPropagation()}
-            >
               {/* COMPACT HEADER - Name, Author, X button */}
               <div className="flex items-center justify-between gap-2 border-b border-cyber-border/50 px-3 py-2">
                 <div className="flex-1 min-w-0">
@@ -709,14 +700,8 @@ export function LedgerImpactTool() {
                 </button>
               </div>
 
-              {/* SCROLLABLE CONTENT - More compact, iOS-friendly scrolling */}
-              <div 
-                className="flex-1 overflow-y-auto px-3 py-2 space-y-3"
-                style={{ 
-                  WebkitOverflowScrolling: 'touch',
-                  overscrollBehavior: 'contain',
-                }}
-              >
+              {/* SCROLLABLE CONTENT - Simple overflow for mobile */}
+              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
                 {/* Summary */}
                 <p className="text-cyber-text text-xs">
                   {selectedAmendment.summary}
@@ -830,16 +815,15 @@ export function LedgerImpactTool() {
               <div className="border-t border-cyber-border/50 px-3 py-2">
                 <button
                   onClick={() => setSelectedAmendment(null)}
-                  className="w-full py-2 px-3 bg-cyber-darker hover:bg-cyber-glow/10 border border-cyber-border hover:border-cyber-glow/50 rounded transition-all text-xs font-cyber text-cyber-text flex items-center justify-center gap-2"
+                  className="w-full py-2 px-3 bg-cyber-darker hover:bg-cyber-glow/10 border border-cyber-border hover:border-cyber-glow/50 rounded text-xs font-cyber text-cyber-text flex items-center justify-center gap-2"
                 >
                   <ChevronRight size={14} className="rotate-180" />
                   Back
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }
