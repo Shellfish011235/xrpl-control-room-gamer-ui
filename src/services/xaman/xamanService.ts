@@ -231,16 +231,18 @@ class XamanService {
   // ==================== TRANSACTION SIGNING ====================
 
   /**
-   * Create a payment signing request
+   * Create a payment signing request.
+   * If sourceAccount is provided, use it (e.g. from wallet store); otherwise require session.
    */
-  async requestPaymentSignature(payment: PaymentDetails): Promise<SigningRequest> {
-    if (!this.session) {
-      throw new Error('Not connected to Xaman. Please connect first.');
+  async requestPaymentSignature(payment: PaymentDetails, sourceAccount?: string): Promise<SigningRequest> {
+    const account = sourceAccount ?? this.session?.address;
+    if (!account) {
+      throw new Error('No payer address. Connect Xaman or add a wallet in the app.');
     }
 
     const tx: XRPLTransaction = {
       TransactionType: 'Payment',
-      Account: this.session.address,
+      Account: account,
       Destination: payment.destination,
       Amount: this.formatAmount(payment.amount, payment.currency, payment.issuer),
     };

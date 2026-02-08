@@ -49,7 +49,7 @@ export interface AdoptionProject {
   description: string;
   useCase: string;
   website?: string;
-  status: 'live' | 'beta' | 'development' | 'announced';
+  status: 'live' | 'beta' | 'development' | 'announced' | 'sunset';
   micropaymentFeatures: string[];
   logo?: string;
 }
@@ -62,10 +62,10 @@ export const ADOPTION_PROJECTS: AdoptionProject[] = [
   {
     name: 'Coil',
     category: 'content',
-    description: 'Web Monetization platform using ILP',
+    description: 'Web Monetization platform using ILP. Coil sunset most products in Feb 2023; ILP work continued by Interledger Foundation.',
     useCase: 'Stream micropayments to content creators while browsing',
     website: 'https://coil.com',
-    status: 'live',
+    status: 'sunset',
     micropaymentFeatures: ['ILP streaming', 'Web Monetization API', 'Browser extension'],
   },
   {

@@ -188,6 +188,7 @@ export function AdoptionTracker({
                       <div className={`w-2 h-2 rounded-full ${
                         project.status === 'live' ? 'bg-cyber-green' :
                         project.status === 'beta' ? 'bg-cyber-yellow' :
+                        project.status === 'sunset' ? 'bg-cyber-muted' :
                         'bg-cyber-muted'
                       }`} />
                       <div>
@@ -199,9 +200,10 @@ export function AdoptionTracker({
                       <span className={`px-2 py-0.5 rounded text-[9px] ${
                         project.status === 'live' ? 'bg-cyber-green/20 text-cyber-green' :
                         project.status === 'beta' ? 'bg-cyber-yellow/20 text-cyber-yellow' :
+                        project.status === 'sunset' ? 'bg-cyber-border text-cyber-muted' :
                         'bg-cyber-border text-cyber-muted'
                       }`}>
-                        {project.status.toUpperCase()}
+                        {project.status === 'sunset' ? 'NO LONGER OPERATING' : project.status.toUpperCase()}
                       </span>
                       {expandedProject === project.name ? (
                         <ChevronUp size={14} className="text-cyber-muted" />

@@ -253,15 +253,15 @@ export function SecureAgentPanel() {
     securePaymentAgent.setConfig(newConfig);
   };
 
-  // Save Xaman credentials
+  // Save Xaman credentials (browser only needs API Key; Secret is optional for backend)
   const handleSaveXamanCredentials = () => {
-    if (apiKeyInput.trim() && apiSecretInput.trim()) {
-      xamanService.setApiCredentials(apiKeyInput.trim(), apiSecretInput.trim());
+    if (apiKeyInput.trim()) {
+      xamanService.setApiCredentials(apiKeyInput.trim(), apiSecretInput.trim() || undefined);
       setXamanMode('production');
       setShowXamanSetup(false);
       setApiKeyInput('');
       setApiSecretInput('');
-      addMessage('system', '✅ Xaman API connected! You can now make real payments.\n\nYour credentials are saved securely in your browser.');
+      addMessage('system', '✅ Xaman API connected! You can now make real payments from the chat.\n\nYour API key is saved in your browser. Sign in Xaman when the QR appears.');
     }
   };
 
@@ -391,8 +391,8 @@ export function SecureAgentPanel() {
                       </li>
                       <li>Click "Create new application"</li>
                       <li>Give it a name (e.g., "My Payment Agent")</li>
-                      <li>Copy your <strong>API Key</strong> and <strong>API Secret</strong></li>
-                      <li>Paste them below 👇</li>
+                      <li>Copy your <strong>API Key</strong> (required). API Secret is optional (backend only).</li>
+                      <li>Paste your API Key below 👇</li>
                     </ol>
                   </div>
 
@@ -409,12 +409,12 @@ export function SecureAgentPanel() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-cyber-muted block mb-1">API Secret</label>
+                      <label className="text-xs text-cyber-muted block mb-1">API Secret <span className="text-cyber-muted/70">(optional – backend only)</span></label>
                       <input
                         type="password"
                         value={apiSecretInput}
                         onChange={(e) => setApiSecretInput(e.target.value)}
-                        placeholder="Paste your API Secret here..."
+                        placeholder="Leave blank for browser-only signing"
                         className="w-full px-3 py-2 rounded bg-cyber-darker border border-cyber-border text-sm text-cyber-text placeholder:text-cyber-muted/50"
                       />
                     </div>
@@ -423,7 +423,7 @@ export function SecureAgentPanel() {
                   {/* Save Button */}
                   <button
                     onClick={handleSaveXamanCredentials}
-                    disabled={!apiKeyInput.trim() || !apiSecretInput.trim()}
+                    disabled={!apiKeyInput.trim()}
                     className="w-full py-3 rounded-lg bg-cyber-green/20 border border-cyber-green/50 text-cyber-green font-medium hover:bg-cyber-green/30 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     <Shield size={16} />

@@ -147,6 +147,31 @@ export const FALLBACK_PRICES: Record<string, number> = {
   HBAR: 0.40,
 } as const;
 
+// ==================== AGENT ECONOMY ====================
+
+/** Service wallet for paid actions (Power Mode, etc.). Set VITE_AGENT_SERVICE_WALLET in .env */
+export const AGENT_SERVICE_WALLET: string =
+  (typeof import.meta !== 'undefined' && (import.meta as { env?: Record<string, string> }).env?.VITE_AGENT_SERVICE_WALLET) ||
+  'rYourServiceWalletHere';
+
+/** Power Mode Unlock price (XRP) */
+export const POWER_MODE_UNLOCK_XRP = 0.25;
+
+/** Power Mode duration (ms) - 24 hours */
+export const POWER_MODE_DURATION_MS = 24 * 60 * 60 * 1000;
+
+// ==================== DATA ACCURACY & SOURCING ====================
+
+/** Display label for when dashboard quantitative data was last updated */
+export const DATA_AS_OF_LABEL = 'Feb 7, 2026';
+
+/** Primary sources for dashboard metrics (for disclaimers) */
+export const DATA_SOURCES = {
+  remittances: 'World Bank / Banxico / BSP',
+  bridges: 'DefiLlama (on-chain)',
+  odl: 'Ripple insights / partner estimates',
+} as const;
+
 // ==================== UI CONSTANTS ====================
 
 /** Animation durations (ms) */

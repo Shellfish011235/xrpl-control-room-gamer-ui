@@ -1239,10 +1239,9 @@ export default function Network() {
                       </div>
                     )}
                     
-                    {/* Data Disclaimer */}
                     <div className="mt-4 pt-3 border-t border-cyber-border/30">
                       <p className="text-[9px] text-cyber-muted italic">
-                        Note: Volume and performance metrics are estimates. Contact operators for real-time data.
+                        Remittance: total market (World Bank/Banxico/BSP). Bridge: DefiLlama where noted. ILP/Rafiki: estimates; refer to rafiki.dev or connector operators.
                       </p>
                     </div>
                   </motion.div>
@@ -1420,10 +1419,9 @@ export default function Network() {
                       </div>
                     )}
                     
-                    {/* Data Disclaimer */}
                     <div className="mt-4 pt-3 border-t border-cyber-border/30">
                       <p className="text-[9px] text-cyber-muted italic">
-                        Note: Volume figures are estimates based on available data. For current metrics, refer to rafiki.dev or connector operators.
+                        Remittance: total market (World Bank/BSP). ILP/Rafiki: estimates; refer to rafiki.dev or connector operators for current metrics.
                       </p>
                     </div>
                   </motion.div>
@@ -1670,10 +1668,16 @@ export default function Network() {
                       </div>
                     )}
                     
-                    {/* Data Disclaimer */}
+                    {/* Data source for corridor */}
+                    {selectedPaymentCorridor.dataSource && (
+                      <p className="text-[9px] text-cyber-muted mb-2">
+                        Source: {selectedPaymentCorridor.dataSource}
+                        {selectedPaymentCorridor.dataAsOf && ` • As of ${selectedPaymentCorridor.dataAsOf}`}
+                      </p>
+                    )}
                     <div className="mt-4 pt-3 border-t border-cyber-border/30">
                       <p className="text-[9px] text-cyber-muted italic">
-                        Note: Volume figures are estimates. For current data, refer to official Ripple ODL reports.
+                        Remittance volumes: total market (World Bank/Banxico/BSP). ODL share is a subset; no public corridor-level breakdown from Ripple.
                       </p>
                     </div>
                   </motion.div>
@@ -1985,10 +1989,16 @@ export default function Network() {
                       )}
                     </div>
                     
-                    {/* Data Disclaimer */}
+                    {/* Data source & disclaimer */}
+                    {(selectedBridge.dataSource || selectedBridge.dataAsOf) && (
+                      <p className="text-[9px] text-cyber-muted mb-2">
+                        Source: {selectedBridge.dataSource || '—'}
+                        {selectedBridge.dataAsOf && ` • Data as of ${selectedBridge.dataAsOf}`}
+                      </p>
+                    )}
                     <div className="mt-4 pt-3 border-t border-cyber-border/30">
                       <p className="text-[9px] text-cyber-muted italic">
-                        Note: Volume and TVL figures are estimates. For current data, refer to official bridge dashboards.
+                        Remittance volumes: total market (World Bank/Banxico/BSP). Bridge TVL/volume: DefiLlama where noted. ODL corridor figures are estimated; no public corridor-level breakdown from Ripple.
                       </p>
                     </div>
                   </motion.div>

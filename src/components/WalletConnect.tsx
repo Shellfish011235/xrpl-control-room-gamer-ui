@@ -36,11 +36,15 @@ const SUPPORTED_CURRENCIES = [
 
 type CurrencyCode = typeof SUPPORTED_CURRENCIES[number]['code'];
 
+// Fallback XRP price (USD) when CoinGecko fails - keeps wallet "synced" with at least approximate fiat
+const FALLBACK_XRP_PRICE_USD = 2.5;
+
 // Hook to fetch XRP price in multiple currencies
 function useXRPPrice(currency: CurrencyCode) {
   const [price, setPrice] = useState<number | null>(null);
   const [change24h, setChange24h] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [usingFallback, setUsingFallback] = useState(false);
 
   useEffect(() => {
     const fetchPrice = async () => {
@@ -50,10 +54,19 @@ function useXRPPrice(currency: CurrencyCode) {
         );
         if (!response.ok) throw new Error('Failed to fetch price');
         const data = await response.json();
-        setPrice(data.ripple[currency]);
-        setChange24h(data.ripple[`${currency}_24h_change`]);
+        const p = data.ripple?.[currency];
+        if (typeof p === 'number') {
+          setPrice(p);
+          setChange24h(data.ripple?.[`${currency}_24h_change`] ?? null);
+          setUsingFallback(false);
+        } else {
+          throw new Error('No price in response');
+        }
       } catch (err) {
-        console.error('[Price] Error fetching XRP price:', err);
+        console.warn('[Price] XRP price fetch failed, using fallback:', err);
+        setUsingFallback(true);
+        setPrice(currency === 'usd' ? FALLBACK_XRP_PRICE_USD : FALLBACK_XRP_PRICE_USD);
+        setChange24h(null);
       } finally {
         setLoading(false);
       }
@@ -64,7 +77,7 @@ function useXRPPrice(currency: CurrencyCode) {
     return () => clearInterval(interval);
   }, [currency]);
 
-  return { price, change24h, loading };
+  return { price, change24h, loading, usingFallback };
 }
 
 // Category groupings
@@ -97,7 +110,7 @@ export function WalletConnect() {
   });
   const [showCurrencyDropdown, setShowCurrencyDropdown] = useState(false);
 
-  const { price: xrpPrice, change24h, loading: priceLoading } = useXRPPrice(selectedCurrency);
+  const { price: xrpPrice, change24h, loading: priceLoading, usingFallback: priceUsingFallback } = useXRPPrice(selectedCurrency);
 
   const toggleHideAmounts = () => {
     setHideAmounts(prev => {
@@ -123,11 +136,12 @@ export function WalletConnect() {
       .reduce((sum, w) => sum + (w.balance || 0), 0);
   }, [wallets]);
 
-  // Calculate total fiat value
+  // Calculate total fiat value (use fallback when live fetch fails so USD never shows "--")
   const totalFiatValue = useMemo(() => {
-    if (!xrpPrice || totalXRP === 0) return null;
-    return totalXRP * xrpPrice;
-  }, [totalXRP, xrpPrice]);
+    if (totalXRP === 0) return null;
+    const rate = xrpPrice ?? (selectedCurrency === 'usd' ? FALLBACK_XRP_PRICE_USD : null);
+    return rate != null ? totalXRP * rate : null;
+  }, [totalXRP, xrpPrice, selectedCurrency]);
 
   // Get currency info
   const currencyInfo = SUPPORTED_CURRENCIES.find(c => c.code === selectedCurrency)!;
@@ -297,9 +311,14 @@ export function WalletConnect() {
                 {priceLoading ? (
                   <span className="text-sm text-cyber-muted animate-pulse">Loading...</span>
                 ) : totalFiatValue !== null ? (
-                  <span className="text-sm text-cyber-text">
-                    {hideAmounts ? '••••••' : `${currencyInfo.symbol}${totalFiatValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                  </span>
+                  <>
+                    <span className="text-sm text-cyber-text">
+                      {hideAmounts ? '••••••' : `${currencyInfo.symbol}${totalFiatValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                    </span>
+                    {priceUsingFallback && (
+                      <span className="text-[9px] text-cyber-muted" title="Live price unavailable; approximate value">~</span>
+                    )}
+                  </>
                 ) : (
                   <span className="text-sm text-cyber-muted">--</span>
                 )}

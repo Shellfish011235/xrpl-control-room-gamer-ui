@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe, Skull, User, HeartPulse, Home, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Zap } from 'lucide-react'
+import { Globe, Skull, User, HeartPulse, Home, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Zap, Wallet } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 
 // XRP Price Hook - fetches from CoinGecko
@@ -163,6 +163,7 @@ const navItems = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/terminal', label: 'Terminal', icon: Activity },
   { path: '/micropayments', label: 'Micropay', icon: Zap },
+  { path: '/agent-economy', label: 'Agents', icon: Wallet },
   { path: '/carv', label: 'CARV', icon: Cpu },
   { path: '/network', label: 'Network', icon: Globe },
   { path: '/underworld', label: 'Underworld', icon: Skull },

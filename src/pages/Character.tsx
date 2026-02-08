@@ -458,8 +458,8 @@ function NftDetailModal({
 }
 
 export default function Character() {
-  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle } = useProfileStore()
-  const { wallets } = useWalletStore()
+  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle, setMemberSinceYear } = useProfileStore()
+  const { wallets, refreshAllWallets } = useWalletStore()
   const { nfts, memeTokens, isLoading, fetchAllAssets, lastUpdated } = useAssetsStore()
   const nextLevel = 10000
 
@@ -497,6 +497,25 @@ export default function Character() {
       fetchAllAssets()
     }
   }, [wallets.length, fetchAllAssets])
+
+  // Sync wallet data: refresh balances when Character loads so "last updated" and USD stay in sync
+  useEffect(() => {
+    const realWallets = wallets.filter(w => w.provider !== 'demo')
+    if (realWallets.length > 0) {
+      refreshAllWallets()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
+
+  // Sync "Member since" from connected wallet when profile has none (fixes "Connect wallet to see history")
+  useEffect(() => {
+    if (memberSinceYear != null) return
+    const withYear = wallets
+      .filter((w): w is typeof w & { creationYear: number } => w.provider !== 'demo' && typeof w.creationYear === 'number')
+      .sort((a, b) => a.creationYear - b.creationYear)
+    if (withYear.length > 0) {
+      setMemberSinceYear(withYear[0].creationYear)
+    }
+  }, [wallets, memberSinceYear, setMemberSinceYear])
 
   const copyAddress = async (address: string) => {
     await navigator.clipboard.writeText(address)

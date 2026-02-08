@@ -285,6 +285,11 @@ class SecurePaymentAgent {
       throw new Error('Could not parse payment amount. Try: "Send 50 XRP to rABC..." or "Pay $25 to..."');
     }
 
+    if (!destination) {
+      const currencyLabel = currency === 'XRP' ? 'XRP' : currency;
+      throw new Error(`I understood: ${amount} ${currencyLabel}. Who should I send it to? Please paste an XRPL address (r...) or say a known payee name.`);
+    }
+
     return {
       destination,
       destinationName,

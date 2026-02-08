@@ -105,6 +105,9 @@ export function CostComparator({
           <div className="flex items-center gap-2">
             <BarChart2 size={16} className="text-cyber-green" />
             <span className="font-cyber text-cyber-green text-sm">MICROPAYMENT COST COMPARISON</span>
+            <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/40" title="Fee and TPS figures are reference benchmarks, not live network data.">
+              REFERENCE
+            </span>
           </div>
         </div>
 

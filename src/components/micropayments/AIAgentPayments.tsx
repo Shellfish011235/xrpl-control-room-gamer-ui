@@ -206,6 +206,9 @@ export function AIAgentPayments({
           <div className="flex items-center gap-2">
             <Bot size={16} className="text-cyber-green" />
             <span className="font-cyber text-cyber-green text-sm">AI AGENT PAYMENTS</span>
+            <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/40" title="Agents and stats are demo data; transactions are simulated when you click Simulate. No live chain feed.">
+              DEMO
+            </span>
           </div>
           {enableSimulation && (
             <button
@@ -343,7 +346,9 @@ export function AIAgentPayments({
       {/* Transaction Feed */}
       <div className="max-h-40 overflow-y-auto">
         <div className="p-2 sticky top-0 bg-cyber-darker border-b border-cyber-border">
-          <p className="text-[10px] text-cyber-muted">LIVE TRANSACTION FEED</p>
+          <p className="text-[10px] text-cyber-muted">
+            {isSimulating ? 'SIMULATED TRANSACTION FEED' : 'TRANSACTION FEED (run Simulate for demo tx)'}
+          </p>
         </div>
         {transactions.length === 0 ? (
           <div className="p-4 text-center">

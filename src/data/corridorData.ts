@@ -33,6 +33,10 @@ export interface PaymentCorridor {
   odlEnabled: boolean;
   launchDate?: string;
   growthYoY?: string;
+  /** e.g. "World Bank / Banxico" — for UI disclaimer */
+  dataSource?: string;
+  /** e.g. "Feb 2026" */
+  dataAsOf?: string;
 }
 
 export interface ODLPartner {
@@ -71,6 +75,10 @@ export interface CrossChainBridge {
   description: string;
   features: string[];
   securityModel: string;
+  /** e.g. "DefiLlama" — for UI disclaimer */
+  dataSource?: string;
+  /** e.g. "Feb 7, 2026" */
+  dataAsOf?: string;
 }
 
 export interface XRPLConnectedChain {
@@ -307,13 +315,15 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Mexico', countryCode: 'MX', city: 'Multiple', coordinates: [-99.1332, 19.4326] },
     type: 'remittance',
     volume: 'high',
-    monthlyVolume: '$2.1B',
+    monthlyVolume: '~$5.5B',
     partners: ['bitso'],
-    description: 'Largest XRP-facilitated remittance corridor globally. High-frequency, low-value transfers.',
+    description: 'Total US–Mexico remittance market (World Bank/Banxico). Bitso/ODL serves a subset; no public corridor-level ODL breakdown. High-frequency, low-value transfers.',
     xrpSettlement: true,
     odlEnabled: true,
     launchDate: '2019-10',
-    growthYoY: '+28%',
+    growthYoY: '~2%',
+    dataSource: 'World Bank / Banxico',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'us-ph',
@@ -322,13 +332,15 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Philippines', countryCode: 'PH', city: 'Manila', coordinates: [120.9842, 14.5995] },
     type: 'remittance',
     volume: 'high',
-    monthlyVolume: '$1.8B',
+    monthlyVolume: '~$3.25B',
     partners: ['coins-ph'],
-    description: 'Major OFW (Overseas Filipino Workers) remittance corridor with instant settlement.',
+    description: 'Total US–Philippines remittance market (World Bank/BSP). Coins.ph/ODL serves a subset; no public corridor-level ODL breakdown. OFW corridor with instant settlement.',
     xrpSettlement: true,
     odlEnabled: true,
     launchDate: '2020-02',
-    growthYoY: '+34%',
+    growthYoY: '~3–4%',
+    dataSource: 'World Bank / BSP',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'us-latam',
@@ -352,13 +364,15 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Philippines', countryCode: 'PH', city: 'Manila', coordinates: [120.9842, 14.5995] },
     type: 'remittance',
     volume: 'high',
-    monthlyVolume: '$450M',
+    monthlyVolume: '~$450M (est.)',
     partners: ['sbi-remit', 'coins-ph'],
-    description: 'SBI Remit-powered corridor for Japanese workers sending to Philippines.',
+    description: 'SBI Remit–powered corridor. Volume is estimated; Ripple does not publish corridor-level ODL breakdowns.',
     xrpSettlement: true,
     odlEnabled: true,
     launchDate: '2021-03',
-    growthYoY: '+22%',
+    growthYoY: '~3%',
+    dataSource: 'Ripple / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'jp-vn',
@@ -864,19 +878,21 @@ export const crossChainBridges: CrossChainBridge[] = [
     id: 'axelar-network',
     name: 'Axelar Network',
     type: 'lock-mint',
-    chains: ['xrpl-evm-sidechain', 'ethereum', 'solana', 'cosmos', 'bnb-chain', '80+ others'],
+    chains: ['xrpl-evm-sidechain', 'ethereum', 'solana', 'cosmos', 'bnb-chain', '44 chains'],
     supportedAssets: ['XRP', 'eXRP', 'XRPL tokens', 'IOU'],
     docsUrl: 'https://docs.axelar.dev/dev/send-tokens/xrpl/xrpl-its',
     website: 'https://axelar.network',
     status: 'mainnet',
-    tvl: '$500M+',
-    monthlyVolume: '$2.8B',
-    dailyTransactions: '15,000+',
+    tvl: '~$147M',
+    monthlyVolume: '~$93M (30d)',
+    dailyTransactions: '—',
     avgTransferTime: '2-5 min',
     fees: '0.1-0.2%',
-    description: 'Leading decentralized interoperability layer. First and primary bridge for XRPL EVM Sidechain, connecting to 80+ blockchains for asset transfers, GMP (smart contract calls), RWAs, DeFi, and global payment corridors.',
-    features: ['80+ chain connectivity', 'General Message Passing (GMP)', 'Asset transfers', 'RWA support', 'Interchain Token Service'],
+    description: 'Decentralized interoperability layer. Primary bridge for XRPL EVM Sidechain. TVL and volume from on-chain aggregation (DefiLlama). XRPL-specific TVL ~$1.4M.',
+    features: ['44+ chain connectivity', 'General Message Passing (GMP)', 'Asset transfers', 'RWA support', 'Interchain Token Service'],
     securityModel: 'Decentralized validator network with proof-of-stake',
+    dataSource: 'DefiLlama',
+    dataAsOf: 'Feb 7, 2026',
   },
   {
     id: 'wormhole',
@@ -887,14 +903,16 @@ export const crossChainBridges: CrossChainBridge[] = [
     docsUrl: 'https://docs.wormhole.com',
     website: 'https://wormhole.com',
     status: 'mainnet',
-    tvl: '$1B+',
-    monthlyVolume: '$4.2B',
-    dailyTransactions: '25,000+',
+    tvl: '~$500M',
+    monthlyVolume: '~$100M (30d est.)',
+    dailyTransactions: '—',
     avgTransferTime: '15-20 min',
     fees: 'Variable',
-    description: 'Cross-chain messaging and asset transfer protocol integrated with XRPL mainnet and EVM Sidechain. Enables multichain digital assets, cross-chain DeFi, institutional transfers, and payment corridors.',
+    description: 'Cross-chain messaging and asset transfer protocol integrated with XRPL mainnet and EVM Sidechain. TVL/volume from on-chain aggregation; XRPL subset is a fraction of total.',
     features: ['Cross-chain messaging', 'Native token transfers', 'Institutional grade', 'Fast bridging', 'Multi-chain support'],
     securityModel: 'Guardian network with 19 validators',
+    dataSource: 'DefiLlama',
+    dataAsOf: 'Feb 7, 2026',
   },
   {
     id: 'xrpl-evm-bridge',
