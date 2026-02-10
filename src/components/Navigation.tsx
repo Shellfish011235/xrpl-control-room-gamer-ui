@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Globe, Skull, User, HeartPulse, Home, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Zap, Wallet } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
+import defaultLogo from '../assets/profile-default.png'
 
 // XRP Price Hook - fetches from CoinGecko
 function useXRPPrice() {
@@ -185,13 +186,15 @@ export default function Navigation() {
       
       <nav className="cyber-panel border-t-0 rounded-t-none px-4 lg:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Logo - XRPL Control Room logo (matches profile default) */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyber-glow to-cyber-blue flex items-center justify-center cyber-glow">
-                <span className="font-cyber font-bold text-lg text-cyber-darker">XR</span>
-              </div>
-              <div className="absolute -inset-1 rounded-lg bg-cyber-glow/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#00d4ff] flex items-center justify-center p-0 ring-1 ring-cyber-glow/40 profile-default-logo-wrap">
+              <img
+                src={defaultLogo}
+                alt="XRPL Control Room"
+                className="w-full h-full object-contain profile-default-logo scale-110"
+              />
+              <div className="absolute -inset-1 rounded-lg bg-cyber-glow/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
             </div>
             <div className="hidden sm:block">
               <h1 className="font-cyber text-lg font-bold tracking-wider text-cyber-text group-hover:text-cyber-glow transition-colors">

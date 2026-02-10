@@ -159,7 +159,7 @@ export const MARKETING_POINTS = {
   headlines: [
     "XRPL: Where fees are smaller than the payments",
     "100,000+ transactions per second. $0.00003 per transaction.",
-    "The only network where AI agents can afford to pay for every API call",
+    "One of the few networks where AI agents can afford to pay for every API call",
     "Web Monetization runs on Interledger. Interledger runs on XRPL.",
     "Payment channels: 2 transactions, unlimited micropayments",
   ],

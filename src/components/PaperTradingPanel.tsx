@@ -2,6 +2,7 @@
 // Execute trades based on signals, track performance, compete with yourself
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wallet, TrendingUp, TrendingDown,
@@ -15,6 +16,9 @@ import {
 } from 'lucide-react';
 import { usePaperTradingStore } from '../store/paperTradingStore';
 import { useWalletStore } from '../store/walletStore';
+import { getAgentSuggestion, type AgentSuggestionResult } from '../services/paperTradingAgentSuggestion';
+import { fetchCryptoSentiment } from '../services/freeDataFeeds';
+import { useOrchestraSimStore } from '../store/orchestraSimStore';
 
 // Auto-trade icons
 import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink } from 'lucide-react';
@@ -316,6 +320,11 @@ export function PaperTradingPanel({
   // Simulation boost state
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState(0);
+
+  // Orchestra / AI suggestion (Phase 1: rule-based, same data as Run the Orchestra)
+  const [agentSuggestion, setAgentSuggestion] = useState<AgentSuggestionResult | null>(null);
+  const [agentSuggestionLoading, setAgentSuggestionLoading] = useState(false);
+  const recordOrchestraSimPayment = useOrchestraSimStore((s) => s.recordPayment);
   
   // Simulation Boost - generates realistic trading activity to build history
   const runSimulationBoost = useCallback(async (numTrades: number = 20) => {
@@ -410,6 +419,62 @@ export function PaperTradingPanel({
     setIsSimulating(false);
     setSimulationProgress(100);
   }, [executeTrade, isSimulating, prices, positions, cashBalance]);
+
+  // Get AI suggestion (Price + Sentiment → rule-based; same feeds as Orchestra)
+  const fetchAgentSuggestion = useCallback(async () => {
+    setAgentSuggestionLoading(true);
+    setAgentSuggestion(null);
+    try {
+      const [sentimentData, priceRes] = await Promise.all([
+        fetchCryptoSentiment(),
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true', { mode: 'cors' }).then((r) => r.json()),
+      ]);
+      const price = priceRes?.ripple?.usd ?? prices?.XRP ?? 2.45;
+      const priceChange24h = priceRes?.ripple?.usd_24h_change ?? 0;
+      const stats = store?.getStats?.();
+      const winRate = stats && stats.totalTrades > 0 ? stats.winRate / 100 : undefined;
+      const suggestion = getAgentSuggestion({
+        asset: 'XRP',
+        price,
+        priceChange24hPercent: priceChange24h,
+        sentimentScore: sentimentData.score,
+        sentimentTrend: sentimentData.trend,
+        winRate,
+        avgWinLossRatio: stats && stats.winningTrades > 0 && stats.losingTrades > 0 ? 1.2 : undefined,
+      });
+      setAgentSuggestion(suggestion);
+    } catch (e) {
+      console.warn('[PaperTrading] Agent suggestion failed:', e);
+      setAgentSuggestion({
+        action: 'hold',
+        sizePercent: 0,
+        confidence: 50,
+        reason: 'Could not fetch sentiment/price. Hold.',
+        usedKelly: false,
+      });
+    } finally {
+      setAgentSuggestionLoading(false);
+    }
+  }, [prices, store]);
+
+  // Apply suggestion: run through processSignal (source 'agent') and record sim payments to Orchestra feed
+  const applyAgentSuggestion = useCallback(() => {
+    if (!agentSuggestion || !processSignal || agentSuggestion.action === 'hold') return;
+    const price = prices?.XRP ?? 2.45;
+    recordOrchestraSimPayment('Paper Trading Bot', 'Price Feed (CoinGecko / Binance)', 20, 'Request XRP price for suggestion');
+    recordOrchestraSimPayment('Paper Trading Bot', 'Sentiment (SentiCrypt)', 24, 'Request sentiment for suggestion');
+    recordOrchestraSimPayment('Paper Trading Bot', 'Reasoning (LLM)', 100, 'Format suggestion for user');
+    processSignal({
+      id: `agent_${Date.now()}`,
+      type: 'orchestra_suggestion',
+      asset: 'XRP',
+      action: agentSuggestion.action,
+      confidence: agentSuggestion.confidence,
+      price,
+      reason: agentSuggestion.reason + (agentSuggestion.usedKelly ? ' (Kelly-sized)' : ''),
+    });
+    setAgentSuggestion(null);
+  }, [agentSuggestion, processSignal, prices, recordOrchestraSimPayment]);
   
   useEffect(() => {
     // Skip if auto-trading disabled or no signals
@@ -2052,6 +2117,63 @@ export function PaperTradingPanel({
                     <p className="font-cyber text-lg text-cyber-yellow">
                       {autoTradeSettings?.minConfidence}%
                     </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Orchestra AI Suggestion (Price + Sentiment → rule-based; same as Run the Orchestra) */}
+            <div className="p-4 rounded bg-gradient-to-r from-cyber-cyan/10 to-cyber-green/10 border border-cyber-cyan/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-cyber-cyan/30">
+                    <Bot size={20} className="text-cyber-cyan" />
+                  </div>
+                  <div>
+                    <h4 className="font-cyber text-sm text-cyber-text">ORCHESTRA SUGGESTION</h4>
+                    <p className="text-[9px] text-cyber-muted">
+                      Price + Sentiment (same data as Run the Orchestra). When you <strong>Apply</strong>, payments appear in Micropayments → AI Agents.
+                    </p>
+                    <Link
+                      to="/micropayments"
+                      state={{ tab: 'agents' }}
+                      className="inline-flex items-center gap-1 mt-1.5 text-[9px] text-cyber-cyan hover:text-cyber-cyan/80"
+                    >
+                      See payments in Micropayments → AI Agents <ChevronRight size={10} />
+                    </Link>
+                  </div>
+                </div>
+                <button
+                  onClick={fetchAgentSuggestion}
+                  disabled={agentSuggestionLoading}
+                  className="px-3 py-1.5 text-xs rounded bg-cyber-cyan/20 text-cyber-cyan hover:bg-cyber-cyan/30 disabled:opacity-50 border border-cyber-cyan/40"
+                >
+                  {agentSuggestionLoading ? '…' : 'Get suggestion'}
+                </button>
+              </div>
+              {agentSuggestion && (
+                <div className="mt-2 p-3 rounded bg-cyber-darker/60 border border-cyber-cyan/20 space-y-2">
+                  <p className="text-[10px] text-cyber-text">
+                    <span className="text-cyber-cyan font-cyber">{agentSuggestion.action.toUpperCase()}</span>
+                    {agentSuggestion.sizePercent > 0 && ` · ${agentSuggestion.sizePercent}% size`}
+                    {agentSuggestion.usedKelly && ' (Kelly)'}
+                  </p>
+                  <p className="text-[9px] text-cyber-muted">{agentSuggestion.reason}</p>
+                  <p className="text-[9px] text-cyber-muted">Confidence: {agentSuggestion.confidence}%</p>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={applyAgentSuggestion}
+                      disabled={agentSuggestion.action === 'hold'}
+                      className="flex-1 py-1.5 text-[10px] rounded bg-cyber-green/20 text-cyber-green hover:bg-cyber-green/30 disabled:opacity-50 border border-cyber-green/40"
+                    >
+                      Apply (run auto-trade + record to Orchestra)
+                    </button>
+                    <button
+                      onClick={() => setAgentSuggestion(null)}
+                      className="px-2 py-1.5 text-[10px] rounded bg-cyber-border/50 text-cyber-muted hover:bg-cyber-border"
+                    >
+                      Dismiss
+                    </button>
                   </div>
                 </div>
               )}

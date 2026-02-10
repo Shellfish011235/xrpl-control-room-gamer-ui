@@ -34,12 +34,13 @@ A cyberpunk-inspired **institutional-grade trading terminal** for monitoring the
 - **Xaman Wallet Integration** - QR code connection
 - **Live Feeds** - Twitter/X and GitHub activity streams
 
-### 🗺️ World Map
-- **Interactive World Map** - Global XRPL network visualization
-- **Payment Corridors** - ILP corridor volume and routing data
-- **Node Hotspots** - Validator locations and health metrics
+### 🗺️ Network (World Map + Topology)
+- **Interactive World Map** - Global XRPL network with five lenses: Validators, ILP, Corridors, Community, Regulation
+- **Ledger Topology** - ILP network graph: ledgers, connectors, trust-based corridors; Trust/Domain/Flow lenses; TRUST & DOMAIN legend
+- **Full Network Topology** - Single graph aggregating validators, ILP ledgers, payment corridors, ODL partners, bridges & chains; layer toggles; **full-screen view** (click graph or button to expand)
+- **Payment Corridors Ecosystem** - ODL partners, payment corridors with sourced monthly volume & YoY, cross-chain bridges, XRPL-connected chains
+- **Node Hotspots** - Validator locations and health metrics; live XRPScan data toggle
 - **Regional Analytics** - TPS charts and distribution stats
-- **Live Data Toggle** - Switch between live XRPScan data and static view
 
 ### 💀 Underworld
 - **Regulatory Intelligence** - Real-time tracking of crypto regulations
@@ -111,37 +112,43 @@ xrpl-control-room-gamer-ui/
 ├── src/
 │   ├── components/
 │   │   ├── institutional/        # Trading terminal components
-│   │   │   ├── AlertBuilder.tsx
-│   │   │   ├── LiquidationHeatmap.tsx
-│   │   │   ├── OrderBookDepth.tsx
-│   │   │   └── RiskDashboard.tsx
+│   │   ├── globe/                 # WorldGlobe map
+│   │   ├── ilp/                   # ConnectorMap, ledger topology
+│   │   ├── network/               # Full network topology (unified graph, full-screen)
 │   │   ├── Navigation.tsx
 │   │   ├── PaperTradingPanel.tsx
 │   │   └── WalletConnect.tsx
+│   ├── data/
+│   │   ├── corridorData.ts        # Payment corridors, ODL partners, bridges, chains
+│   │   ├── unifiedTopology.ts     # Aggregated topology for full network graph
+│   │   ├── globeContent.ts
+│   │   ├── ilpData.ts
+│   │   └── regulatoryData.ts
 │   ├── pages/
 │   │   ├── Home.tsx
-│   │   ├── Terminal.tsx          # Institutional trading terminal
-│   │   ├── MemeticLab.tsx        # Game theory & cognitive security
-│   │   ├── WorldMap.tsx
+│   │   ├── Network.tsx            # Map + Ledger topology + Full network topology
+│   │   ├── Terminal.tsx
+│   │   ├── MemeticLab.tsx
 │   │   ├── Underworld.tsx
 │   │   ├── Character.tsx
 │   │   └── Clinic.tsx
 │   ├── services/
-│   │   ├── websocketPriceFeeds.ts    # Real-time price aggregation
-│   │   ├── liquidationHeatmap.ts     # Liquidation zone analysis
-│   │   ├── advancedRiskMetrics.ts    # Portfolio risk calculations
-│   │   ├── alertNotifications.ts     # Multi-channel notifications
-│   │   ├── aiQuantumAnalytics.ts     # AI/ML prediction models
-│   │   ├── predictionMarkets.ts      # Market sentiment integration
-│   │   └── xrplService.ts            # XRPL WebSocket connection
+│   │   ├── ilp/                   # ILP topology (ledgers, connectors, corridors)
+│   │   ├── websocketPriceFeeds.ts
+│   │   ├── liquidationHeatmap.ts
+│   │   └── xrplService.ts
 │   ├── store/
-│   │   ├── paperTradingStore.ts
-│   │   └── globeStore.ts
+│   │   ├── ilpStore.ts            # Ledger/topology state
+│   │   ├── globeStore.ts
+│   │   └── paperTradingStore.ts
 │   ├── App.tsx
 │   ├── main.tsx
 │   └── index.css
-├── COMPETITIVE-ANALYSIS.md       # Market positioning research
-├── INSTITUTIONAL-UPGRADE-PLAN.md # Development roadmap
+├── COMPLIANCE-GLOBAL-US-FLORIDA.md  # Compliance overview (not legal advice)
+├── PRODUCTION-SAME-AS-LOCAL.md      # Env parity for Vercel/local
+├── SAFETY-AUDIT.md                  # Security & safety notes
+├── COMPETITIVE-ANALYSIS.md
+├── INSTITUTIONAL-UPGRADE-PLAN.md
 └── package.json
 ```
 
@@ -172,14 +179,18 @@ This dashboard features a **cyberpunk/gaming aesthetic** inspired by:
 | **CoinGecko** | XRP price in nav bar | ✅ Live |
 | **Binance WebSocket** | Real-time orderbook, trades | ✅ Live (Terminal) |
 | **XRPL Pathfinding** | Payment routing (ripple_path_find) | ✅ Live |
-| **World Globe** | 2D map visualization | ✅ Fixed |
+| **World Globe** | 2D map, Network lenses | ✅ Live |
+| **ILP Topology** | Ledgers, connectors, corridors (in-app) | ✅ Live |
+| **Full Network Topology** | Unified graph, full-screen | ✅ Live |
 | **CoinGlass** | Liquidation data | 🔧 Ready for API key |
 | **Telegram Bot API** | Alert notifications | 🔧 Ready for token |
 | **Discord Webhooks** | Alert notifications | 🔧 Ready for webhook URL |
 
 ## 🌐 Deployment
 
-### Vercel (Recommended)
+### Vercel (Recommended) — Phase 1 demo
+Deploy the current app so others can try **Run the Orchestra** (Micropayments → AI Agents) and **Paper Trading** with the **Orchestra suggestion** (Price + Sentiment → rule-based). No real funds; see [ROADMAP.md](./ROADMAP.md) Phase 1.
+
 ```bash
 npm i -g vercel
 vercel
@@ -199,15 +210,28 @@ docker run -p 3000:3000 xrpl-control-room
 
 ## 🗺️ Roadmap
 
+**Phased strategy:** Prototypes and community feedback first; see **[ROADMAP.md](./ROADMAP.md)** for the full plan (simulations → testnet → compliant APIs → funding → document & audit). **Regulatory watch:** [REGULATORY-WATCH.md](./REGULATORY-WATCH.md).
+
+### Shipped
 - [x] Real-time WebSocket price feeds (Terminal)
 - [x] Liquidation heatmap visualization (Terminal)
 - [x] Advanced risk metrics (VaR, Sharpe, etc.)
 - [x] Multi-channel alert system
 - [x] Paper trading simulator
 - [x] Game theory & cognitive security lab
-- [x] World Map with error handling and fallback CDNs
+- [x] Network page: World Map with Validators / ILP / Corridors / Community / Regulation lenses
+- [x] Ledger topology: ILP network graph with trust-based corridors and domain lens
+- [x] Full network topology: unified graph (validators, ILP, ODL, bridges & chains) with full-screen view
+- [x] Payment corridors ecosystem: sourced volume data, ODL partners, bridges & chains
 - [x] XRPL Pathfinding with live mainnet connection
-- [ ] Backtesting engine with historical data
+- [x] Compliance and safety docs (COMPLIANCE-GLOBAL-US-FLORIDA, SAFETY-AUDIT, PRODUCTION-SAME-AS-LOCAL)
+
+### Next (phased, zero/low risk first)
+- [ ] **Phase 1:** AI-driven paper trading + mock agents (Zustand/TanStack Query sims, Kelly Criterion); backtesting engine
+- [ ] **Phase 2:** XRPL Testnet branch — supervised agents (Xaman QR), mock AML in Underworld
+- [ ] **Phase 3:** Compliant programmatic tools (Ripple WaaS/policy mocks, trust layers)
+- [ ] **Phase 4:** XRPL Grants AI Fund (Spring 2026), accelerator, community feedback
+- [ ] **Phase 5:** AI risk docs, explainability, audit logging (ongoing)
 - [ ] Advanced order types (TWAP, iceberg)
 - [ ] REST API for external integrations
 - [ ] PostgreSQL/TimescaleDB for tick data

@@ -50,6 +50,30 @@ These design choices are commonly cited to argue that a product is **not** actin
 
 ---
 
+## AI Risk Policy and Explainability (Future-Proofing)
+
+To align with evolving AI regulations (e.g. **EU AI Act** full enforcement Aug 2026; **US state laws** such as Colorado AI Act June 2026), we document and implement the following where AI influences payments or trading:
+
+- **Risk assessments:** Document how AI is used (e.g. suggestions, position sizing, alerts). For high-risk use cases, maintain a simple risk assessment (what can go wrong, mitigations, human oversight). Update when features change.
+- **Explainability protocols:** In the UI, where AI suggests an action (e.g. payment plan, trade size), show a short, user-facing reason (e.g. “Based on Kelly Criterion and current balance”) so users understand the suggestion. Avoid black-box decisions for financial actions.
+- **Audit trails and provenance:** Log AI-involved decisions (sim, testnet, and if ever mainnet) so we can trace “who/what suggested what and when.” Stored in audit log (e.g. Secure Payment Agent, SafetyLayer); use for mock or real audits and incident reporting.
+- **Oversight:** Keep human-in-the-loop for any transfer of value. Rate limits, kill switch, and caps (SafetyLayer) count as oversight controls.
+
+*This is not a full compliance program; it is a set of practices to grow into as we add AI-driven features. Counsel should confirm adequacy for your jurisdiction.*
+
+---
+
+## Staying Current on Regulations
+
+Regulations change. We maintain a **regulatory watch** so the project can stay current:
+
+- **REGULATORY-WATCH.md** — Lists where we check for updates (White House, SEC, CFTC, FinCEN, EU AI Act, state laws, XRPL ecosystem). Re-check after major announcements (e.g. president/crypto meetings, new AI or digital asset rules).
+- **ROADMAP.md** — Phased plan (simulations → testnet → compliant APIs) and compliance tie-ins (EU AI Act, Colorado AI Act, GENIUS/CLARITY).
+
+When in doubt, reassess with qualified counsel before enabling mainnet or real-user flows.
+
+---
+
 ## Practical Checklist (Still Get Legal Advice)
 
 | Area | Your design | What to confirm with counsel |
@@ -65,7 +89,10 @@ These design choices are commonly cited to argue that a product is **not** actin
 ## Where This Is Documented in the Repo
 
 - **OPENCLAW-COMPLIANCE-AND-USE.md** — Money transmission, custody, Xaman use, royalties, AI agent economy, liability, and “get a legal opinion” guidance.
-- **This file** — High-level alignment with global, US, and Florida crypto and AI regulation; not a substitute for legal advice.
+- **docs/AI-AGENT-ECONOMY-INTEGRATION.md** — How AI payments, OpenClaw, and Agent Economy fit together; regulatory scope (no custody, user-signs-only, applicable laws).
+- **This file** — High-level alignment with global, US, and Florida crypto and AI regulation; AI risk policy and explainability; not a substitute for legal advice.
+- **ROADMAP.md** — Phased roadmap (sim → testnet → compliant APIs) with compliance tie-ins.
+- **REGULATORY-WATCH.md** — Where to check for regulatory updates (White House, SEC, EU AI Act, state laws, etc.).
 
 ---
 

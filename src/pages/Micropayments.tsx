@@ -1,11 +1,12 @@
 // Micropayments Page - XRPL/ILP Micropayment Dominance Showcase
 // "The network where fees are smaller than the payments themselves"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Zap, DollarSign, Bot, Globe, Layers, BarChart2,
-  TrendingUp, Award, ArrowRight, Target, Cpu, HelpCircle
+  TrendingUp, Award, ArrowRight, Target, Cpu, HelpCircle, Wallet
 } from 'lucide-react';
 
 import { StreamVisualizer } from '../components/micropayments/StreamVisualizer';
@@ -20,8 +21,18 @@ import { OpenClawDashboard } from '../components/micropayments/OpenClawDashboard
 // PAGE COMPONENT
 // =============================================================================
 
+const TAB_IDS = ['overview', 'streams', 'channels', 'web', 'agents', 'adoption', 'openclaw'] as const;
+type TabId = typeof TAB_IDS[number];
+
 export default function MicropaymentsPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'streams' | 'channels' | 'web' | 'agents' | 'adoption' | 'openclaw'>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const location = useLocation();
+
+  // Open a specific tab when navigating from Agent Economy (e.g. Link state: { tab: 'openclaw' })
+  useEffect(() => {
+    const stateTab = (location.state as { tab?: TabId })?.tab;
+    if (stateTab && TAB_IDS.includes(stateTab)) setActiveTab(stateTab);
+  }, [location.state]);
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: <BarChart2 size={14} /> },
@@ -56,6 +67,18 @@ export default function MicropaymentsPage() {
             XRPL + ILP enable true micropayments: streaming content revenue, 
             AI agent transactions, pay-per-API-call, and more.
           </p>
+          <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
+            <span className="text-cyber-muted">AI agent economy:</span>
+            <Link to="/agent-economy" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyber-glow/10 border border-cyber-glow/30 text-cyber-glow hover:bg-cyber-glow/20 font-cyber transition-colors">
+              <Wallet size={12} />
+              Agent Economy (receipts &amp; caps)
+            </Link>
+            <Link to="/carv" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/20 font-cyber transition-colors">
+              <Bot size={12} />
+              Secure Payment Agent
+            </Link>
+            <span className="text-[10px] text-cyber-muted ml-1">· Use within applicable laws; no custody.</span>
+          </div>
         </motion.div>
 
         {/* New here? — what this page does and how to use it */}
@@ -354,11 +377,11 @@ export default function MicropaymentsPage() {
                   <h3 className="font-cyber text-cyber-green mb-3">THE AI AGENT ECONOMY</h3>
                   <p className="text-xs text-cyber-text mb-3">
                     Autonomous AI agents need to pay for resources: compute, data, tools, other agents.
-                    XRPL/ILP is the only network where this is economically viable.
+                    XRPL/ILP is one of the very few networks where micropayments like this are economically viable (fees &lt; payment size).
                   </p>
                   <div className="space-y-2">
                     <div className="p-2 rounded bg-cyber-border/30">
-                      <p className="text-[10px] text-cyber-green">✓ GPT-5 agent pays $0.0001 per data API call</p>
+                      <p className="text-[10px] text-cyber-green">✓ AI agent pays ~$0.0001 per data API call (XRPL fee ~$0.00003)</p>
                     </div>
                     <div className="p-2 rounded bg-cyber-border/30">
                       <p className="text-[10px] text-cyber-green">✓ Orchestrator pays GPU cluster per compute-second</p>
@@ -380,6 +403,25 @@ export default function MicropaymentsPage() {
                     <strong>On Ethereum L1:</strong> 1000 × $2.50 fee = <span className="text-cyber-red">$2,500/minute in fees</span>
                     <br/>
                     <strong>On XRPL:</strong> 1000 × $0.00003 fee = <span className="text-cyber-green">$0.03/minute in fees</span>
+                  </p>
+                </div>
+                <div className="cyber-panel p-4 border-cyber-border bg-cyber-darker/40">
+                  <p className="text-[10px] text-cyber-muted font-cyber mb-2">WHO ELSE / IS THIS VIABLE?</p>
+                  <p className="text-[10px] text-cyber-text mb-2">
+                    The use case is real: pay-per-call for AI agents exists elsewhere (e.g. <strong>x402</strong> on Solana/Base, OpenLibx402, APINow). XRPL/ILP has <strong>live micropayment adopters</strong> for content (Cinnamon, Puma), remittance (ODL), and ILP infrastructure (Rafiki, Uphold). AI-agent-specific adoption on XRPL is <strong>emerging</strong>—infrastructure is ready; this app and OpenClaw are part of that. So yes: viable product/tool; adoption still growing.
+                  </p>
+                  <p className="text-[9px] text-cyber-muted">See Adoption tab for full list of XRPL/ILP projects.</p>
+                </div>
+                <div className="cyber-panel p-4 border-cyber-cyan/30 bg-cyber-cyan/5">
+                  <p className="text-[10px] text-cyber-cyan font-cyber mb-2">BUILD VS INTEGRATE / TESTING</p>
+                  <p className="text-[10px] text-cyber-text mb-2">
+                    Orchestra today = <strong>in-app demo</strong> (we built the mock agents). To go real: <strong>build</strong> our own agent services, <strong>integrate</strong> external ones (x402, OpenClaw, future XRPL registry), or <strong>mix both</strong>. Testing: demo = manual; real agents = unit + integration tests, testnet for payments. See <code className="text-[9px] bg-cyber-darker px-1 rounded">docs/AI-AGENT-ECONOMY-INTEGRATION.md</code> → “Run the Orchestra”.
+                  </p>
+                </div>
+                <div className="cyber-panel p-4 border-cyber-green/30 bg-cyber-green/5">
+                  <p className="text-[10px] text-cyber-green font-cyber mb-2">RECOMMENDED NEXT AGENTS</p>
+                  <p className="text-[10px] text-cyber-text mb-2">
+                    Other dashboard data you could add as agents: <strong>Prediction markets</strong> (Polymarket – predictionMarkets.ts), <strong>Analytics / screener</strong> (analyticsService, cryptoScreener), <strong>Order book</strong> (Binance depth), <strong>ILP pathfinding</strong> (carPathfinding), <strong>Alerts</strong> (alertNotifications), <strong>NFT metadata</strong> (assetsStore). See doc section “Other agents we recommend”.
                   </p>
                 </div>
               </div>

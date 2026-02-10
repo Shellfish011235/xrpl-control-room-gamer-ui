@@ -3,6 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Camera, X, Upload, Link as LinkIcon, Check } from 'lucide-react';
 import { useProfileStore } from '../store/profileStore';
 
+// Bundled logo so it always loads (no public/ cache issues)
+import defaultLogo from '../assets/profile-default.png';
+
+const DEFAULT_PROFILE_IMAGE = '/profile-default.png';
+
+function isDefaultLogo(src: string | null): boolean {
+  return !src || src === DEFAULT_PROFILE_IMAGE || (typeof src === 'string' && src.startsWith('/profile-default.png'));
+}
+
 interface ProfilePictureUploadProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
@@ -65,17 +74,21 @@ export function ProfilePictureUpload({ size = 'lg', className = '' }: ProfilePic
         onMouseLeave={() => setIsHovering(false)}
         onClick={() => setShowModal(true)}
       >
-        {/* Image or Placeholder */}
-        {profileImage ? (
+        {/* Profile image: custom upload or default XRPL Control Room logo (light blue bg) */}
+        {isDefaultLogo(profileImage) ? (
+          <div className="w-full h-full bg-[#00d4ff] flex items-center justify-center p-0 ring-2 ring-cyber-glow/40 profile-default-logo-wrap overflow-hidden">
+            <img 
+              src={defaultLogo} 
+              alt="Profile" 
+              className="profile-default-logo profile-default-logo-expanded"
+            />
+          </div>
+        ) : (
           <img 
             src={profileImage} 
             alt="Profile" 
             className="w-full h-full object-cover"
           />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-cyber-glow/20 via-cyber-purple/20 to-cyber-navy flex items-center justify-center">
-            <Camera size={40} className="text-cyber-glow/60" />
-          </div>
         )}
         
         {/* Hover Overlay */}
@@ -133,12 +146,12 @@ export function ProfilePictureUpload({ size = 'lg', className = '' }: ProfilePic
                       className="w-full h-full object-cover"
                       onError={() => setPreviewImage(null)}
                     />
+                  ) : isDefaultLogo(profileImage) ? (
+                    <div className="w-full h-full bg-[#00d4ff] flex items-center justify-center p-1">
+                      <img src={defaultLogo} alt="Current" className="w-full h-full object-contain opacity-50 profile-default-logo" />
+                    </div>
                   ) : profileImage ? (
-                    <img 
-                      src={profileImage} 
-                      alt="Current" 
-                      className="w-full h-full object-cover opacity-50"
-                    />
+                    <img src={profileImage} alt="Current" className="w-full h-full object-cover opacity-50" />
                   ) : (
                     <div className="w-full h-full bg-cyber-darker flex items-center justify-center">
                       <Camera size={32} className="text-cyber-muted" />
@@ -240,16 +253,19 @@ export function ProfilePictureUpload({ size = 'lg', className = '' }: ProfilePic
               </div>
 
               {/* Remove button */}
-              {profileImage && (
+              {profileImage && !isDefaultLogo(profileImage) && (
                 <button
                   onClick={() => {
-                    setProfileImage(null);
+                    setProfileImage(DEFAULT_PROFILE_IMAGE);
                     setShowModal(false);
                   }}
                   className="w-full mt-3 py-2 text-xs text-cyber-red hover:text-cyber-red/80 transition-colors"
                 >
-                  Remove profile picture
+                  Reset to default logo
                 </button>
+              )}
+              {isDefaultLogo(profileImage) && (
+                <p className="w-full mt-3 py-2 text-xs text-cyber-muted text-center">Default: XRPL Control Room logo</p>
               )}
             </motion.div>
           </motion.div>

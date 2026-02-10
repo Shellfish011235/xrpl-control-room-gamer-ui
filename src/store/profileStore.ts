@@ -20,8 +20,7 @@ interface ProfileState {
   updateStats: (stats: Partial<Pick<ProfileState, 'reputation' | 'socialScore' | 'skillPoints' | 'level' | 'xp'>>) => void;
 }
 
-// Default profile image - ethereal blue-haired character
-// Users can upload their own via the ProfilePictureUpload component
+// Default profile image - XRPL Control Room logo (display uses bundled src/assets/profile-default.png)
 const DEFAULT_PROFILE_IMAGE = '/profile-default.png';
 
 export const useProfileStore = create<ProfileState>()(
@@ -47,6 +46,13 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: 'xrpl-profile-state',
+      partialize: (state) => state,
+      onRehydrateStorage: () => (state) => {
+        if (!state?.profileImage) return;
+        if (state?.profileImage && state.profileImage.startsWith('/profile-default.png') && state.profileImage !== DEFAULT_PROFILE_IMAGE) {
+          useProfileStore.getState().setProfileImage(DEFAULT_PROFILE_IMAGE);
+        }
+      },
     }
   )
 );

@@ -14,7 +14,7 @@ export interface PaperTrade {
   amount: number;         // Quantity purchased/sold
   price: number;          // Price at execution
   totalCost: number;      // amount * price
-  source: 'manual' | 'signal' | 'prediction' | 'auto';  // How trade was initiated
+  source: 'manual' | 'signal' | 'prediction' | 'auto' | 'agent';  // How trade was initiated
   signalId?: string;      // If from a prediction signal
   notes?: string;
 }
@@ -572,15 +572,16 @@ export const usePaperTradingStore = create<PaperTradingState>()(
           }
         }
         
-        // Execute the trade!
+        // Execute the trade! Use 'agent' source when from Orchestra suggestion
+        const source = signal.type === 'orchestra_suggestion' ? 'agent' : 'auto';
         const success = state.executeTrade({
           type: signal.action,
           asset: signal.asset,
           amount: tradeAmount,
           price: signal.price,
-          source: 'auto',
+          source,
           signalId: signal.id,
-          notes: `Auto-trade: ${signal.reason} (${signal.confidence}% confidence)`,
+          notes: source === 'agent' ? `Orchestra: ${signal.reason}` : `Auto-trade: ${signal.reason} (${signal.confidence}% confidence)`,
         });
         
         if (success) {

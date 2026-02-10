@@ -4,16 +4,19 @@
 // Functional "AI orchestra": run a real multi-step workflow, record payments, show result
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Cpu, Bot, Zap, ArrowRight, Activity, DollarSign,
   MessageSquare, Database, Cloud, Workflow, Play, Pause,
-  Circle, TrendingUp, Music2
+  Circle, TrendingUp, Music2, ChevronRight
 } from 'lucide-react';
 import {
   useMicropaymentStore,
   USE_CASE_INFO,
   type MicropaymentStream,
 } from '../../services/micropayments/streamingPayments';
+import { fetchCryptoSentiment, fetchXRPLMetrics } from '../../services/freeDataFeeds';
+import { useOrchestraSimStore } from '../../store/orchestraSimStore';
 
 // =============================================================================
 // TYPES
@@ -48,46 +51,12 @@ interface AgentTransaction {
 }
 
 // =============================================================================
-// DEMO AGENTS
+// ORCHESTRA AGENTS — based on data sources used across the dashboard
 // =============================================================================
+// Each agent maps to a real service/API the app uses: Network (XRPScan, RPC),
+// prices (CoinGecko, Binance), CARV (LLM), Micropayments (liveXRPLData), etc.
 
-const DEMO_AGENTS: AIAgent[] = [
-  {
-    id: 'gpt-5-agent',
-    name: 'GPT-5 Reasoning Agent',
-    type: 'llm',
-    address: 'rGPT5Agent1234567890',
-    capabilities: ['reasoning', 'code_generation', 'analysis'],
-    pricePerCall: 100, // 0.0001 XRP per call
-    status: 'online',
-    totalEarned: 0,
-    totalSpent: 15000000, // Spent 15 XRP on data
-    callsProcessed: 150000,
-  },
-  {
-    id: 'market-data-api',
-    name: 'Real-Time Market Data',
-    type: 'data_provider',
-    address: 'rDataAPI9876543210',
-    capabilities: ['price_feeds', 'order_book', 'historical'],
-    pricePerCall: 10, // 0.00001 XRP per call
-    status: 'online',
-    totalEarned: 25000000,
-    totalSpent: 0,
-    callsProcessed: 2500000,
-  },
-  {
-    id: 'gpu-compute',
-    name: 'GPU Compute Cluster',
-    type: 'compute',
-    address: 'rGPUCluster111222333',
-    capabilities: ['inference', 'training', 'rendering'],
-    pricePerCall: 1000, // 0.001 XRP per second
-    status: 'busy',
-    totalEarned: 50000000,
-    totalSpent: 1000000,
-    callsProcessed: 50000,
-  },
+const DASHBOARD_AGENTS: AIAgent[] = [
   {
     id: 'orchestrator',
     name: 'Task Orchestrator',
@@ -101,16 +70,100 @@ const DEMO_AGENTS: AIAgent[] = [
     callsProcessed: 1000000,
   },
   {
-    id: 'code-executor',
-    name: 'Sandboxed Code Executor',
+    id: 'price-feed',
+    name: 'Price Feed (CoinGecko / Binance)',
+    type: 'data_provider',
+    address: 'rPriceFeed9876543210',
+    capabilities: ['xrp_usd', 'ticker', '24h_change'],
+    pricePerCall: 10,
+    status: 'online',
+    totalEarned: 18000000,
+    totalSpent: 0,
+    callsProcessed: 1800000,
+  },
+  {
+    id: 'xrpl-ledger',
+    name: 'XRPL Ledger (RPC)',
+    type: 'data_provider',
+    address: 'rXRPLRPC111222333',
+    capabilities: ['server_info', 'fee', 'account_channels'],
+    pricePerCall: 15,
+    status: 'online',
+    totalEarned: 12000000,
+    totalSpent: 0,
+    callsProcessed: 800000,
+  },
+  {
+    id: 'xrpscan',
+    name: 'XRPScan (validators, amendments, metrics)',
+    type: 'data_provider',
+    address: 'rXRPScanAPI444555',
+    capabilities: ['validators', 'nodes', 'amendments', 'metrics'],
+    pricePerCall: 20,
+    status: 'online',
+    totalEarned: 9000000,
+    totalSpent: 0,
+    callsProcessed: 450000,
+  },
+  {
+    id: 'reasoning',
+    name: 'Reasoning (LLM)',
+    type: 'llm',
+    address: 'rLLMAgent1234567890',
+    capabilities: ['reasoning', 'summarize', 'payment_decision'],
+    pricePerCall: 100,
+    status: 'online',
+    totalEarned: 0,
+    totalSpent: 12000000,
+    callsProcessed: 120000,
+  },
+  {
+    id: 'pathfinder',
+    name: 'DEX Pathfinder (xrplPathfinding)',
     type: 'tool',
-    address: 'rCodeExec666777888',
-    capabilities: ['python', 'javascript', 'shell'],
+    address: 'rPathfind666777888',
+    capabilities: ['path_find', 'quote', 'order_book'],
     pricePerCall: 50,
+    status: 'online',
+    totalEarned: 4000000,
+    totalSpent: 0,
+    callsProcessed: 80000,
+  },
+  {
+    id: 'sentiment',
+    name: 'Sentiment (SentiCrypt)',
+    type: 'data_provider',
+    address: 'rSentimentAPI999000',
+    capabilities: ['crypto_sentiment', 'trend', 'score'],
+    pricePerCall: 12,
     status: 'online',
     totalEarned: 3000000,
     totalSpent: 0,
-    callsProcessed: 60000,
+    callsProcessed: 250000,
+  },
+  {
+    id: 'tx-history',
+    name: 'Tx History (xrplcluster)',
+    type: 'data_provider',
+    address: 'rTxHistoryABC123',
+    capabilities: ['account_tx', 'ledger_tx', 'openclaw_feed'],
+    pricePerCall: 25,
+    status: 'online',
+    totalEarned: 5000000,
+    totalSpent: 0,
+    callsProcessed: 200000,
+  },
+  {
+    id: 'regulatory-watch',
+    name: 'Regulatory Watch (Compliance)',
+    type: 'data_provider',
+    address: 'rRegWatchCOMP789',
+    capabilities: ['regulatory_watch', 'compliance_check', 'jurisdiction_alerts'],
+    pricePerCall: 18,
+    status: 'online',
+    totalEarned: 2200000,
+    totalSpent: 0,
+    callsProcessed: 120000,
   },
 ];
 
@@ -122,13 +175,14 @@ export function AIAgentPayments({
   onAgentSelect,
   enableSimulation = true,
 }: AIAgentPaymentsProps) {
-  const [agents, setAgents] = useState<AIAgent[]>(DEMO_AGENTS);
+  const [agents, setAgents] = useState<AIAgent[]>(DASHBOARD_AGENTS);
   const [transactions, setTransactions] = useState<AgentTransaction[]>([]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [orchestraResult, setOrchestraResult] = useState<string | null>(null);
   const [isOrchestraRunning, setIsOrchestraRunning] = useState(false);
-  const [orchestraTask, setOrchestraTask] = useState<'xrp_price' | 'summary' | 'pipeline'>('xrp_price');
+  const [orchestraTask, setOrchestraTask] = useState<'xrp_price' | 'ledger_fee' | 'sentiment' | 'xrpscan_metrics' | 'pathfinder_quote' | 'tx_history' | 'compliance_snapshot' | 'summary' | 'pipeline'>('xrp_price');
+  const simPayments = useOrchestraSimStore((s) => s.payments);
 
   // Stats
   const stats = useMemo(() => {
@@ -208,27 +262,68 @@ export function AIAgentPayments({
     setOrchestraResult(null);
 
     const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
-    const marketData = agents.find(a => a.id === 'market-data-api')!;
-    const gptAgent = agents.find(a => a.id === 'gpt-5-agent')!;
-    const codeExec = agents.find(a => a.id === 'code-executor')!;
+    const priceFeed = agents.find(a => a.id === 'price-feed')!;
+    const xrplLedger = agents.find(a => a.id === 'xrpl-ledger')!;
+    const sentimentAgent = agents.find(a => a.id === 'sentiment')!;
+    const xrpscanAgent = agents.find(a => a.id === 'xrpscan')!;
+    const pathfinderAgent = agents.find(a => a.id === 'pathfinder')!;
+    const txHistoryAgent = agents.find(a => a.id === 'tx-history')!;
+    const regulatoryWatchAgent = agents.find(a => a.id === 'regulatory-watch')!;
+    const reasoning = agents.find(a => a.id === 'reasoning')!;
 
     const steps: Array<{ fromId: string; toId: string; amount: number; reason: string; latencyMs: number }> =
       orchestraTask === 'xrp_price'
         ? [
-            { fromId: 'orchestrator', toId: 'market-data-api', amount: marketData.pricePerCall * 2, reason: 'Request XRP/USD price feed', latencyMs: 15 },
-            { fromId: 'market-data-api', toId: 'orchestrator', amount: 5, reason: 'Return XRP/USD to orchestrator', latencyMs: 8 },
-            { fromId: 'orchestrator', toId: 'gpt-5-agent', amount: gptAgent.pricePerCall, reason: 'Format price for user', latencyMs: 20 },
+            { fromId: 'orchestrator', toId: 'price-feed', amount: priceFeed.pricePerCall * 2, reason: 'Request XRP/USD (CoinGecko)', latencyMs: 15 },
+            { fromId: 'price-feed', toId: 'orchestrator', amount: 5, reason: 'Return XRP/USD to orchestrator', latencyMs: 8 },
+            { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Format price for user', latencyMs: 20 },
           ]
-        : orchestraTask === 'summary'
+        : orchestraTask === 'ledger_fee'
           ? [
-              { fromId: 'orchestrator', toId: 'gpt-5-agent', amount: gptAgent.pricePerCall * 3, reason: 'Summarize user request', latencyMs: 45 },
-              { fromId: 'gpt-5-agent', toId: 'orchestrator', amount: 5, reason: 'Return summary', latencyMs: 10 },
+              { fromId: 'orchestrator', toId: 'xrpl-ledger', amount: xrplLedger.pricePerCall * 2, reason: 'Request server_info + fee (RPC)', latencyMs: 25 },
+              { fromId: 'xrpl-ledger', toId: 'orchestrator', amount: 5, reason: 'Return ledger + fee to orchestrator', latencyMs: 10 },
+              { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Summarize ledger status', latencyMs: 18 },
             ]
-          : [
-              { fromId: 'orchestrator', toId: 'market-data-api', amount: marketData.pricePerCall, reason: 'Step 1: Fetch data', latencyMs: 25 },
-              { fromId: 'orchestrator', toId: 'code-executor', amount: codeExec.pricePerCall, reason: 'Step 2: Run transform', latencyMs: 30 },
-              { fromId: 'orchestrator', toId: 'gpt-5-agent', amount: gptAgent.pricePerCall, reason: 'Step 3: Format response', latencyMs: 22 },
-            ];
+          : orchestraTask === 'sentiment'
+            ? [
+                { fromId: 'orchestrator', toId: 'sentiment', amount: sentimentAgent.pricePerCall, reason: 'Request crypto sentiment (SentiCrypt)', latencyMs: 30 },
+                { fromId: 'sentiment', toId: 'orchestrator', amount: 5, reason: 'Return trend + score to orchestrator', latencyMs: 8 },
+                { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Format sentiment for user', latencyMs: 20 },
+              ]
+            : orchestraTask === 'xrpscan_metrics'
+              ? [
+                  { fromId: 'orchestrator', toId: 'xrpscan', amount: xrpscanAgent.pricePerCall * 2, reason: 'Request validators/metrics (XRPScan)', latencyMs: 35 },
+                  { fromId: 'xrpscan', toId: 'orchestrator', amount: 5, reason: 'Return metrics to orchestrator', latencyMs: 10 },
+                  { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Summarize network metrics', latencyMs: 18 },
+                ]
+              : orchestraTask === 'pathfinder_quote'
+                ? [
+                    { fromId: 'orchestrator', toId: 'pathfinder', amount: pathfinderAgent.pricePerCall, reason: 'Request path quote (ripple_path_find)', latencyMs: 40 },
+                    { fromId: 'pathfinder', toId: 'orchestrator', amount: 5, reason: 'Return path/quote to orchestrator', latencyMs: 8 },
+                    { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Format quote for user', latencyMs: 20 },
+                  ]
+                : orchestraTask === 'tx_history'
+                  ? [
+                      { fromId: 'orchestrator', toId: 'tx-history', amount: txHistoryAgent.pricePerCall, reason: 'Request account_tx (xrplcluster)', latencyMs: 30 },
+                      { fromId: 'tx-history', toId: 'orchestrator', amount: 5, reason: 'Return tx list to orchestrator', latencyMs: 10 },
+                      { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Summarize recent activity', latencyMs: 18 },
+                    ]
+                  : orchestraTask === 'compliance_snapshot'
+                    ? [
+                        { fromId: 'orchestrator', toId: 'regulatory-watch', amount: regulatoryWatchAgent.pricePerCall, reason: 'Request compliance snapshot (regulatory watch)', latencyMs: 28 },
+                        { fromId: 'regulatory-watch', toId: 'orchestrator', amount: 5, reason: 'Return watch sources + stance to orchestrator', latencyMs: 8 },
+                        { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Summarize how we stay in law', latencyMs: 20 },
+                      ]
+                    : orchestraTask === 'summary'
+                    ? [
+                        { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall * 3, reason: 'Summarize user request', latencyMs: 45 },
+                        { fromId: 'reasoning', toId: 'orchestrator', amount: 5, reason: 'Return summary', latencyMs: 10 },
+                      ]
+                    : [
+                        { fromId: 'orchestrator', toId: 'price-feed', amount: priceFeed.pricePerCall, reason: 'Step 1: Fetch XRP price', latencyMs: 25 },
+                        { fromId: 'orchestrator', toId: 'sentiment', amount: sentimentAgent.pricePerCall, reason: 'Step 2: Fetch sentiment (SentiCrypt)', latencyMs: 30 },
+                        { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Step 3: Format response', latencyMs: 22 },
+                      ];
 
     const newTxs: AgentTransaction[] = steps.map(s => {
       const from = agents.find(a => a.id === s.fromId)!;
@@ -272,11 +367,125 @@ export function AIAgentPayments({
         } catch {
           priceUsd = '2.45 (mock)';
         }
-        setOrchestraResult(`Orchestra result: XRP/USD = $${priceUsd}. (Orchestrator → Market Data → Reasoning → you; each step recorded as a micropayment.)`);
+        setOrchestraResult(`Orchestra result: XRP/USD = $${priceUsd}. (Orchestrator → Price Feed → Reasoning; each step recorded as a micropayment.)`);
+      } else if (orchestraTask === 'ledger_fee') {
+        let ledgerSeq = '—';
+        let feeXrp = '—';
+        try {
+          const [infoRes, feeRes] = await Promise.all([
+            fetch('https://s1.ripple.com:51234/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ method: 'server_info', params: [{}] }),
+            }),
+            fetch('https://s1.ripple.com:51234/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ method: 'fee', params: [{}] }),
+            }),
+          ]);
+          const infoData = await infoRes.json();
+          const feeData = await feeRes.json();
+          const seq = infoData.result?.info?.validated_ledger?.seq;
+          const drops = feeData.result?.drops?.base_fee;
+          if (seq != null) ledgerSeq = String(seq);
+          if (drops != null) feeXrp = (Number(drops) / 1_000_000).toFixed(6);
+        } catch {
+          ledgerSeq = '— (mock)';
+          feeXrp = '— (mock)';
+        }
+        setOrchestraResult(`Orchestra result: Ledger #${ledgerSeq}, base fee ${feeXrp} XRP. (Orchestrator → XRPL Ledger RPC → Reasoning; dashboard data.)`);
+      } else if (orchestraTask === 'sentiment') {
+        let trend = 'neutral';
+        let score = 50;
+        try {
+          const { trend: t, score: s } = await fetchCryptoSentiment();
+          trend = t;
+          score = s;
+        } catch {
+          trend = 'neutral (mock)';
+        }
+        setOrchestraResult(`Orchestra result: Crypto sentiment ${trend}, score ${score}/100. (Orchestrator → SentiCrypt → Reasoning; same feed as dashboard.)`);
+      } else if (orchestraTask === 'xrpscan_metrics') {
+        let msg = 'Orchestra result: ';
+        try {
+          const metrics = await fetchXRPLMetrics();
+          if (metrics) {
+            msg += `Ledger #${metrics.ledger_index}, ${metrics.txn_count_24h?.toLocaleString() ?? '—'} txs (24h), ${metrics.txn_rate?.toFixed(1) ?? '—'} txs/s, avg fee ${metrics.avg_fee ?? '—'} drops. (Orchestrator → XRPScan → Reasoning; dashboard data.)`;
+          } else {
+            msg += 'XRPScan metrics unavailable (mock). Orchestrator → XRPScan → Reasoning.';
+          }
+        } catch {
+          msg += 'XRPScan metrics error (mock). Orchestrator → XRPScan → Reasoning.';
+        }
+        setOrchestraResult(msg);
+      } else if (orchestraTask === 'pathfinder_quote') {
+        let msg = 'Orchestra result: ';
+        try {
+          const res = await fetch('https://s1.ripple.com:51234/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              method: 'ripple_path_find',
+              params: [{
+                source_account: 'rN7n7otQDd6FczFgLdlqtyMVrn3e1DjxvV',
+                destination_account: 'rN7n7otQDd6FczFgLdlqtyMVrn3e1DjxvV',
+                destination_amount: { currency: 'USD', value: '1', issuer: 'rN7n7otQDd6FczFgLdlqtyMVrn3e1DjxvV' },
+              }],
+            }),
+          });
+          const data = await res.json();
+          const alts = data.result?.alternatives;
+          const pathCount = Array.isArray(alts) ? alts.length : 0;
+          msg += pathCount > 0
+            ? `Pathfinder found ${pathCount} path(s). (Orchestrator → DEX Pathfinder → Reasoning; dashboard data.)`
+            : 'Pathfinder: no path for demo params. (Orchestrator → DEX Pathfinder → Reasoning.)';
+        } catch {
+          msg += 'Pathfinder request failed (mock). Orchestrator → DEX Pathfinder → Reasoning.';
+        }
+        setOrchestraResult(msg);
+      } else if (orchestraTask === 'tx_history') {
+        let msg = 'Orchestra result: ';
+        try {
+          const res = await fetch('https://xrplcluster.com/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              method: 'account_tx',
+              params: [{ account: 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64', limit: 10 }],
+            }),
+          });
+          const data = await res.json();
+          const txs = data.result?.transactions ?? [];
+          msg += `${txs.length} recent tx(s) for demo account. (Orchestrator → Tx History → Reasoning; same as OpenClaw dashboard.)`;
+        } catch {
+          msg += 'Tx history unavailable (mock). Orchestrator → Tx History → Reasoning.';
+        }
+        setOrchestraResult(msg);
+      } else if (orchestraTask === 'compliance_snapshot') {
+        const snapshot = [
+          'Watch: White House, SEC, CFTC, FinCEN; state (e.g. CO AI Act, FL); EU AI Act, MiCA.',
+          'Stance: No custody, user signs only (Xaman), human-in-the-loop. Re-check before scaling (see REGULATORY-WATCH.md).',
+        ].join(' ');
+        setOrchestraResult(`Orchestra result: ${snapshot} (Orchestrator → Regulatory Watch → Reasoning.)`);
       } else if (orchestraTask === 'summary') {
         setOrchestraResult('Orchestra result: "XRPL enables fast, low-fee micropayments for AI agents." (Reasoning agent produced this; payment recorded.)');
       } else {
-        setOrchestraResult('Orchestra result: 3-step pipeline complete (Data → Code Exec → Reasoning). Each step paid via micropayment.');
+        let priceUsd = '2.45';
+        let trend = 'neutral';
+        let score = 50;
+        try {
+          const [priceRes, sentimentData] = await Promise.all([
+            fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd', { mode: 'cors' }).then(r => r.json()),
+            fetchCryptoSentiment(),
+          ]);
+          if (priceRes?.ripple?.usd != null) priceUsd = String(priceRes.ripple.usd);
+          trend = sentimentData.trend;
+          score = sentimentData.score;
+        } catch {
+          trend = 'neutral (mock)';
+        }
+        setOrchestraResult(`Orchestra result: XRP/USD = $${priceUsd}, sentiment ${trend} (${score}/100). Price → Sentiment → Reasoning; each step paid via micropayment (dashboard data).`);
       }
     } finally {
       setIsOrchestraRunning(false);
@@ -295,7 +504,7 @@ export function AIAgentPayments({
           <div className="flex items-center gap-2">
             <Bot size={16} className="text-cyber-green" />
             <span className="font-cyber text-cyber-green text-sm">AI AGENT PAYMENTS</span>
-            <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/40" title="Agents and stats are demo data; transactions are simulated when you click Simulate. No live chain feed.">
+            <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/40" title="Agents and balances are simulated. Price, ledger, sentiment, XRPScan, pathfinder, and tx history tasks call real dashboard APIs; payments are not on-chain.">
               DEMO
             </span>
           </div>
@@ -314,13 +523,16 @@ export function AIAgentPayments({
           )}
         </div>
 
-        {/* Functional AI Orchestra — run a real workflow, see payments + result */}
+        {/* Functional AI Orchestra — simulated workflow; only e.g. XRP price may call a real API */}
         <div className="mb-3 p-3 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30">
           <p className="text-[10px] text-cyber-cyan font-cyber mb-2 flex items-center gap-1">
             <Music2 size={12} /> RUN THE ORCHESTRA
           </p>
           <p className="text-[9px] text-cyber-muted mb-2">
-            Pick a task. The orchestrator will dispatch to real agents (data, reasoning, tools); each step is recorded as a micropayment below.
+            Each agent = a <strong>dashboard data source</strong> (CoinGecko, XRPL RPC, XRPScan, SentiCrypt, CARV LLM, pathfinder, tx history). Payments are simulated; price, ledger, and sentiment tasks call the same APIs as the rest of the app. Each step is recorded as a micropayment below.
+          </p>
+          <p className="text-[9px] text-cyber-muted mb-2">
+            <strong>Paper Trading link:</strong> Get suggestions (Price + Sentiment) on the <Link to="/terminal" className="text-cyber-cyan hover:underline inline-flex items-center gap-0.5">Terminal page <ChevronRight size={10} /></Link> → scroll to Paper Trading → <strong>Auto</strong> tab → &quot;Get suggestion&quot; / &quot;Apply&quot;. Those payments show here under &quot;From paper trading&quot;.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <select
@@ -328,9 +540,15 @@ export function AIAgentPayments({
               onChange={(e) => setOrchestraTask(e.target.value as typeof orchestraTask)}
               className="bg-cyber-darker border border-cyber-border rounded px-2 py-1.5 text-xs text-cyber-text"
             >
-              <option value="xrp_price">XRP price check (real API when possible)</option>
-              <option value="summary">Summary (reasoning step)</option>
-              <option value="pipeline">3-step pipeline (Data → Code → Reasoning)</option>
+              <option value="xrp_price">XRP price (CoinGecko)</option>
+              <option value="ledger_fee">Ledger + fee (XRPL RPC)</option>
+              <option value="sentiment">Sentiment (SentiCrypt)</option>
+              <option value="xrpscan_metrics">Network metrics (XRPScan)</option>
+              <option value="pathfinder_quote">Path quote (DEX Pathfinder)</option>
+              <option value="tx_history">Tx history (xrplcluster)</option>
+              <option value="compliance_snapshot">Compliance snapshot (stay in law)</option>
+              <option value="summary">Summary (reasoning only)</option>
+              <option value="pipeline">Pipeline: Price → Sentiment → Reasoning</option>
             </select>
             <button
               onClick={runOrchestra}
@@ -402,9 +620,12 @@ export function AIAgentPayments({
         </div>
       </div>
 
-      {/* Agent List */}
+      {/* Agent List — demo agents, not live on-chain */}
       <div className="p-3 border-b border-cyber-border">
-        <p className="text-[10px] text-cyber-muted mb-2">REGISTERED AGENTS</p>
+        <p className="text-[10px] text-cyber-muted mb-2 flex items-center gap-2">
+          REGISTERED AGENTS
+          <span className="text-[8px] text-cyber-yellow bg-cyber-yellow/10 px-1.5 py-0.5 rounded border border-cyber-yellow/30">Based on dashboard data sources; payments simulated</span>
+        </p>
         <div className="space-y-2">
           {agents.map(agent => {
             const isSelected = selectedAgent === agent.id;
@@ -451,19 +672,24 @@ export function AIAgentPayments({
                 </div>
 
                 {isSelected && (
-                  <div className="mt-2 pt-2 border-t border-cyber-border/50 grid grid-cols-3 gap-2 text-[9px]">
-                    <div>
-                      <p className="text-cyber-muted">Price/Call</p>
-                      <p className="text-cyber-cyan">{agent.pricePerCall} drops</p>
+                  <div className="mt-2 pt-2 border-t border-cyber-border/50 space-y-2 text-[9px]">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <p className="text-cyber-muted">Price/Call</p>
+                        <p className="text-cyber-cyan">{agent.pricePerCall} drops</p>
+                      </div>
+                      <div>
+                        <p className="text-cyber-muted">Calls Processed</p>
+                        <p className="text-cyber-text">{agent.callsProcessed.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-cyber-muted">Capabilities</p>
+                        <p className="text-cyber-text truncate">{agent.capabilities.join(', ')}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-cyber-muted">Calls Processed</p>
-                      <p className="text-cyber-text">{agent.callsProcessed.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-cyber-muted">Capabilities</p>
-                      <p className="text-cyber-text truncate">{agent.capabilities.join(', ')}</p>
-                    </div>
+                    <p className="text-cyber-muted border-t border-cyber-border/30 pt-1.5">
+                      Used in: {getAgentDashboardSource(agent.id)}
+                    </p>
                   </div>
                 )}
               </div>
@@ -479,10 +705,10 @@ export function AIAgentPayments({
             {isSimulating ? 'SIMULATED TRANSACTION FEED' : 'TRANSACTION FEED (run Simulate for demo tx)'}
           </p>
         </div>
-        {transactions.length === 0 ? (
+        {transactions.length === 0 && simPayments.length === 0 ? (
           <div className="p-4 text-center">
             <MessageSquare size={20} className="text-cyber-muted mx-auto mb-1 opacity-50" />
-            <p className="text-[9px] text-cyber-muted">No transactions yet</p>
+            <p className="text-[9px] text-cyber-muted">No transactions yet. Run orchestra above, or <Link to="/terminal" className="text-cyber-cyan hover:underline">go to Terminal → Paper Trading → Auto</Link> and click &quot;Get suggestion&quot; then &quot;Apply&quot;.</p>
           </div>
         ) : (
           <div className="divide-y divide-cyber-border/30">
@@ -499,6 +725,24 @@ export function AIAgentPayments({
                 <p className="text-cyber-muted">{tx.reason}</p>
               </div>
             ))}
+            {simPayments.length > 0 && (
+              <>
+                <div className="px-3 py-1 text-[8px] text-cyber-cyan font-cyber border-t border-cyber-cyan/30 mt-1">From paper trading</div>
+                {[...simPayments].reverse().slice(0, 10).map(p => (
+                  <div key={p.id} className="px-3 py-1.5 text-[9px]">
+                    <div className="flex items-center gap-1">
+                      <span className="text-cyber-text">{p.from}</span>
+                      <ArrowRight size={10} className="text-cyber-muted" />
+                      <span className="text-cyber-text">{p.to}</span>
+                      <span className="text-cyber-green ml-auto">
+                        +{(p.amount / 1000000).toFixed(6)} XRP
+                      </span>
+                    </div>
+                    <p className="text-cyber-muted">{p.reason}</p>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -543,6 +787,21 @@ function getStatusColor(status: AIAgent['status']) {
     case 'online': return '#00FF88';
     case 'busy': return '#FFD700';
     case 'offline': return '#666666';
+  }
+}
+
+function getAgentDashboardSource(agentId: string): string {
+  switch (agentId) {
+    case 'orchestrator': return 'Orchestra routing, task dispatch';
+    case 'price-feed': return 'Nav, Wallet, Terminal, livePrices, MemeticLab, CARV';
+    case 'xrpl-ledger': return 'liveXRPLData, xrplService (server_info, fee, account_channels)';
+    case 'xrpscan': return 'Network page (validators, agreement), LedgerImpactTool (amendments)';
+    case 'reasoning': return 'CARV Secure Payment Agent (LLM)';
+    case 'pathfinder': return 'xrplPathfinding, xrplDex (pathfinding, quotes)';
+    case 'sentiment': return 'freeDataFeeds (SentiCrypt)';
+    case 'tx-history': return 'OpenClawDashboard, account_tx (xrplcluster)';
+    case 'regulatory-watch': return 'REGULATORY-WATCH.md, COMPLIANCE-GLOBAL-US-FLORIDA.md, regulatoryData';
+    default: return 'Dashboard';
   }
 }
 

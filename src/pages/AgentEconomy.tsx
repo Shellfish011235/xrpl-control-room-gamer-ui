@@ -4,10 +4,11 @@
  */
 
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cpu, ListTodo, Receipt, Shield, Zap, ExternalLink, Loader2, CheckCircle,
-  Lock, Unlock, Clock, Wallet, AlertCircle
+  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign
 } from 'lucide-react';
 import { useWalletStore } from '../store/walletStore';
 import { useAgentEconomyStore } from '../store/agentEconomyStore';
@@ -373,6 +374,37 @@ export default function AgentEconomy() {
           <p className="text-cyber-muted text-sm max-w-2xl">
             Structured actions with clear price and destination. You sign; funds go wallet-to-wallet. No custody.
           </p>
+
+          {/* How AI payments, OpenClaw, and Agent Economy fit together */}
+          <div className="mt-4 p-4 rounded-xl border border-cyber-border/80 bg-cyber-darker/40">
+            <p className="text-[11px] text-cyber-muted uppercase tracking-wider font-medium mb-3">AI agent economy in this app</p>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                to="/micropayments"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-glow/10 border border-cyber-glow/30 text-cyber-glow hover:bg-cyber-glow/20 text-xs font-cyber transition-colors"
+              >
+                <Zap size={14} />
+                Micropayments · OpenClaw &amp; AI streams
+              </Link>
+              <Link
+                to="/micropayments"
+                state={{ tab: 'openclaw' }}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-green/10 border border-cyber-green/30 text-cyber-green hover:bg-cyber-green/20 text-xs font-cyber transition-colors"
+              >
+                <DollarSign size={14} />
+                OpenClaw revenue
+              </Link>
+              <Link
+                to="/carv"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/20 text-xs font-cyber transition-colors"
+              >
+                <Bot size={14} />
+                Secure Payment Agent (pay in chat)
+              </Link>
+            </div>
+            <p className="text-[10px] text-cyber-muted mt-2">This page = receipts, spend caps, and paid actions. OpenClaw = earn from plugin. CARV = AI payment agent with Xaman.</p>
+            <p className="text-[9px] text-cyber-muted mt-1.5 border-t border-cyber-border/50 pt-2">Use must comply with applicable laws. No custody; you sign in Xaman. See compliance docs in repo.</p>
+          </div>
         </motion.div>
 
         {/* Tabs */}

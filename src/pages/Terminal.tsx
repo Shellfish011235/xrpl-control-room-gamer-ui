@@ -286,7 +286,7 @@ export default function Terminal() {
           </ErrorBoundary>
         </motion.div>
         
-        {/* Paper Trading */}
+        {/* Paper Trading — Orchestra suggestion is in the Auto tab; Apply sends payments to Micropayments → AI Agents */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

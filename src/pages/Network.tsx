@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from 'react'
 import { 
   Globe, Server, Users, Link2,
   Route, Scale, Building, Eye, X, RefreshCw, Wifi, WifiOff,
-  ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock,
+  ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock, HelpCircle,
 } from 'lucide-react'
 import { WorldGlobe } from '../components/globe/WorldGlobe'
 import { useGlobeStore } from '../store/globeStore'
@@ -269,7 +269,7 @@ export default function Network() {
     return null
   }, [selection])
   
-  // Network stats - use live data when available
+  // Network stats - use live data when available; each box has an action (switch lens)
   const networkStats = useMemo(() => {
     if (liveStats && showLiveData) {
       return [
@@ -278,38 +278,51 @@ export default function Network() {
           value: liveStats.unlValidators.toString(), 
           change: `${liveStats.activeValidators} active`, 
           color: 'cyber-green',
-          live: true
+          live: true,
+          lens: 'validators' as GlobeLens,
+          hint: 'View on map',
+          isPlaceholder: false,
         },
         { 
           label: 'Total Validators', 
           value: liveStats.totalValidators.toString(), 
           change: `${(liveStats.averageAgreement * 100).toFixed(1)}% avg`, 
           color: 'cyber-glow',
-          live: true
+          live: true,
+          lens: 'validators' as GlobeLens,
+          hint: 'View on map',
+          isPlaceholder: false,
         },
         { 
-          label: 'Agreement', 
-          value: `${(liveStats.averageAgreement * 100).toFixed(1)}%`, 
-          change: '24h average', 
+          label: 'Ledger agreement', 
+          value: liveStats.averageAgreement > 0 ? `${(liveStats.averageAgreement * 100).toFixed(1)}%` : '—',
+          change: liveStats.averageAgreement > 0 ? 'Same next ledger (24h)' : 'From XRPScan · Click for details',
           color: 'cyber-purple',
-          live: true
+          live: true,
+          lens: 'validators' as GlobeLens,
+          hint: 'View details',
+          isPlaceholder: liveStats.averageAgreement === 0,
+          description: 'Agreement on ledger closes: how often validators voted for the same next ledger (consensus). 24h average from XRPScan.',
         },
         { 
           label: 'Global Hubs', 
           value: hubs.length.toString(), 
           change: `${corridors.length} corridors`, 
           color: 'cyber-cyan',
-          live: false
+          live: false,
+          lens: 'corridors' as GlobeLens,
+          hint: 'View hubs & corridors',
+          isPlaceholder: false,
         },
       ]
     }
     
     // Fallback to static hub data
     return [
-      { label: 'Active Validators', value: hubs.reduce((sum, h) => sum + h.validators, 0).toString(), change: '+3', color: 'cyber-green', live: false },
-      { label: 'Total Hubs', value: hubs.length.toString(), change: '+2', color: 'cyber-glow', live: false },
-      { label: 'Corridors', value: corridors.length.toString(), change: '+1', color: 'cyber-purple', live: false },
-      { label: 'Agreement', value: '99.5%', change: '24h avg', color: 'cyber-cyan', live: false },
+      { label: 'Active Validators', value: hubs.reduce((sum, h) => sum + h.validators, 0).toString(), change: '+3', color: 'cyber-green', live: false, lens: 'validators' as GlobeLens, hint: 'View on map', isPlaceholder: false },
+      { label: 'Total Hubs', value: hubs.length.toString(), change: '+2', color: 'cyber-glow', live: false, lens: 'corridors' as GlobeLens, hint: 'View on map', isPlaceholder: false },
+      { label: 'Corridors', value: corridors.length.toString(), change: '+1', color: 'cyber-purple', live: false, lens: 'corridors' as GlobeLens, hint: 'View on map', isPlaceholder: false },
+      { label: 'Ledger agreement', value: '99.5%', change: 'Same next ledger (24h)', color: 'cyber-cyan', live: false, lens: 'validators' as GlobeLens, hint: 'View details', isPlaceholder: false, description: 'Agreement on ledger closes: how often validators voted for the same next ledger (consensus). 24h average from XRPScan.' },
     ]
   }, [hubs, corridors, liveStats, showLiveData])
 
@@ -377,7 +390,7 @@ export default function Network() {
           )}
         </motion.div>
         
-        {/* Stats Bar - equal cards, generous padding */}
+        {/* Stats Bar - equal cards, clickable to switch lens and focus map */}
         <motion.div 
           className="grid grid-cols-2 lg:grid-cols-4 gap-3"
           initial={{ opacity: 0, y: 12 }}
@@ -385,18 +398,34 @@ export default function Network() {
           transition={{ delay: 0.05 }}
         >
           {networkStats.map((stat) => (
-            <div key={stat.label} className="cyber-panel p-5 relative min-h-[4.5rem] flex flex-col justify-between rounded-xl border border-cyber-border/80">
+            <button
+              key={stat.label}
+              type="button"
+              onClick={() => setActiveLens(stat.lens)}
+              className="cyber-panel p-5 relative min-h-[4.5rem] flex flex-col justify-between rounded-xl border border-cyber-border/80 text-left cursor-pointer hover:border-cyber-glow/50 hover:bg-cyber-glow/5 focus:outline-none focus:ring-2 focus:ring-cyber-glow/40 focus:ring-offset-2 focus:ring-offset-cyber-dark transition-all group"
+            >
               {stat.live && (
                 <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-cyber-green/15 border border-cyber-green/40">
                   <span className="text-[10px] font-medium text-cyber-green">Live</span>
                 </div>
               )}
-              <p className="text-[11px] text-cyber-muted font-medium uppercase tracking-wider">{stat.label}</p>
+              <p className="text-[11px] text-cyber-muted font-medium uppercase tracking-wider flex items-center gap-1">
+                {stat.label}
+                {'description' in stat && stat.description && (
+                  <span title={stat.description} className="inline-flex text-cyber-muted hover:text-cyber-glow cursor-help">
+                    <HelpCircle size={11} />
+                  </span>
+                )}
+              </p>
               <div className="flex items-baseline gap-2 mt-1">
-                <span className={`font-cyber text-xl text-${stat.color}`}>{stat.value}</span>
+                <span className={`font-cyber text-xl ${stat.isPlaceholder ? 'text-cyber-muted' : `text-${stat.color}`}`}>{stat.value}</span>
                 <span className="text-[11px] text-cyber-muted">{stat.change}</span>
               </div>
-            </div>
+              <span className="text-[9px] text-cyber-muted mt-2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                <ArrowRight size={10} />
+                {stat.hint}
+              </span>
+            </button>
           ))}
         </motion.div>
         
@@ -2589,20 +2618,25 @@ export default function Network() {
                   </div>
                 </div>
                 
-                {/* Agreement */}
-                <div className="p-2 rounded bg-gradient-to-r from-cyber-green/20 to-cyber-glow/20 border border-cyber-green/30">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-cyber-muted">Average Agreement (24h)</span>
-                    <span className="text-sm font-cyber text-cyber-green">
-                      {(liveStats.averageAgreement * 100).toFixed(1)}%
+                {/* Agreement = agreement on ledger closes (consensus) */}
+                <div className="p-2 rounded bg-gradient-to-r from-cyber-green/20 to-cyber-glow/20 border border-cyber-green/30" title="Validators vote on the next ledger. This is how often they voted for the same one (consensus). From XRPScan.">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] text-cyber-muted">Agreement on ledger closes (24h)</span>
+                    <span className={`text-sm font-cyber shrink-0 ${liveStats.averageAgreement > 0 ? 'text-cyber-green' : 'text-cyber-muted'}`}>
+                      {liveStats.averageAgreement > 0 ? `${(liveStats.averageAgreement * 100).toFixed(1)}%` : '—'}
                     </span>
                   </div>
-                  <div className="w-full h-1.5 bg-cyber-darker/50 rounded mt-1">
-                    <div 
-                      className="h-full rounded bg-gradient-to-r from-cyber-green to-cyber-glow"
-                      style={{ width: `${liveStats.averageAgreement * 100}%` }}
-                    />
-                  </div>
+                  <p className="text-[9px] text-cyber-muted mt-0.5">Same next ledger voted by validators</p>
+                  {liveStats.averageAgreement > 0 ? (
+                    <div className="w-full h-1.5 bg-cyber-darker/50 rounded mt-1">
+                      <div 
+                        className="h-full rounded bg-gradient-to-r from-cyber-green to-cyber-glow"
+                        style={{ width: `${Math.min(100, liveStats.averageAgreement * 100)}%` }}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-[9px] text-cyber-muted mt-1.5">No 24h data yet from XRPScan. Validators may report after a full window.</p>
+                  )}
                 </div>
                 
                 {/* Last Updated */}
