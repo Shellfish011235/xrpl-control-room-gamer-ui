@@ -118,7 +118,7 @@ export interface CostComparison {
 // MICROPAYMENT STORE
 // =============================================================================
 
-const _simulationIntervalIds: number[] = [];
+const _simulationIntervalIds: ReturnType<typeof setInterval>[] = [];
 
 interface MicropaymentState {
   streams: MicropaymentStream[];
@@ -307,7 +307,7 @@ export const useMicropaymentStore = create<MicropaymentState>((set, get) => ({
 
   startSimulation: () => {
     const streams = createDemoStreams();
-    const intervalIds: number[] = [];
+    const intervalIds: ReturnType<typeof setInterval>[] = [];
     streams.forEach(stream => {
       const id = setInterval(() => {
         const state = get();
