@@ -4,11 +4,7 @@ import {
   Globe, Server, Users, Link2,
   Route, Scale, Building, Eye, X, RefreshCw, Wifi, WifiOff,
   ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock,
-  Network as NetworkIcon
 } from 'lucide-react'
-import { ConnectorMap } from '../components/ilp/ConnectorMap'
-import { useILPStore } from '../store/ilpStore'
-import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { WorldGlobe } from '../components/globe/WorldGlobe'
 import { useGlobeStore } from '../store/globeStore'
 import { useLiveNetworkData } from '../hooks/useLiveNetworkData'
@@ -79,6 +75,9 @@ import {
   getAllProjects,
   type XRPLProject,
 } from '../data/xrplExpandedData'
+import { ConnectorMap } from '../components/ilp'
+import { UnifiedNetworkTopology } from '../components/network'
+import { useILPStore } from '../store/ilpStore'
 
 // Lens icons mapping
 const lensIcons: Record<GlobeLens, React.ReactNode> = {
@@ -90,6 +89,8 @@ const lensIcons: Record<GlobeLens, React.ReactNode> = {
 }
 
 const lensOrder: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation']
+
+/** Map panel: proportional height so validators, ILP, corridors, community, and regulation maps match layout */
 
 // Hub type colors
 const hubTypeColors: Record<GlobeHub['type'], string> = {
@@ -247,49 +248,6 @@ export default function Network() {
     return null
   }, [selection])
   
-  // Get region distribution - use live data when available
-  const regionData = useMemo(() => {
-    const regions: Record<string, { nodes: number; color: string }> = {
-      'North America': { nodes: 0, color: '#00d4ff' },
-      'Europe': { nodes: 0, color: '#a855f7' },
-      'Asia Pacific': { nodes: 0, color: '#00ff88' },
-      'Middle East': { nodes: 0, color: '#ffd700' },
-      'Other': { nodes: 0, color: '#ff8c00' },
-    }
-    
-    // Country code to region mapping
-    const countryToRegion: Record<string, string> = {
-      US: 'North America', CA: 'North America', MX: 'North America',
-      GB: 'Europe', DE: 'Europe', FR: 'Europe', NL: 'Europe', CH: 'Europe',
-      IT: 'Europe', ES: 'Europe', SE: 'Europe', NO: 'Europe', FI: 'Europe',
-      PL: 'Europe', AT: 'Europe', BE: 'Europe', IE: 'Europe', PT: 'Europe',
-      JP: 'Asia Pacific', SG: 'Asia Pacific', KR: 'Asia Pacific', 
-      AU: 'Asia Pacific', IN: 'Asia Pacific', CN: 'Asia Pacific',
-      HK: 'Asia Pacific', TW: 'Asia Pacific', NZ: 'Asia Pacific',
-      TH: 'Asia Pacific', MY: 'Asia Pacific', PH: 'Asia Pacific',
-      AE: 'Middle East', SA: 'Middle East', IL: 'Middle East',
-      QA: 'Middle East', KW: 'Middle East', BH: 'Middle East',
-    }
-    
-    if (showLiveData && liveStats && liveStats.topCountries.length > 0) {
-      // Use live data
-      liveStats.topCountries.forEach(({ code, count }) => {
-        const region = countryToRegion[code] || 'Other'
-        regions[region].nodes += count
-      })
-    } else {
-      // Fallback to static hub data
-      hubs.forEach(hub => {
-        const region = countryToRegion[hub.countryIso2] || 'Other'
-        regions[region].nodes += hub.validators
-      })
-    }
-    
-    return Object.entries(regions)
-      .map(([name, data]) => ({ name, ...data }))
-      .filter(r => r.nodes > 0)
-  }, [hubs, liveStats, showLiveData])
-  
   // Selection context
   const selectionContext = useMemo(() => {
     if (selection.type === 'none') return null
@@ -356,183 +314,153 @@ export default function Network() {
   }, [hubs, corridors, liveStats, showLiveData])
 
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div 
-          className="mb-6"
-          initial={{ opacity: 0, y: -20 }}
+    <div className="min-h-screen pt-20 pb-12 px-4 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* Header - clean, one line */}
+        <motion.div
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex items-center gap-3 mb-2">
-            <Globe className="text-cyber-glow" size={28} />
-            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">NETWORK</h1>
-            <div className="ml-auto flex items-center gap-4">
-              {/* Live data toggle */}
-              <button
-                onClick={toggleShowLiveData}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${
-                  showLiveData 
-                    ? 'border-cyber-green/50 bg-cyber-green/10 text-cyber-green' 
-                    : 'border-cyber-border text-cyber-muted hover:border-cyber-muted'
-                }`}
-              >
-                {showLiveData ? <Wifi size={14} /> : <WifiOff size={14} />}
-                <span className="text-xs font-cyber">
-                  {showLiveData ? 'LIVE' : 'STATIC'}
-                </span>
-              </button>
-              
-              {/* Refresh button */}
-              {showLiveData && (
-                <button
-                  onClick={() => refetchLiveData()}
-                  disabled={isLoadingLive}
-                  className="p-2 rounded border border-cyber-border hover:border-cyber-glow/50 hover:bg-cyber-glow/10 transition-all disabled:opacity-50"
-                >
-                  <RefreshCw size={14} className={`text-cyber-glow ${isLoadingLive ? 'animate-spin' : ''}`} />
-                </button>
-              )}
-              
-              {/* Status indicator */}
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${
-                  isLoadingLive 
-                    ? 'bg-cyber-yellow animate-pulse' 
-                    : liveError 
-                      ? 'bg-red-500' 
-                      : showLiveData && liveStats 
-                        ? 'bg-cyber-green animate-pulse' 
-                        : 'bg-cyber-muted'
-                }`} />
-                <span className={`text-xs font-cyber ${
-                  isLoadingLive 
-                    ? 'text-cyber-yellow' 
-                    : liveError 
-                      ? 'text-red-500' 
-                      : showLiveData && liveStats 
-                        ? 'text-cyber-green' 
-                        : 'text-cyber-muted'
-                }`}>
-                  {isLoadingLive 
-                    ? 'LOADING' 
-                    : liveError 
-                      ? 'ERROR' 
-                      : showLiveData && liveStats 
-                        ? 'XRPSCAN' 
-                        : 'OFFLINE'}
-                </span>
-              </div>
+          <div className="flex items-center gap-3">
+            <Globe className="text-cyber-glow shrink-0" size={28} />
+            <div>
+              <h1 className="font-cyber text-xl sm:text-2xl text-cyber-text tracking-tight">Network</h1>
+              <p className="text-xs text-cyber-muted mt-0.5">
+                Global XRPL visualization & analytics
+                {showLiveData && liveStats && (
+                  <span className="ml-2 text-cyber-glow">· {liveValidators.length} validators mapped</span>
+                )}
+              </p>
             </div>
           </div>
-          <p className="text-cyber-muted">
-            Global XRPL Network Visualization & Analytics
-            {showLiveData && liveStats && (
-              <span className="ml-2 text-cyber-glow text-xs">
-                • {liveValidators.length} validators mapped
+          <div className="ml-auto flex items-center gap-4">
+            <button
+              onClick={toggleShowLiveData}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded border transition-all ${
+                showLiveData
+                  ? 'border-cyber-green/50 bg-cyber-green/10 text-cyber-green'
+                  : 'border-cyber-border text-cyber-muted hover:border-cyber-muted'
+              }`}
+            >
+              {showLiveData ? <Wifi size={14} /> : <WifiOff size={14} />}
+              <span className="text-xs font-cyber">
+                {showLiveData ? 'LIVE' : 'STATIC'}
               </span>
+            </button>
+            {showLiveData && (
+              <button
+                onClick={() => refetchLiveData()}
+                disabled={isLoadingLive}
+                className="p-2 rounded border border-cyber-border hover:border-cyber-glow/50 hover:bg-cyber-glow/10 transition-all disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={`text-cyber-glow ${isLoadingLive ? 'animate-spin' : ''}`} />
+              </button>
             )}
-          </p>
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${
+                isLoadingLive ? 'bg-cyber-yellow animate-pulse' :
+                liveError ? 'bg-red-500' :
+                showLiveData && liveStats ? 'bg-cyber-green animate-pulse' : 'bg-cyber-muted'
+              }`} />
+              <span className={`text-xs font-cyber ${
+                isLoadingLive ? 'text-cyber-yellow' :
+                liveError ? 'text-red-500' :
+                showLiveData && liveStats ? 'text-cyber-green' : 'text-cyber-muted'
+              }`}>
+                {isLoadingLive ? 'LOADING' : liveError ? 'ERROR' : showLiveData && liveStats ? 'XRPSCAN' : 'OFFLINE'}
+              </span>
+            </div>
+          </div>
           {liveError && (
-            <p className="text-xs text-red-400 mt-1">
-              ⚠️ {liveError}
-            </p>
+            <p className="text-xs text-red-400 mt-1">⚠️ {liveError}</p>
           )}
         </motion.div>
         
-        {/* Stats Bar */}
+        {/* Stats Bar - equal cards, generous padding */}
         <motion.div 
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
-          initial={{ opacity: 0, y: 20 }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3"
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.05 }}
         >
           {networkStats.map((stat) => (
-            <div key={stat.label} className="cyber-panel p-4 relative">
+            <div key={stat.label} className="cyber-panel p-5 relative min-h-[4.5rem] flex flex-col justify-between rounded-xl border border-cyber-border/80">
               {stat.live && (
-                <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-cyber-green/20 border border-cyber-green/30">
-                  <span className="text-[8px] font-cyber text-cyber-green">LIVE</span>
+                <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-cyber-green/15 border border-cyber-green/40">
+                  <span className="text-[10px] font-medium text-cyber-green">Live</span>
                 </div>
               )}
-              <p className="text-xs text-cyber-muted mb-1">{stat.label}</p>
-              <div className="flex items-end gap-2">
-                <span className={`font-cyber text-2xl text-${stat.color}`}>{stat.value}</span>
-                <span className="text-xs text-cyber-green mb-1">{stat.change}</span>
+              <p className="text-[11px] text-cyber-muted font-medium uppercase tracking-wider">{stat.label}</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className={`font-cyber text-xl text-${stat.color}`}>{stat.value}</span>
+                <span className="text-[11px] text-cyber-muted">{stat.change}</span>
               </div>
             </div>
           ))}
         </motion.div>
         
-        {/* Lens Tabs */}
+        {/* Lens Tabs - pill style, clear active state */}
         <motion.div 
-          className="cyber-panel p-2 mb-4"
+          className="flex flex-wrap gap-2"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.15 }}
+          transition={{ delay: 0.1 }}
         >
-          <div className="flex items-center gap-1 flex-wrap">
-            {lensOrder.map((lensKey) => {
-              const meta = lensMetadata[lensKey]
-              const isActive = activeLens === lensKey
-              
-              return (
-                <button
-                  key={lensKey}
-                  onClick={() => setActiveLens(lensKey)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded font-cyber text-xs tracking-wider transition-all ${
-                    isActive 
-                      ? 'bg-cyber-glow/20 border border-cyber-glow/50' 
-                      : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-border/30'
-                  }`}
-                  style={isActive ? { color: meta.color } : undefined}
-                >
-                  {lensIcons[lensKey]}
-                  <span className="hidden sm:inline">{meta.label}</span>
-                </button>
-              )
-            })}
-          </div>
+          {lensOrder.map((lensKey) => {
+            const meta = lensMetadata[lensKey]
+            const isActive = activeLens === lensKey
+            return (
+              <button
+                key={lensKey}
+                onClick={() => setActiveLens(lensKey)}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive 
+                    ? 'bg-cyber-glow/15 border border-cyber-glow/40 shadow-sm' 
+                    : 'bg-cyber-darker/40 border border-cyber-border/60 text-cyber-muted hover:text-cyber-text hover:border-cyber-border'
+                }`}
+                style={isActive ? { color: meta.color } : undefined}
+              >
+                {lensIcons[lensKey]}
+                <span className="hidden sm:inline">{meta.label}</span>
+              </button>
+            )
+          })}
         </motion.div>
         
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sidebar - Filters & Legend */}
-          <motion.div 
-            className="lg:col-span-2"
-            initial={{ opacity: 0, x: -20 }}
+        {/* Main content: CSS Grid for consistent alignment (left | map | right) */}
+        <div className="network-grid max-w-full">
+          <motion.aside
+            className="network-left-sidebar"
+            initial={{ opacity: 0, x: -12 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.15 }}
           >
-            <div className="cyber-panel p-4 sticky top-24">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <Eye size={14} className="text-cyber-glow" />
-                <span className="font-cyber text-sm text-cyber-glow">ACTIVE LENS</span>
-              </div>
-              
-              <div className="mb-4">
+            <div className="network-panel-card p-4 space-y-4">
+              <div>
                 <div 
-                  className="flex items-center gap-3 p-3 rounded bg-cyber-darker/50 border"
-                  style={{ borderColor: `${lens.color}50` }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-cyber-darker/40 border"
+                  style={{ borderColor: `${lens.color}40` }}
                 >
                   <div 
-                    className="w-10 h-10 rounded flex items-center justify-center"
-                    style={{ backgroundColor: `${lens.color}20`, color: lens.color }}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${lens.color}18`, color: lens.color }}
                   >
                     {lensIcons[activeLens]}
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-cyber-text">{lens.label}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-cyber-text truncate">{lens.label}</p>
                     <p className="text-[10px] text-cyber-muted">{brief.items.length} items</p>
                   </div>
                 </div>
-                <p className="text-xs text-cyber-muted mt-2">{lens.description}</p>
+                <p className="text-[11px] text-cyber-muted mt-2 leading-snug">{lens.description}</p>
               </div>
               
-              {/* Live Validator Legend - shown when live data is active */}
+              {/* Live Validator Legend */}
               {showLiveData && (activeLens === 'validators' || activeLens === 'community') && (
-                <div className="mb-4">
-                  <p className="text-xs text-cyber-muted mb-2 font-cyber">VALIDATOR STATUS</p>
-                  <div className="space-y-1">
+                <div>
+                  <p className="text-[10px] font-semibold text-cyber-muted uppercase tracking-wider mb-2">Validator status</p>
+                  <div className="space-y-1.5">
                     {[
                       { label: 'Excellent (99%+)', color: '#00ff88' },
                       { label: 'Good (95-99%)', color: '#00d4ff' },
@@ -558,9 +486,9 @@ export default function Network() {
               )}
               
               {/* Hub Legend */}
-              <div className="mb-4">
-                <p className="text-xs text-cyber-muted mb-2 font-cyber">HUB TYPES ({hubs.length} total)</p>
-                <div className="space-y-1 max-h-[180px] overflow-y-auto custom-scrollbar">
+              <div>
+                <p className="text-[10px] font-semibold text-cyber-muted uppercase tracking-wider mb-2">Hub types ({hubs.length})</p>
+                <div className="space-y-1.5 max-h-44 overflow-y-auto custom-scrollbar">
                   {Object.entries(hubTypeColors).map(([type, color]) => {
                     const count = hubs.filter(h => h.type === type).length;
                     return (
@@ -583,46 +511,42 @@ export default function Network() {
               
               {/* ILP Legend & Filters (show on ILP lens) */}
               {activeLens === 'ilp' && (
-                <div className="mb-4 pt-4 border-t border-cyber-border">
-                  <p className="text-xs text-cyber-muted mb-2 font-cyber">ILP NETWORK</p>
-                  
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-2 gap-1 mb-3">
+                <div className="pt-4 border-t border-cyber-border/60">
+                  <p className="text-[10px] font-semibold text-cyber-muted uppercase tracking-wider mb-2">ILP network</p>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
                     <button 
                       onClick={() => setIlpFilter(ilpFilter === 'connectors' ? 'all' : 'connectors')}
-                      className={`p-1.5 rounded text-center transition-all ${
-                        ilpFilter === 'connectors' ? 'bg-cyber-green/20 border border-cyber-green/50' : 'bg-cyber-darker/50 border border-cyber-border/50'
+                      className={`p-2.5 rounded-xl text-center transition-all ${
+                        ilpFilter === 'connectors' ? 'bg-cyber-green/15 border border-cyber-green/40' : 'bg-cyber-darker/40 border border-cyber-border/60'
                       }`}
                     >
-                      <p className="text-sm font-cyber text-cyber-green">{ilpStats.activeConnectors}</p>
-                      <p className="text-[8px] text-cyber-muted">Connectors</p>
+                      <p className="text-base font-cyber text-cyber-green">{ilpStats.activeConnectors}</p>
+                      <p className="text-[10px] text-cyber-muted mt-0.5">Connectors</p>
                     </button>
                     <button 
                       onClick={() => setIlpFilter(ilpFilter === 'corridors' ? 'all' : 'corridors')}
-                      className={`p-1.5 rounded text-center transition-all ${
-                        ilpFilter === 'corridors' ? 'bg-cyber-purple/20 border border-cyber-purple/50' : 'bg-cyber-darker/50 border border-cyber-border/50'
+                      className={`p-2.5 rounded-xl text-center transition-all ${
+                        ilpFilter === 'corridors' ? 'bg-cyber-purple/15 border border-cyber-purple/40' : 'bg-cyber-darker/40 border border-cyber-border/60'
                       }`}
                     >
-                      <p className="text-sm font-cyber text-cyber-purple">{ilpStats.corridors}</p>
-                      <p className="text-[8px] text-cyber-muted">Corridors</p>
+                      <p className="text-base font-cyber text-cyber-purple">{ilpStats.corridors}</p>
+                      <p className="text-[10px] text-cyber-muted mt-0.5">Corridors</p>
                     </button>
                     <button 
                       onClick={() => setIlpFilter(ilpFilter === 'repos' ? 'all' : 'repos')}
-                      className={`p-1.5 rounded text-center transition-all ${
-                        ilpFilter === 'repos' ? 'bg-cyber-glow/20 border border-cyber-glow/50' : 'bg-cyber-darker/50 border border-cyber-border/50'
+                      className={`p-2.5 rounded-xl text-center transition-all ${
+                        ilpFilter === 'repos' ? 'bg-cyber-glow/15 border border-cyber-glow/40' : 'bg-cyber-darker/40 border border-cyber-border/60'
                       }`}
                     >
-                      <p className="text-sm font-cyber text-cyber-glow">{ilpStats.totalRepos}</p>
-                      <p className="text-[8px] text-cyber-muted">GitHub Repos</p>
+                      <p className="text-base font-cyber text-cyber-glow">{ilpStats.totalRepos}</p>
+                      <p className="text-[10px] text-cyber-muted mt-0.5">Repos</p>
                     </button>
-                    <div className="p-1.5 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                      <p className="text-sm font-cyber text-cyber-yellow">{ilpStats.protocols}</p>
-                      <p className="text-[8px] text-cyber-muted">Protocols</p>
+                    <div className="p-2.5 rounded-xl bg-cyber-darker/40 border border-cyber-border/60 text-center">
+                      <p className="text-base font-cyber text-cyber-yellow">{ilpStats.protocols}</p>
+                      <p className="text-[10px] text-cyber-muted mt-0.5">Protocols</p>
                     </div>
                   </div>
-                  
-                  {/* Corridor Types Legend */}
-                  <p className="text-[10px] text-cyber-muted mb-1 font-cyber">CORRIDOR TYPES</p>
+                  <p className="text-[10px] font-semibold text-cyber-muted uppercase tracking-wider mb-1.5">Corridor types</p>
                   <div className="space-y-1 mb-3">
                     {[
                       { type: 'remittance', label: 'Remittance', color: '#00ff88' },
@@ -748,7 +672,7 @@ export default function Network() {
               
               {/* Regulatory Legend & Filters (show on regulation lens) */}
               {activeLens === 'regulation' && (
-                <div className="mb-4 pt-4 border-t border-cyber-border">
+                <div className="mb-3 pt-3 border-t border-cyber-border">
                   <p className="text-xs text-cyber-muted mb-2 font-cyber">REGULATORY STATUS</p>
                   <div className="space-y-1 mb-4">
                     {[
@@ -833,30 +757,36 @@ export default function Network() {
                 </div>
               )}
             </div>
-          </motion.div>
+          </motion.aside>
           
-          {/* Center - Globe */}
-          <motion.div 
-            className="lg:col-span-7"
-            initial={{ opacity: 0, scale: 0.95 }}
+          {/* Center - Map (grid column 2, fills height) */}
+          <motion.section
+            className="network-map-container"
+            initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
           >
-            <div className="cyber-panel p-2 h-full" style={{ minHeight: '400px', maxHeight: '500px' }}>
-              <WorldGlobe className="h-full" />
+            <div className="map-inner">
+              <div className="map-panel flex flex-col overflow-hidden min-h-[400px] w-full">
+                <WorldGlobe className="h-full w-full" />
+              </div>
+              <p className="text-xs text-cyber-muted text-center flex-shrink-0 py-2">
+                Click a country or hub for details · Drag when map is unlocked
+              </p>
             </div>
-          </motion.div>
+          </motion.section>
           
-          {/* Right Sidebar - Stats & Selection */}
-          <motion.div 
-            className="lg:col-span-3 space-y-4"
+          {/* Right sidebar (grid column 3) - single card, same height as left and center */}
+          <motion.aside
+            className="network-right-sidebar"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
           >
+            <div className="network-panel-card p-4 space-y-4">
             {/* Selection Panel */}
             {selectionContext && (
-              <div className="cyber-panel p-4 border-cyber-glow/30">
+              <div className="cyber-panel p-5 border border-cyber-glow/25 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-cyber text-sm text-cyber-glow">SELECTED</span>
                   <button 
@@ -2057,6 +1987,53 @@ export default function Network() {
                       </button>
                     </div>
                     <p className="text-[10px] text-cyber-muted mb-2">{selectedChain.description}</p>
+
+                    {/* Chain metrics (same style as bridge card) */}
+                    {(selectedChain.tvl ?? selectedChain.monthlyVolume ?? selectedChain.dailyTransactions ?? selectedChain.avgTransferTime ?? selectedChain.fees) && (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 mb-3">
+                          {selectedChain.monthlyVolume != null && (
+                            <div className="p-2 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                              <p className="text-[9px] text-cyber-muted mb-0.5">Monthly Volume</p>
+                              <p className="text-sm font-cyber text-cyber-purple">{selectedChain.monthlyVolume}</p>
+                            </div>
+                          )}
+                          {selectedChain.tvl != null && (
+                            <div className="p-2 rounded bg-cyber-darker/60 border border-cyber-border/30">
+                              <p className="text-[9px] text-cyber-muted mb-0.5">Total Value Locked</p>
+                              <p className="text-sm font-cyber text-cyber-glow">{selectedChain.tvl}</p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                          {selectedChain.dailyTransactions != null && (
+                            <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                              <p className="text-[8px] text-cyber-muted">Daily Txns</p>
+                              <p className="text-xs font-cyber text-cyber-cyan">{selectedChain.dailyTransactions}</p>
+                            </div>
+                          )}
+                          {selectedChain.avgTransferTime != null && (
+                            <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                              <p className="text-[8px] text-cyber-muted">Avg Time</p>
+                              <p className="text-xs font-cyber text-cyber-green">{selectedChain.avgTransferTime}</p>
+                            </div>
+                          )}
+                          {selectedChain.fees != null && (
+                            <div className="p-2 rounded bg-cyber-darker/40 border border-cyber-border/20 text-center">
+                              <p className="text-[8px] text-cyber-muted">Fees</p>
+                              <p className="text-xs font-cyber text-cyber-yellow">{selectedChain.fees}</p>
+                            </div>
+                          )}
+                        </div>
+                        {(selectedChain.dataSource ?? selectedChain.dataAsOf) && (
+                          <p className="text-[8px] text-cyber-muted mb-2">
+                            Source: {selectedChain.dataSource ?? '—'}
+                            {selectedChain.dataAsOf && ` • Data as of ${selectedChain.dataAsOf}`}
+                          </p>
+                        )}
+                      </>
+                    )}
+
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div>
                         <p className="text-[9px] text-cyber-muted">Type</p>
@@ -2158,6 +2135,10 @@ export default function Network() {
                        className="px-2 py-1 rounded text-[9px] bg-cyber-green/20 text-cyber-green hover:bg-cyber-green/30">
                       XRPL EVM
                     </a>
+                    <a href="https://app.squidrouter.com" target="_blank" rel="noopener noreferrer"
+                       className="px-2 py-1 rounded text-[9px] bg-cyber-green/20 text-cyber-green hover:bg-cyber-green/30">
+                      Squid
+                    </a>
                     <a href="https://flare.network" target="_blank" rel="noopener noreferrer"
                        className="px-2 py-1 rounded text-[9px] bg-cyber-purple/20 text-cyber-purple hover:bg-cyber-purple/30">
                       Flare
@@ -2173,6 +2154,10 @@ export default function Network() {
                     <a href="https://www.therootnetwork.com" target="_blank" rel="noopener noreferrer"
                        className="px-2 py-1 rounded text-[9px] bg-cyber-yellow/20 text-cyber-yellow hover:bg-cyber-yellow/30">
                       Root Network
+                    </a>
+                    <a href="https://songbird.network" target="_blank" rel="noopener noreferrer"
+                       className="px-2 py-1 rounded text-[9px] bg-cyber-purple/20 text-cyber-purple hover:bg-cyber-purple/30">
+                      Songbird
                     </a>
                   </div>
                 </div>
@@ -2629,122 +2614,140 @@ export default function Network() {
                 </div>
               </motion.div>
             )}
-            
-            {/* Region Distribution */}
-            <div className="cyber-panel p-4">
-              <h3 className="font-cyber text-sm text-cyber-glow mb-4">REGION DISTRIBUTION</h3>
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={regionData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={35}
-                      outerRadius={60}
-                      dataKey="nodes"
-                      stroke="transparent"
-                    >
-                      {regionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="space-y-2 mt-4">
-                {regionData.map((region) => (
-                  <div key={region.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: region.color }} />
-                      <span className="text-xs text-cyber-text">{region.name}</span>
-                    </div>
-                    <span className="text-xs text-cyber-muted font-cyber">{region.nodes}</span>
-                  </div>
-                ))}
-              </div>
             </div>
-          </motion.div>
+          </motion.aside>
         </div>
-      </div>
 
-      {/* Network Topology Section */}
-      <NetworkTopologySection />
+        {/* Ledger Topology - single card, clear hierarchy */}
+        <LedgerTopologySection />
+
+        {/* Full Network Topology - all tabs (Validators, ILP, Corridors, Bridges & Chains) */}
+        <FullNetworkTopologySection />
+      </div>
     </div>
   )
 }
 
-// Network Topology Section Component
-function NetworkTopologySection() {
-  const { initialized, ledgers, connectors, corridors, initialize } = useILPStore();
+// ==================== LEDGER TOPOLOGY SECTION ====================
+function LedgerTopologySection() {
+  const initialize = useILPStore((s) => s.initialize)
+  const initialized = useILPStore((s) => s.initialized)
+  const ledgers = useILPStore((s) => s.ledgers)
+  const corridors = useILPStore((s) => s.corridors)
 
-  // Initialize ILP store on mount
   useEffect(() => {
-    if (!initialized || ledgers.length === 0) {
-      initialize();
-    }
-  }, [initialized, ledgers.length, initialize]);
+    if (!initialized) initialize()
+  }, [initialized, initialize])
 
-  // Stats
-  const activeCorridors = corridors.filter(c => c.status === 'active').length;
-  const avgTrust = connectors.length > 0 
-    ? connectors.reduce((sum, c) => sum + c.trust_score, 0) / connectors.length 
-    : 0;
+  const avgTrust = useMemo(() => {
+    if (corridors.length === 0) return 0
+    const connIds = new Set(corridors.map((c) => c.connector_id))
+    const store = useILPStore.getState()
+    const connectors = store.connectors
+    let sum = 0
+    let n = 0
+    connectors.forEach((c) => {
+      if (connIds.has(c.id)) {
+        sum += c.trust_score
+        n++
+      }
+    })
+    return n ? (sum / n) * 100 : 0
+  }, [corridors])
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
+    <motion.section
+      className="w-full block pb-8"
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
-      className="mt-8 px-4 lg:px-8"
+      transition={{ delay: 0.15 }}
     >
-      {/* Section Header */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-cyber-cyan/20 flex items-center justify-center">
-          <NetworkIcon className="w-5 h-5 text-cyber-cyan" />
-        </div>
-        <div>
-          <h2 className="font-cyber text-lg text-cyber-text">LEDGER TOPOLOGY</h2>
-          <p className="text-xs text-cyber-muted">
-            How XRPL connects to other networks • Trust-based corridor visualization
-          </p>
-        </div>
-        
-        {/* Quick Stats */}
-        <div className="ml-auto hidden md:flex items-center gap-4 px-4 py-2 cyber-panel">
-          <div className="text-center">
-            <p className="text-[10px] text-cyber-muted">Ledgers</p>
-            <p className="font-cyber text-sm text-cyber-text">{ledgers.length}</p>
+      <div className="cyber-panel p-6 rounded-2xl border border-cyber-border/80 overflow-visible">
+        <div className="flex flex-wrap items-center gap-4 mb-5 pb-4 border-b border-cyber-border/60 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-cyber-glow/10">
+              <Link2 size={20} className="text-cyber-glow" />
+            </div>
+            <div>
+              <h2 className="font-cyber text-lg text-cyber-text tracking-tight">Ledger topology</h2>
+              <p className="text-xs text-cyber-muted mt-0.5">
+                How XRPL connects to other networks · Trust-based corridors
+              </p>
+            </div>
           </div>
-          <div className="w-px h-6 bg-cyber-border" />
-          <div className="text-center">
-            <p className="text-[10px] text-cyber-muted">Corridors</p>
-            <p className="font-cyber text-sm text-cyber-green">{activeCorridors}</p>
-          </div>
-          <div className="w-px h-6 bg-cyber-border" />
-          <div className="text-center">
-            <p className="text-[10px] text-cyber-muted">Avg Trust</p>
-            <p className={`font-cyber text-sm ${avgTrust > 0.7 ? 'text-cyber-green' : avgTrust > 0.5 ? 'text-cyber-yellow' : 'text-cyber-red'}`}>
-              {(avgTrust * 100).toFixed(0)}%
-            </p>
-          </div>
+          {ledgers.length > 0 && corridors.length > 0 && (
+            <div className="flex flex-wrap gap-3 ml-auto">
+              <span className="px-3 py-1.5 rounded-lg bg-cyber-darker/50 text-xs text-cyber-muted">
+                <span className="text-cyber-glow font-medium">{ledgers.length}</span> ledgers
+              </span>
+              <span className="px-3 py-1.5 rounded-lg bg-cyber-darker/50 text-xs text-cyber-muted">
+                <span className="text-cyber-purple font-medium">{corridors.length}</span> corridors
+              </span>
+              <span className="px-3 py-1.5 rounded-lg bg-cyber-darker/50 text-xs text-cyber-muted">
+                <span className="text-cyber-green font-medium">{avgTrust.toFixed(0)}%</span> avg trust
+              </span>
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Connector Map */}
-      <div className="cyber-panel p-2" style={{ minHeight: '400px', maxHeight: '500px' }}>
-        <ConnectorMap
-          onLedgerClick={(ledger) => console.log('Clicked ledger:', ledger.name)}
-          onCorridorClick={(corridor) => console.log('Clicked corridor:', corridor.id)}
-        />
-      </div>
-
-      {/* Philosophy Footer */}
-      <div className="mt-4 text-center">
-        <p className="text-[10px] text-cyber-muted italic">
-          "ILP does not connect blockchains. Connectors do. Trust is a topology, not a claim."
+        <p className="text-[11px] text-cyber-muted mb-4 flex-shrink-0">
+          Nodes are ledgers or networks (on-ledger, off-ledger, hybrid). Lines are corridors; click a ledger or corridor for details. Trust % and explanations are shown below.
+        </p>
+        {initialized && ledgers.length > 0 ? (
+          <div className="rounded-xl border border-cyber-border/50 bg-cyber-darker/30 overflow-visible">
+            <ConnectorMap
+              onLedgerClick={() => {}}
+              onCorridorClick={() => {}}
+            />
+          </div>
+        ) : (
+          <div className="py-16 text-center text-cyber-muted text-sm">
+            Loading topology…
+          </div>
+        )}
+        <p className="text-[11px] text-cyber-muted/90 mt-5 pt-4 border-t border-cyber-border/40 italic">
+          ILP does not connect blockchains. Connectors do. Trust is a topology, not a claim.
         </p>
       </div>
-    </motion.div>
-  );
+    </motion.section>
+  )
+}
+
+// ==================== FULL NETWORK TOPOLOGY SECTION ====================
+function FullNetworkTopologySection() {
+  const initialize = useILPStore((s) => s.initialize)
+  const initialized = useILPStore((s) => s.initialized)
+
+  useEffect(() => {
+    if (!initialized) initialize()
+  }, [initialized, initialize])
+
+  return (
+    <motion.section
+      className="w-full block mt-8"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2 }}
+    >
+      <div className="cyber-panel p-6 rounded-2xl border border-cyber-border/80 overflow-visible">
+        <div className="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-cyber-border/60">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-cyber-purple/10">
+              <Route size={20} className="text-cyber-purple" />
+            </div>
+            <div>
+              <h2 className="font-cyber text-lg text-cyber-text tracking-tight">Full network topology</h2>
+              <p className="text-xs text-cyber-muted mt-0.5">
+                One graph from all Network tabs: validators, ILP ledgers, payment corridors, ODL partners, bridges &amp; chains
+              </p>
+            </div>
+          </div>
+        </div>
+        {initialized ? (
+          <UnifiedNetworkTopology />
+        ) : (
+          <div className="py-12 text-center text-cyber-muted text-sm">Loading…</div>
+        )}
+      </div>
+    </motion.section>
+  )
 }

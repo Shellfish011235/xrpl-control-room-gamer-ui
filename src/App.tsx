@@ -1,7 +1,24 @@
+import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import Navigation from './components/Navigation'
+
+/** Slower scroll speed site-wide so options in scrollable boxes are easier to see. */
+const SCROLL_SPEED_FACTOR = 0.4
+
+function getScrollableElement(el: HTMLElement | null): HTMLElement | null {
+  while (el && el !== document.body) {
+    const { overflowY, overflowX, overflow } = getComputedStyle(el)
+    const canScrollY = el.scrollHeight > el.clientHeight
+    const canScrollX = el.scrollWidth > el.clientWidth
+    const scrollableY = (overflowY === 'auto' || overflowY === 'scroll' || overflow === 'auto' || overflow === 'scroll') && canScrollY
+    const scrollableX = (overflowX === 'auto' || overflowX === 'scroll' || overflow === 'auto' || overflow === 'scroll') && canScrollX
+    if (scrollableY || scrollableX) return el
+    el = el.parentElement
+  }
+  return null
+}
 import Home from './pages/Home'
 import Network from './pages/Network'
 import Underworld from './pages/Underworld'
@@ -23,6 +40,22 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  useEffect(() => {
+    function onWheel(e: WheelEvent) {
+      const scrollable = getScrollableElement(e.target as HTMLElement)
+      if (!scrollable) return
+      const deltaY = e.deltaY * SCROLL_SPEED_FACTOR
+      const deltaX = e.deltaX * SCROLL_SPEED_FACTOR
+      if (deltaY !== 0 || deltaX !== 0) {
+        e.preventDefault()
+        scrollable.scrollTop += deltaY
+        scrollable.scrollLeft += deltaX
+      }
+    }
+    document.addEventListener('wheel', onWheel, { passive: false, capture: true })
+    return () => document.removeEventListener('wheel', onWheel, { capture: true })
+  }, [])
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>

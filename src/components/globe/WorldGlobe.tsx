@@ -89,6 +89,9 @@ const regulatoryColors: Record<string, string> = {
   unclear: 'rgba(100, 116, 139, 0.3)'    // muted
 };
 
+/** Canonical map view: same center/zoom on every Network lens so alignment is consistent */
+const GLOBE_CANONICAL_VIEW = { coordinates: [0, 20] as [number, number], zoom: 1 };
+
 interface WorldGlobeProps {
   className?: string;
 }
@@ -103,11 +106,13 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
     liveNodes,
     showLiveData,
   } = useGlobeStore();
-  const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
-    coordinates: [20, 15],  // Slightly offset to show more corridors
-    zoom: 1.2
-  });
-  const [mapLocked, setMapLocked] = useState(true); // Map locked by default - prevents accidental panning
+  const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>(GLOBE_CANONICAL_VIEW);
+  const [mapLocked, setMapLocked] = useState(true); // Map locked by default
+
+  // Reset map to canonical view when lens changes so every tab shows the same alignment
+  useEffect(() => {
+    setPosition(GLOBE_CANONICAL_VIEW);
+  }, [activeLens]);
   const [hoveredValidator, setHoveredValidator] = useState<LiveValidatorMarker | null>(null);
   const [hoveredNode, setHoveredNode] = useState<LiveNodeMarker | null>(null);
   const [hoveredConnector, setHoveredConnector] = useState<ILPConnectorInstance | null>(null);
@@ -269,7 +274,7 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
       return 'rgba(0, 212, 255, 0.15)';
     }
     
-    return '#0d1526'; // cyber-navy
+    return '#132238'; // visible land (slightly lighter than background so map reads clearly)
   }, [activeLens, selection, hubs]);
   
   // Filter corridors by lens relevance
@@ -304,7 +309,7 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
   const handleReset = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setPosition({ coordinates: [0, 20], zoom: 1 });
+    setPosition(GLOBE_CANONICAL_VIEW);
     clearSelection();
   }, [clearSelection]);
   
@@ -367,33 +372,22 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
       />
       
       <ComposableMap
-        projection="geoEqualEarth"
+        projection="geoMercator"
         projectionConfig={{
-          scale: 140,
-          center: [0, 0]
+          scale: 120
         }}
-        style={{ 
-          width: '100%', 
-          height: '100%',
-          maxHeight: '500px'
-        }}
+        style={{ width: '100%', height: '100%' }}
       >
         <ZoomableGroup
           center={position.coordinates}
           zoom={position.zoom}
           onMoveEnd={({ coordinates, zoom }: { coordinates: [number, number]; zoom: number }) => {
             if (!mapLocked) {
-              // Limit movement range
-              const clampedCoords: [number, number] = [
-                Math.max(-180, Math.min(180, coordinates[0])),
-                Math.max(-60, Math.min(70, coordinates[1]))
-              ];
-              setPosition({ coordinates: clampedCoords, zoom: Math.min(zoom, 3) });
+              setPosition({ coordinates, zoom });
             }
           }}
           minZoom={1}
-          maxZoom={3}
-          translateExtent={[[-200, -100], [1200, 600]]}
+          maxZoom={8}
         >
           {/* Countries */}
           <Geographies geography={currentGeoUrl}>
@@ -857,6 +851,19 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
           CLEAR SELECTION
         </motion.button>
       )}
+      
+      {/* Lens at a glance - uses central space, reduces empty feel */}
+      <div 
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-lg border border-cyber-border/60 bg-cyber-darker/90 backdrop-blur-sm z-10 pointer-events-none flex items-center gap-3 text-[10px] font-cyber tracking-wide"
+        style={{ color: lensColor }}
+      >
+        <span>{hubs.length} hubs</span>
+        <span className="text-cyber-muted">•</span>
+        <span>{corridors.length} corridors</span>
+        <span className="text-cyber-muted">•</span>
+        <span className="text-cyber-muted">Lens:</span>
+        <span>{lensMetadata[activeLens].label}</span>
+      </div>
       
       {/* Scan lines effect */}
       <div className="absolute inset-0 pointer-events-none scanlines opacity-20" />

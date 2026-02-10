@@ -99,6 +99,18 @@ export interface XRPLConnectedChain {
   features: string[];
   useCases: string[];
   tvl?: string;
+  /** Estimated monthly volume (e.g. "~$93M (30d)") */
+  monthlyVolume?: string;
+  /** Estimated daily transactions */
+  dailyTransactions?: string;
+  /** Average transfer/finality time (e.g. "2-5 min" or "~5s") */
+  avgTransferTime?: string;
+  /** Fee description (e.g. "0.1-0.2%") */
+  fees?: string;
+  /** e.g. "DefiLlama" | "Chain explorer" */
+  dataSource?: string;
+  /** e.g. "Feb 7, 2026" */
+  dataAsOf?: string;
   status: ProjectStatus;
 }
 
@@ -349,11 +361,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Brazil', countryCode: 'BR', city: 'São Paulo', coordinates: [-46.6333, -23.5505] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$1.2B (est.)',
     partners: ['bitso'],
-    description: 'Expanding corridor serving Central and South American markets.',
+    description: 'Expanding corridor serving Central and South American markets. Total market (World Bank/central banks); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
     growthYoY: '+42%',
+    dataSource: 'World Bank / Banxico / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   
   // Asia Pacific
@@ -381,11 +396,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Vietnam', countryCode: 'VN', city: 'Ho Chi Minh City', coordinates: [106.6297, 10.8231] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$120M (est.)',
     partners: ['sbi-remit'],
-    description: 'Growing corridor for Vietnamese workers in Japan.',
+    description: 'Growing corridor for Vietnamese workers in Japan. Total market (World Bank/SBV); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
     growthYoY: '+38%',
+    dataSource: 'World Bank / SBV / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'jp-id',
@@ -394,10 +412,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Indonesia', countryCode: 'ID', city: 'Jakarta', coordinates: [106.8456, -6.2088] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$180M (est.)',
+    growthYoY: '~4%',
     partners: ['sbi-remit'],
-    description: 'Expanding Japanese-Indonesian remittance route.',
+    description: 'Expanding Japanese-Indonesian remittance route. Total market (World Bank/BI); ODL share is a subset; no public corridor-level breakdown from Ripple.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / BI / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'sg-ph',
@@ -406,10 +428,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Philippines', countryCode: 'PH', coordinates: [120.9842, 14.5995] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$220M (est.)',
+    growthYoY: '~5%',
     partners: ['tranglo', 'coins-ph', 'nium'],
-    description: 'ASEAN remittance corridor via Tranglo network.',
+    description: 'ASEAN remittance corridor via Tranglo network. Total market (World Bank/BSP); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / BSP / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'sg-my',
@@ -418,10 +444,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Malaysia', countryCode: 'MY', city: 'Kuala Lumpur', coordinates: [101.6869, 3.139] },
     type: 'b2b',
     volume: 'medium',
+    monthlyVolume: '~$350M (est.)',
+    growthYoY: '~6%',
     partners: ['tranglo'],
-    description: 'High-frequency business payments between Singapore and Malaysia.',
+    description: 'High-frequency business payments between Singapore and Malaysia. B2B flow estimates; ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'Partner estimates / trade data',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'sg-in',
@@ -430,11 +460,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'India', countryCode: 'IN', city: 'Mumbai', coordinates: [72.8777, 19.076] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$280M (est.)',
     partners: ['nium', 'tranglo'],
-    description: 'Tech sector and worker remittances to India.',
+    description: 'Tech sector and worker remittances to India. Total market (RBI/World Bank); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
     growthYoY: '+45%',
+    dataSource: 'World Bank / RBI / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'au-ph',
@@ -443,10 +476,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Philippines', countryCode: 'PH', coordinates: [120.9842, 14.5995] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$95M (est.)',
+    growthYoY: '~3%',
     partners: ['novatti', 'coins-ph'],
-    description: 'Filipino diaspora remittances from Australia.',
+    description: 'Filipino diaspora remittances from Australia. Total market (World Bank/BSP); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / BSP / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'kr-ph',
@@ -455,10 +492,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Philippines', countryCode: 'PH', coordinates: [120.9842, 14.5995] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$75M (est.)',
+    growthYoY: '~4%',
     partners: ['sentbe', 'coins-ph'],
-    description: 'Korean worker and tourist remittances to Philippines.',
+    description: 'Korean worker and tourist remittances to Philippines. Total market (World Bank/BSP); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / BSP / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   
   // Middle East
@@ -469,11 +510,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Pakistan', countryCode: 'PK', city: 'Karachi', coordinates: [67.0011, 24.8607] },
     type: 'remittance',
     volume: 'high',
+    monthlyVolume: '~$1.8B (est.)',
     partners: ['lulu-exchange'],
-    description: 'Major Gulf worker remittance corridor to Pakistan.',
+    description: 'Major Gulf worker remittance corridor to Pakistan. Total market (World Bank/SBP); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
     growthYoY: '+31%',
+    dataSource: 'World Bank / SBP / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'ae-in',
@@ -482,10 +526,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'India', countryCode: 'IN', city: 'Mumbai', coordinates: [72.8777, 19.076] },
     type: 'remittance',
     volume: 'high',
+    monthlyVolume: '~$2.1B (est.)',
+    growthYoY: '~5%',
     partners: ['lulu-exchange'],
-    description: 'Massive Indian diaspora remittance corridor from Gulf.',
+    description: 'Massive Indian diaspora remittance corridor from Gulf. Total market (World Bank/RBI); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / RBI / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'ae-ph',
@@ -494,10 +542,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Philippines', countryCode: 'PH', coordinates: [120.9842, 14.5995] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$140M (est.)',
+    growthYoY: '~4%',
     partners: ['lulu-exchange', 'coins-ph'],
-    description: 'OFW remittances from UAE to Philippines.',
+    description: 'OFW remittances from UAE to Philippines. Total market (World Bank/BSP); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / BSP / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'ae-bd',
@@ -506,10 +558,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Bangladesh', countryCode: 'BD', city: 'Dhaka', coordinates: [90.4125, 23.8103] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$1.4B (est.)',
+    growthYoY: '~6%',
     partners: ['lulu-exchange'],
-    description: 'Bangladeshi worker remittances from Gulf region.',
+    description: 'Bangladeshi worker remittances from Gulf region. Total market (World Bank/BB); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / Bangladesh Bank / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   
   // Europe
@@ -520,9 +576,13 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'UK', countryCode: 'GB', city: 'London', coordinates: [-0.1276, 51.5074] },
     type: 'b2b',
     volume: 'medium',
+    monthlyVolume: '~$800M (est.)',
+    growthYoY: '~2%',
     partners: ['azimo'],
-    description: 'Post-Brexit cross-channel business and personal payments.',
+    description: 'Post-Brexit cross-channel business and personal payments. B2B and remittance flow estimates; ODL share is a subset.',
     xrpSettlement: true,
+    dataSource: 'ECB / BoE / partner estimates',
+    dataAsOf: 'Feb 2026',
     odlEnabled: true,
   },
   {
@@ -532,10 +592,14 @@ export const paymentCorridors: PaymentCorridor[] = [
     to: { country: 'Philippines', countryCode: 'PH', coordinates: [120.9842, 14.5995] },
     type: 'remittance',
     volume: 'medium',
+    monthlyVolume: '~$110M (est.)',
+    growthYoY: '~3%',
     partners: ['azimo', 'coins-ph'],
-    description: 'European diaspora remittances to Philippines.',
+    description: 'European diaspora remittances to Philippines. Total market (World Bank/BSP); ODL share is a subset.',
     xrpSettlement: true,
     odlEnabled: true,
+    dataSource: 'World Bank / BSP / partner estimates',
+    dataAsOf: 'Feb 2026',
   },
   {
     id: 'au-eu',
@@ -595,6 +659,13 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
       'Fast finality',
     ],
     useCases: ['DeFi', 'NFTs', 'Gaming', 'dApps'],
+    tvl: '~$1.4M',
+    monthlyVolume: '~$2M (30d est.)',
+    dailyTransactions: '—',
+    avgTransferTime: '~5s finality',
+    fees: 'Gas in XRP',
+    dataSource: 'DefiLlama / chain',
+    dataAsOf: 'Feb 2026',
     status: 'mainnet',
   },
   {
@@ -689,7 +760,13 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
       'Data protocols',
     ],
     useCases: ['DeFi', 'Oracles', 'Cross-chain', 'Data availability'],
-    tvl: '$150M',
+    tvl: '~$150M',
+    monthlyVolume: '~$45M (30d est.)',
+    dailyTransactions: '—',
+    avgTransferTime: '~1s finality',
+    fees: 'Gas in FLR',
+    dataSource: 'DefiLlama',
+    dataAsOf: 'Feb 2026',
     status: 'mainnet',
   },
   {
@@ -773,7 +850,13 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
       'Low latency',
     ],
     useCases: ['Enterprise', 'Tokenization', 'Cross-chain', 'CBDCs'],
-    tvl: '$50M',
+    tvl: '~$50M',
+    monthlyVolume: '—',
+    dailyTransactions: '—',
+    avgTransferTime: '~3–5s',
+    fees: 'CORE / gas',
+    dataSource: 'DefiLlama',
+    dataAsOf: 'Feb 2026',
     status: 'mainnet',
   },
   {
@@ -816,6 +899,13 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
       'High performance',
     ],
     useCases: ['Smart contracts', 'DeFi', 'Automated transactions'],
+    tvl: '—',
+    monthlyVolume: '—',
+    dailyTransactions: '—',
+    avgTransferTime: '~3–5s',
+    fees: 'XAH gas',
+    dataSource: 'Chain explorer',
+    dataAsOf: 'Feb 2026',
     status: 'mainnet',
   },
   {
@@ -874,6 +964,26 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
 // ==================== CROSS-CHAIN BRIDGES ====================
 
 export const crossChainBridges: CrossChainBridge[] = [
+  {
+    id: 'squid',
+    name: 'Squid Router',
+    type: 'lock-mint',
+    chains: ['xrpl-evm-sidechain', 'ethereum', 'solana', 'cosmos', 'bnb-chain', '40+ chains'],
+    supportedAssets: ['XRP', 'eXRP', 'XRPL tokens', 'Multi-chain'],
+    docsUrl: 'https://docs.squidrouter.com',
+    website: 'https://app.squidrouter.com',
+    status: 'mainnet',
+    tvl: '~$147M',
+    monthlyVolume: '~$93M (30d)',
+    dailyTransactions: '—',
+    avgTransferTime: '2-5 min',
+    fees: '0.1-0.2%',
+    description: 'Cross-chain DEX aggregator and bridge. Primary route for XRPL EVM Sidechain to 40+ chains. Swap and bridge in one click. Built on Axelar GMP.',
+    features: ['XRPL EVM Sidechain support', '40+ chain connectivity', 'Single-click swaps', 'Unified liquidity', 'DEX aggregation'],
+    securityModel: 'Uses Axelar and partner bridge security',
+    dataSource: 'DefiLlama',
+    dataAsOf: 'Feb 2026',
+  },
   {
     id: 'axelar-network',
     name: 'Axelar Network',
@@ -1099,14 +1209,29 @@ export function getAllGitHubRepos(): GitHubRepo[] {
   return xrplConnectedChains.flatMap(c => c.githubRepos);
 }
 
+/** Parse corridor monthlyVolume string to numeric value in millions (for aggregation). Handles ~, $, B, M, (est.), etc. */
+function parseMonthlyVolumeToMillions(value: string): number {
+  if (!value || value === '—' || value === '–') return 0;
+  const cleaned = value.replace(/[~$,\s]/g, '').replace(/\([^)]*\)/g, ''); // remove ~ $ , spaces, (est.) etc.
+  const num = parseFloat(cleaned.replace(/[^\d.]/g, '')); // digits and dot only
+  if (Number.isNaN(num)) return 0;
+  if (cleaned.toUpperCase().includes('B')) return num * 1000; // billions -> millions
+  return num; // already millions or raw number
+}
+
 export function getCorridorStats() {
   const totalVolume = paymentCorridors
-    .filter(c => c.monthlyVolume)
+    .filter(c => c.monthlyVolume && c.monthlyVolume !== '—' && c.monthlyVolume !== '–')
     .reduce((sum, c) => {
-      const vol = parseFloat(c.monthlyVolume!.replace(/[$B,]/g, ''));
-      return sum + (c.monthlyVolume!.includes('B') ? vol * 1000 : vol);
+      const vol = parseMonthlyVolumeToMillions(c.monthlyVolume!);
+      return sum + vol;
     }, 0);
-  
+
+  const estimatedMonthlyVolume =
+    totalVolume > 0 && Number.isFinite(totalVolume)
+      ? `$${(totalVolume / 1000).toFixed(1)}B+`
+      : '—';
+
   return {
     totalCorridors: paymentCorridors.length,
     highVolumeCorridors: paymentCorridors.filter(c => c.volume === 'high').length,
@@ -1116,7 +1241,7 @@ export function getCorridorStats() {
     activePartners: odlPartners.filter(p => p.status === 'active').length,
     connectedChains: xrplConnectedChains.filter(c => c.status === 'mainnet').length,
     activeBridges: crossChainBridges.filter(b => b.status === 'mainnet').length,
-    estimatedMonthlyVolume: `$${(totalVolume / 1000).toFixed(1)}B+`,
+    estimatedMonthlyVolume,
   };
 }
 

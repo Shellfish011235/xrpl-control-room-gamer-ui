@@ -118,6 +118,8 @@ export interface CostComparison {
 // MICROPAYMENT STORE
 // =============================================================================
 
+const _simulationIntervalIds: number[] = [];
+
 interface MicropaymentState {
   streams: MicropaymentStream[];
   packets: PaymentPacket[];
@@ -304,10 +306,31 @@ export const useMicropaymentStore = create<MicropaymentState>((set, get) => ({
   },
 
   startSimulation: () => {
+    const streams = createDemoStreams();
+    const intervalIds: number[] = [];
+    streams.forEach(stream => {
+      const id = setInterval(() => {
+        const state = get();
+        const s = state.streams.find(x => x.id === stream.id);
+        if (!s || s.state.status !== 'active') return;
+        get().recordPacket({
+          streamId: s.id,
+          timestamp: Date.now(),
+          amount: Math.max(1, Math.floor((s.config.ratePerSecond || 100) / 10)),
+          currency: s.config.currency,
+          fulfilled: Math.random() > 0.002,
+          latencyMs: 5 + Math.random() * 25,
+        });
+      }, 100);
+      intervalIds.push(id);
+    });
+    _simulationIntervalIds.push(...intervalIds);
     set({ isSimulating: true });
   },
 
   stopSimulation: () => {
+    _simulationIntervalIds.forEach(id => clearInterval(id));
+    _simulationIntervalIds.length = 0;
     set({ isSimulating: false });
   },
 

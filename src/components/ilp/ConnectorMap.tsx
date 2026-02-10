@@ -141,32 +141,43 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate positions for all ledgers
+  // Calculate positions: use topology ledger positions when available (restores original layout).
+  // Ensure every ledger referenced by any corridor gets a position so no corridor edge is ever skipped.
   const positions = useMemo(() => {
     const pos: Record<string, { x: number; y: number }> = {};
-    const center = { x: 400, y: 200 };
+    const center = { x: 400, y: 240 };
+    const scale = 3.8; // topology coords ~ -60..60, -50..50 -> fit viewBox 800x480 with margin
+
+    const hasAnyPosition = ledgers.some(l => l.position != null && typeof l.position.x === 'number');
+    if (hasAnyPosition) {
+      ledgers.forEach(ledger => {
+        const p = ledger.position;
+        if (p != null && typeof p.x === 'number' && typeof p.y === 'number') {
+          pos[ledger.id] = {
+            x: center.x + p.x * scale,
+            y: center.y - p.y * scale, // flip y so topology up = SVG up
+          };
+        }
+      });
+    }
+
+    // Fallback: XRPL at center, others in a circle (when positions missing)
+    if (!pos['xrpl']) pos['xrpl'] = center;
+    const others = ledgers.filter(l => l.id !== 'xrpl' && !pos[l.id]);
     const radius = 150;
-    
-    // XRPL at center
-    pos['xrpl'] = center;
-    
-    // Other ledgers in a circle
-    const others = ledgers.filter(l => l.id !== 'xrpl');
     others.forEach((ledger, i) => {
-      const angle = (i / others.length) * Math.PI * 2 - Math.PI / 2;
+      const angle = (i / Math.max(1, others.length)) * Math.PI * 2 - Math.PI / 2;
       pos[ledger.id] = {
         x: center.x + Math.cos(angle) * radius,
         y: center.y + Math.sin(angle) * radius,
       };
     });
-    
-    // Debug: log ledger positions
-    console.log('[ConnectorMap] Ledgers:', ledgers.map(l => l.id));
-    console.log('[ConnectorMap] Positions:', Object.keys(pos));
-    console.log('[ConnectorMap] XRPL pos:', pos['xrpl']);
-    console.log('[ConnectorMap] EVM pos:', pos['xrpl_evm']);
-    console.log('[ConnectorMap] Corridors:', corridors.map(c => `${c.from_ledger} → ${c.to_ledger}`));
-    
+    // Ensure every corridor endpoint has a position (so we never skip drawing an edge)
+    corridors.forEach(c => {
+      if (!pos[c.from_ledger]) pos[c.from_ledger] = { ...center };
+      if (!pos[c.to_ledger]) pos[c.to_ledger] = { ...center };
+    });
+
     return pos;
   }, [ledgers, corridors]);
 
@@ -185,7 +196,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
   // Loading state
   if (ledgers.length === 0) {
     return (
-      <div className="w-full h-full min-h-[500px] bg-cyber-darker rounded-lg border border-cyber-border flex items-center justify-center">
+      <div className="w-full h-full min-h-0 bg-cyber-darker rounded-lg border border-cyber-border flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-2 border-cyber-cyan border-t-transparent rounded-full mx-auto mb-4" />
           <p className="text-cyber-muted">Loading ILP Network...</p>
@@ -201,13 +212,13 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
   };
 
   return (
-    <div className="w-full h-full min-h-[500px] bg-cyber-darker rounded-lg border border-cyber-border p-4 overflow-auto">
-      {/* Header */}
-      <div className="mb-4 pb-2 border-b border-cyber-border flex items-center justify-between">
+    <div className="w-full min-h-[560px] bg-transparent rounded-xl overflow-visible">
+      {/* Header - compact */}
+      <div className="mb-4 pb-3 border-b border-cyber-border/60 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="font-cyber text-cyber-cyan">ILP NETWORK TOPOLOGY</h3>
-          <p className="text-xs text-cyber-muted">
-            {ledgers.length} Ledgers • {connectors.length} Connectors • {corridors.length} Corridors • Lens: {activeLens}
+          <h3 className="font-cyber text-sm text-cyber-cyan tracking-tight">ILP network topology</h3>
+          <p className="text-[11px] text-cyber-muted mt-0.5">
+            {ledgers.length} ledgers · {connectors.length} connectors · {corridors.length} corridors · {activeLens} lens
           </p>
         </div>
         {activeRoute && (
@@ -217,8 +228,8 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
         )}
       </div>
 
-      {/* SVG Map */}
-      <svg width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet" className="bg-cyber-darker/50 rounded" style={{ maxHeight: '450px' }}>
+      {/* SVG Map - viewBox with padding so all nodes (incl. FED, BANKS) and legends have clear space */}
+      <svg width="100%" height="500" viewBox="0 0 800 480" preserveAspectRatio="xMidYMid meet" className="bg-cyber-darker/50 rounded overflow-visible shrink-0">
         {/* Definitions */}
         <defs>
           {/* Background grid */}
@@ -277,7 +288,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           })}
         </defs>
         
-        <rect width="800" height="400" fill="url(#grid)" opacity="0.3" />
+        <rect width="800" height="480" fill="url(#grid)" opacity="0.3" />
 
         {/* Risk Fog Overlay (for Fog lens) */}
         {(activeLens === 'fog' || showRiskFog) && (
@@ -300,20 +311,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           </g>
         )}
 
-        {/* XRPL to EVM Sidechain connection */}
-        {positions['xrpl'] && positions['xrpl_evm'] && (
-          <line
-            x1={positions['xrpl'].x}
-            y1={positions['xrpl'].y}
-            x2={positions['xrpl_evm'].x}
-            y2={positions['xrpl_evm'].y}
-            stroke="#00D4FF"
-            strokeWidth={3}
-            strokeOpacity={0.8}
-          />
-        )}
-
-        {/* Corridors (connections) */}
+        {/* Corridors (connections) - all connections drawn from corridor data so nothing is missing */}
         <g className="corridors">
           {corridors.map(corridor => {
             const fromPos = positions[corridor.from_ledger];
@@ -333,6 +331,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
             const dx = toPos.x - fromPos.x;
             const dy = toPos.y - fromPos.y;
             const length = Math.sqrt(dx * dx + dy * dy);
+            if (length < 1e-6) return null; // skip zero-length (same position)
             const nodeRadius = 20;
             const startOffset = nodeRadius / length;
             const endOffset = (length - nodeRadius) / length;
@@ -560,8 +559,8 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           })}
         </g>
 
-        {/* Lens Legend */}
-        <g transform="translate(10, 360)">
+        {/* Lens Legend - bottom-left so it doesn't cover nodes (FED, etc.) */}
+        <g transform="translate(10, 432)">
           <rect x="0" y="-10" width="200" height="45" fill="#0a0a1a" opacity="0.9" rx="4" />
           <text x="5" y="5" fill="#888" fontSize="9" fontFamily="monospace">
             {activeLens.toUpperCase()} LENS
@@ -604,8 +603,8 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           )}
         </g>
         
-        {/* Direction Legend */}
-        <g transform="translate(620, 360)">
+        {/* Direction Legend - bottom-right so it doesn't cover the graph */}
+        <g transform="translate(620, 432)">
           <rect x="0" y="-10" width="170" height="45" fill="#0a0a1a" opacity="0.9" rx="4" />
           <text x="5" y="5" fill="#888" fontSize="9" fontFamily="monospace">DIRECTION</text>
           <circle cx="15" cy="22" r="5" fill="#0a0a1a" stroke="#888" />
@@ -730,32 +729,43 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
         </div>
       )}
 
-      {/* Trust Legend - show only in Trust lens */}
-      {activeLens === 'trust' && (
-        <div className="mt-4 p-3 rounded border border-cyber-border bg-cyber-darker/50">
-          <p className="text-xs text-cyber-muted mb-2 font-cyber">TRUST LEVEL LEGEND</p>
-          <div className="flex flex-wrap gap-4 text-[10px]">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#00FF88' }} />
-              <span className="text-cyber-text">High Trust (&gt;70%)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FFD700' }} />
-              <span className="text-cyber-text">Medium Trust (40-70%)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF4444' }} />
-              <span className="text-cyber-text">Low Trust (&lt;40%)</span>
-            </div>
+      {/* Trust & domain legend - always visible so the topology is self-explanatory */}
+      <div className="mt-4 p-3 rounded border border-cyber-border bg-cyber-darker/50">
+        <p className="text-xs text-cyber-muted mb-2 font-cyber">TRUST &amp; DOMAIN</p>
+        <div className="flex flex-wrap gap-4 text-[10px] mb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#00FF88' }} />
+            <span className="text-cyber-text">High Trust (&gt;70%)</span>
           </div>
-          <p className="text-[9px] text-cyber-muted mt-2">
-            Trust scores are based on: security track record, decentralization, smart contract audits, counterparty risk, and operational history.
-          </p>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FFD700' }} />
+            <span className="text-cyber-text">Medium Trust (40-70%)</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF4444' }} />
+            <span className="text-cyber-text">Low Trust (&lt;40%)</span>
+          </div>
+          <span className="text-cyber-muted">·</span>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#00D4FF' }} />
+            <span className="text-cyber-text">On-ledger</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#FF6B35' }} />
+            <span className="text-cyber-text">Off-ledger</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#A855F7' }} />
+            <span className="text-cyber-text">Hybrid</span>
+          </div>
         </div>
-      )}
+        <p className="text-[9px] text-cyber-muted">
+          Trust: security track record, decentralization, smart contract audits, counterparty risk, operational history. Domain: where value is settled (on-chain, off-chain, or both).
+        </p>
+      </div>
 
-      {/* Ledger List */}
-      <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+      {/* Ledger cards - 5 columns so 10 items = 2 even rows, no awkward gap */}
+      <div className="mt-5 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {ledgers.map(ledger => {
           const color = getLedgerColor(ledger, activeLens, connectors);
           const isSelected = selectedLedger === ledger.id;
@@ -789,10 +799,12 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
         })}
       </div>
 
-      {/* Corridor Stats */}
-      <div className="mt-4 pt-4 border-t border-cyber-border">
-        <p className="text-xs text-cyber-muted mb-2">CORRIDORS {activeLens === 'trust' && '(Trust Lens)'}</p>
-        <div className="space-y-2">
+      {/* Corridors - wrapped pills, no empty feel */}
+      <div className="mt-5 pt-5 border-t border-cyber-border/60">
+        <p className="text-[10px] font-semibold text-cyber-muted uppercase tracking-wider mb-3">
+          Corridors {activeLens === 'trust' && '(trust %)'}
+        </p>
+        <div className="flex flex-wrap gap-2">
           {corridors.map(corridor => {
             const style = getCorridorStyle(corridor, activeLens, connectors, ledgers);
             const connector = connectors.find(c => c.id === corridor.connector_id);
@@ -802,32 +814,31 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
             const trustReason = connector?.trust_reason;
             
             return (
-              <div key={corridor.id} className="space-y-1">
+              <div key={corridor.id} className="flex flex-col gap-0.5">
                 <span 
-                  className={`px-2 py-1 rounded text-[10px] cursor-pointer transition-all inline-flex items-center gap-1 ${
+                  className={`px-2.5 py-1.5 rounded-lg text-[11px] cursor-pointer transition-all inline-flex items-center gap-1 w-fit ${
                     isOnRoute 
-                      ? 'bg-cyber-green/30 text-cyber-green border-2 border-cyber-green' 
+                      ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/50' 
                       : isRelatedToSelected
-                      ? 'bg-cyber-cyan/20 border-2 border-cyber-cyan text-cyber-cyan'
-                      : 'border'
+                      ? 'bg-cyber-cyan/15 border border-cyber-cyan/50 text-cyber-cyan'
+                      : 'bg-cyber-darker/40 border border-cyber-border/60 hover:border-cyber-border'
                   }`}
                   style={{ 
                     borderColor: isOnRoute || isRelatedToSelected ? undefined : style.color,
                     color: isOnRoute || isRelatedToSelected ? undefined : style.color,
-                    backgroundColor: isOnRoute || isRelatedToSelected ? undefined : `${style.color}15`,
+                    backgroundColor: isOnRoute || isRelatedToSelected ? undefined : `${style.color}12`,
                   }}
                   onClick={() => onCorridorClick?.(corridor)}
                 >
-                  {corridor.from_ledger} 
-                  <span className="opacity-70">{corridor.bidirectional ? '⇄' : '→'}</span> 
+                  {corridor.from_ledger}
+                  <span className="opacity-60">{corridor.bidirectional ? ' ⇄ ' : ' → '}</span>
                   {corridor.to_ledger}
                   {activeLens === 'trust' && (
                     <span className="ml-1 opacity-80">({Math.round(trustScore * 100)}%)</span>
                   )}
                 </span>
-                {/* Trust Reason - show in Trust lens */}
-                {activeLens === 'trust' && trustReason && (
-                  <p className="text-[9px] text-cyber-muted ml-2 leading-tight">{trustReason}</p>
+                {trustReason && (
+                  <p className="text-[10px] text-cyber-muted ml-1 leading-snug max-w-md mt-0.5">{trustReason}</p>
                 )}
               </div>
             );

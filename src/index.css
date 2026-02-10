@@ -403,3 +403,120 @@ select:focus-visible {
   outline: 2px solid #00d4ff;
   outline-offset: 2px;
 }
+
+/* ========== Network page: balanced three-column layout (equal-height boxes) ========== */
+/* Apple-style: one row, three equal-height cards, aligned tops and bottoms */
+
+.network-grid {
+  display: grid;
+  grid-template-columns: 1fr 3fr 1fr;
+  grid-template-rows: 1fr;
+  row-gap: 0;
+  column-gap: 20px;
+  align-items: stretch;
+  width: 100%;
+  min-height: 72vh;
+}
+
+/* Left column: single card filling full height */
+.network-left-sidebar {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.network-left-sidebar .network-panel-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 58, 95, 0.8);
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(13, 21, 38, 0.95) 100%);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Center column: single card (map) filling full height */
+.network-map-container {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.network-map-container .map-inner {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 58, 95, 0.8);
+  background: linear-gradient(to bottom, #0a0a1e, #1a1a2e);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  overflow: auto;
+}
+
+.network-map-container .map-inner .map-panel {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Right column: single card filling full height */
+.network-right-sidebar {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.network-right-sidebar .network-panel-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(30, 58, 95, 0.8);
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(13, 21, 38, 0.95) 100%);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.network-panel-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+@media (max-width: 1200px) {
+  .network-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    min-height: 0;
+    height: auto;
+    column-gap: 0;
+  }
+  .network-left-sidebar,
+  .network-map-container,
+  .network-right-sidebar {
+    grid-column: 1;
+    height: auto;
+  }
+  .network-left-sidebar .network-panel-card,
+  .network-right-sidebar .network-panel-card {
+    min-height: 0;
+  }
+  .network-map-container .map-inner {
+    min-height: 400px;
+    height: auto;
+  }
+}

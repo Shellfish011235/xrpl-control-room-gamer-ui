@@ -234,13 +234,21 @@ export function StreamVisualizer({
           className="w-full h-full"
         />
 
-        {/* Overlay: No streams message */}
-        {streams.length === 0 && (
+        {/* Overlay: No streams message (hides as soon as demo creates streams) */}
+        {streams.length === 0 && !isSimulating && (
           <div className="absolute inset-0 flex items-center justify-center bg-cyber-darker/80">
             <div className="text-center">
               <Radio size={32} className="text-cyber-muted mx-auto mb-2 opacity-50" />
               <p className="text-sm text-cyber-muted">No active streams</p>
-              <p className="text-xs text-cyber-muted mt-1">Click "Start Demo" to see micropayments flow</p>
+              <p className="text-xs text-cyber-muted mt-1">Click &quot;Start Demo&quot; to create demo streams and see micropayments flow</p>
+            </div>
+          </div>
+        )}
+        {streams.length === 0 && isSimulating && (
+          <div className="absolute inset-0 flex items-center justify-center bg-cyber-darker/60">
+            <div className="text-center">
+              <Activity size={24} className="text-cyber-green mx-auto mb-2 animate-pulse" />
+              <p className="text-sm text-cyber-green">Starting demo streams…</p>
             </div>
           </div>
         )}

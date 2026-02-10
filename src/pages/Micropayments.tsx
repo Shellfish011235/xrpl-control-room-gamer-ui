@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Zap, DollarSign, Bot, Globe, Layers, BarChart2,
-  TrendingUp, Award, ArrowRight, Target, Cpu
+  TrendingUp, Award, ArrowRight, Target, Cpu, HelpCircle
 } from 'lucide-react';
 
 import { StreamVisualizer } from '../components/micropayments/StreamVisualizer';
@@ -40,7 +40,7 @@ export default function MicropaymentsPage() {
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-4"
         >
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-lg bg-gradient-to-br from-cyber-yellow to-cyber-green">
@@ -48,7 +48,7 @@ export default function MicropaymentsPage() {
             </div>
             <div>
               <h1 className="text-2xl font-cyber text-cyber-text">MICROPAYMENTS</h1>
-              <p className="text-sm text-cyber-green">🔴 MAINNET LIVE - ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64</p>
+              <p className="text-xs text-cyber-muted">🔴 MAINNET LIVE · Network ID: ra7Zj3G…xyo64</p>
             </div>
           </div>
           <p className="text-cyber-muted text-sm max-w-2xl">
@@ -56,6 +56,51 @@ export default function MicropaymentsPage() {
             XRPL + ILP enable true micropayments: streaming content revenue, 
             AI agent transactions, pay-per-API-call, and more.
           </p>
+        </motion.div>
+
+        {/* New here? — what this page does and how to use it */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="cyber-panel p-4 mb-6 border-cyber-cyan/40 bg-cyber-cyan/5"
+        >
+          <div className="flex items-start gap-3">
+            <HelpCircle size={20} className="text-cyber-cyan mt-0.5 flex-shrink-0" />
+            <div>
+              <h2 className="font-cyber text-cyber-cyan text-sm mb-2">New here? What this page does</h2>
+              <p className="text-xs text-cyber-text mb-3">
+                This page explains <strong>why XRPL + ILP are built for micropayments</strong> and lets you try demos. 
+                You don’t need to read everything—follow the steps below to get value in under a minute.
+              </p>
+              <div className="grid sm:grid-cols-3 gap-3 text-xs">
+                <div className="flex gap-2 items-start">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-cyber-cyan/20 text-cyber-cyan flex items-center justify-center font-cyber">1</span>
+                  <div>
+                    <p className="text-cyber-text font-medium">Skim the numbers</p>
+                    <p className="text-cyber-muted text-[10px]">Glance at the four stats below (fee, TPS, finality, min payment).</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 items-start">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-cyber-cyan/20 text-cyber-cyan flex items-center justify-center font-cyber">2</span>
+                  <div>
+                    <p className="text-cyber-text font-medium">Try the demo</p>
+                    <p className="text-cyber-muted text-[10px]">Click the <strong>Streams</strong> tab, then <strong>Start Demo</strong> to see micropayments flow.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 items-start">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-cyber-cyan/20 text-cyber-cyan flex items-center justify-center font-cyber">3</span>
+                  <div>
+                    <p className="text-cyber-text font-medium">Explore by interest</p>
+                    <p className="text-cyber-muted text-[10px]">Use the tabs: Channels (how payments work), Web Monetization, AI Agents, Adoption.</p>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-cyber-muted mt-3 pt-2 border-t border-cyber-border/50">
+                Building something? Start with <strong>Channels</strong> (payment channel flow) or <strong>Web Monetization</strong> (W3C + ILP).
+              </p>
+            </div>
+          </div>
         </motion.div>
 
         {/* Key Stats Banner */}
@@ -121,22 +166,68 @@ export default function MicropaymentsPage() {
           </div>
         </motion.div>
 
+        {/* Why this makes money — plain-language breakdown */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+          className="cyber-panel p-4 mb-6 border-cyber-yellow/40 bg-cyber-yellow/5"
+        >
+          <div className="flex items-start gap-3">
+            <DollarSign size={24} className="text-cyber-yellow mt-1 flex-shrink-0" />
+            <div className="min-w-0">
+              <h2 className="font-cyber text-cyber-yellow text-sm mb-2">Why this makes money (simple breakdown)</h2>
+              <p className="text-xs text-cyber-text mb-3">
+                <strong>Micropayments</strong> = tiny payments (e.g. $0.001 per second of video, or $0.0001 per API call). On most blockchains the <em>fee is bigger than the payment</em>, so they’re useless. On XRPL the fee is ~$0.00003, so you can actually charge tiny amounts and <strong>you keep almost all of it</strong>. Money flows to whoever provides the thing being paid for.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-lg bg-cyber-darker/60 border border-cyber-border/40">
+                  <p className="text-cyber-yellow font-semibold mb-1.5">Who gets paid</p>
+                  <ul className="space-y-1 text-cyber-muted text-[11px]">
+                    <li><strong className="text-cyber-text">Creators</strong> — per second of video/music or per article (you earn as they watch/read).</li>
+                    <li><strong className="text-cyber-text">API / data providers</strong> — per request (AI, data feeds, APIs).</li>
+                    <li><strong className="text-cyber-text">Game devs</strong> — instant tiny payments for in-game items or power-ups.</li>
+                    <li><strong className="text-cyber-text">You (platform)</strong> — small fee or margin on each stream or channel you enable.</li>
+                  </ul>
+                </div>
+                <div className="p-3 rounded-lg bg-cyber-darker/60 border border-cyber-border/40">
+                  <p className="text-cyber-yellow font-semibold mb-1.5">Where the money comes from</p>
+                  <ul className="space-y-1 text-cyber-muted text-[11px]">
+                    <li>Users pay tiny amounts instead of subscriptions or big one-off fees.</li>
+                    <li>AI agents / apps pay per use (data, compute, API calls) instead of flat SaaS.</li>
+                    <li>Volume: 100,000 micropayments at $0.001 = $100 in value flow; fees stay cents.</li>
+                    <li>You monetize by <strong className="text-cyber-text">enabling the pipe</strong> (streams, channels, APIs) and taking a small cut or fee.</li>
+                  </ul>
+                </div>
+              </div>
+              <p className="text-[10px] text-cyber-muted mt-3 pt-2 border-t border-cyber-border/50">
+                The demo on the <strong>Streams</strong> tab shows those tiny payments flowing in real time (simulated). Each line = one revenue stream; the numbers = who gets paid and how much.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Tab Navigation */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-cyber whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? 'bg-cyber-cyan text-cyber-darker'
-                  : 'bg-cyber-border/50 text-cyber-muted hover:text-cyber-text hover:bg-cyber-border'
-              }`}
-            >
-              {tab.icon}
-              {tab.label}
-            </button>
-          ))}
+        <div className="mb-2">
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-cyber whitespace-nowrap transition-all ${
+                  activeTab === tab.id
+                    ? 'bg-cyber-cyan text-cyber-darker'
+                    : 'bg-cyber-border/50 text-cyber-muted hover:text-cyber-text hover:bg-cyber-border'
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-cyber-muted mt-1.5 px-0.5">
+            Overview = intro &amp; cost comparison · Streams = simulated demo (visual/education) · Channels = payment channel flow · Web = W3C monetization · AI Agents = agent payments · Adoption = ecosystem
+          </p>
         </div>
 
         {/* Tab Content */}
@@ -155,6 +246,9 @@ export default function MicropaymentsPage() {
 
           {activeTab === 'streams' && (
             <div className="space-y-6">
+              <p className="text-[11px] text-cyber-muted mb-1">
+                This tab is <strong className="text-cyber-text">visual + education only</strong>: a simulated demo of how ILP micropayment streams look when money flows. It does not connect to real Rafiki/ILP or the ledger. To build real streams, use <a href="https://github.com/interledger/rafiki" target="_blank" rel="noopener noreferrer" className="text-cyber-cyan hover:underline">Rafiki</a> or ILP-enabled infrastructure.
+              </p>
               <StreamVisualizer height={500} showStats={true} />
               <div className="cyber-panel p-4">
                 <h3 className="font-cyber text-cyber-cyan mb-3">USE CASES</h3>
