@@ -619,8 +619,11 @@ export function LedgerImpactTool() {
         </div>
       )}
 
-      {/* Quick Links */}
+      {/* Quick Links + Data source */}
       <div className="mt-4 pt-3 border-t border-cyber-border space-y-1.5">
+        <p className="text-[9px] text-cyber-muted text-right" aria-label="Ledger impact data source">
+          Data: {dataSource === 'live' ? 'XRPScan (live)' : 'Fallback'}
+        </p>
         <a
           href="https://xrpl.org/amendments.html"
           target="_blank"

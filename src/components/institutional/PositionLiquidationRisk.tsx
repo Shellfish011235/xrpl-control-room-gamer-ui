@@ -14,6 +14,8 @@ import {
 interface PositionLiquidationRiskProps {
   compact?: boolean;
   currentPrice?: number;  // Current XRP price for analysis
+  /** Optional label for data feed (e.g. "Price: CoinGecko (live)") */
+  priceSourceLabel?: string;
 }
 
 // Risk level colors and icons
@@ -157,7 +159,7 @@ function MarketRiskCard({ assessment }: { assessment: LiquidationRiskAssessment 
   );
 }
 
-export function PositionLiquidationRisk({ compact = false, currentPrice }: PositionLiquidationRiskProps) {
+export function PositionLiquidationRisk({ compact = false, currentPrice, priceSourceLabel }: PositionLiquidationRiskProps) {
   const { positions, autoTradeSettings, updateLiquidationWarnings } = usePaperTradingStore();
   const [analyses, setAnalyses] = useState<PositionLiquidationAnalysis[]>([]);
   const [marketAssessment, setMarketAssessment] = useState<LiquidationRiskAssessment | null>(null);
@@ -319,13 +321,18 @@ export function PositionLiquidationRisk({ compact = false, currentPrice }: Posit
       )}
       
       {/* Settings indicator */}
-      <div className="mt-4 pt-3 border-t border-cyber-border flex items-center justify-between text-[10px]">
-        <span className="text-cyber-muted">
-          Liquidation-aware stops: <span className="text-cyber-green">ENABLED</span>
-        </span>
-        <span className="text-cyber-muted">
-          Risk tolerance: <span className="text-cyber-cyan">{autoTradeSettings.liquidationRiskTolerance.toUpperCase()}</span>
-        </span>
+      <div className="mt-4 pt-3 border-t border-cyber-border space-y-1">
+        <div className="flex items-center justify-between text-[10px]">
+          <span className="text-cyber-muted">
+            Liquidation-aware stops: <span className="text-cyber-green">ENABLED</span>
+          </span>
+          <span className="text-cyber-muted">
+            Risk tolerance: <span className="text-cyber-cyan">{autoTradeSettings.liquidationRiskTolerance.toUpperCase()}</span>
+          </span>
+        </div>
+        {priceSourceLabel && (
+          <p className="text-[9px] text-cyber-muted text-right">Price: {priceSourceLabel}</p>
+        )}
       </div>
     </div>
   );

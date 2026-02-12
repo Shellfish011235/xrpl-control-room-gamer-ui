@@ -4,6 +4,8 @@
 
 **Last doc update:** February 2026. **You should periodically re-check the sources below** (e.g. after White House meetings, SEC/CFTC announcements, or state/federal law changes).
 
+For how we document features for compliance (e.g. Phase 1 paper trading sim-only) and the “stay current” process, see [COMPLIANCE-GLOBAL-US-FLORIDA.md](./COMPLIANCE-GLOBAL-US-FLORIDA.md) and the **“Staying Compliant: Process”** section below.
+
 ---
 
 ## Why This Matters
@@ -51,6 +53,33 @@
 1. **Before scaling to real users or mainnet:** Re-check federal/state and EU sources; update [COMPLIANCE-GLOBAL-US-FLORIDA.md](./COMPLIANCE-GLOBAL-US-FLORIDA.md) and [ROADMAP.md](./ROADMAP.md) if thresholds or dates change.
 2. **After major announcements:** e.g. President meeting on crypto/digital assets — search news for “White House crypto,” “digital assets executive order,” “SEC crypto 2026,” and add a short note in this file or in a SESSION-NOTES file with date and link.
 3. **Ongoing:** When adding AI-driven features (agents, auto-trading logic), ensure we have risk policy and explainability noted in compliance docs and in the app (see [COMPLIANCE-GLOBAL-US-FLORIDA.md](./COMPLIANCE-GLOBAL-US-FLORIDA.md) AI-specific section).
+
+---
+
+## Staying Compliant: Process
+
+To keep the project **aligned with current regulations** and compliant as we build:
+
+1. **Re-check sources on a schedule**  
+   Periodically (e.g. quarterly, or after any major regulatory news) open the links under “Where to Check” above and scan for new guidance, enforcement, or law changes that affect crypto, digital assets, or AI in finance.
+
+2. **Update the compliance doc when things change**  
+   When laws, dates, or interpretations change (e.g. EU AI Act enforcement date, new state AI law, SEC/CFTC guidance):  
+   - Update [COMPLIANCE-GLOBAL-US-FLORIDA.md](./COMPLIANCE-GLOBAL-US-FLORIDA.md) with the new detail or date.  
+   - If a new jurisdiction or topic becomes relevant, add a short subsection or bullet there and a pointer in this file.
+
+3. **When we add or change product features**  
+   - If the feature touches **payments, custody, trading, or AI suggestions**: add or update the relevant section in COMPLIANCE-GLOBAL-US-FLORIDA.md (e.g. “Phase 1 Paper Trading Features” or a new feature table).  
+   - Re-check the regulatory sources above for any new rules that might apply (e.g. new state AI law, updated money-transmission guidance).  
+   - Before **real users or mainnet**: reassess with qualified counsel; do not rely on this doc alone.
+
+4. **Feature checklist (stay current)**  
+   - [ ] New feature documented in COMPLIANCE-GLOBAL-US-FLORIDA.md if it touches money, custody, or AI.  
+   - [ ] REGULATORY-WATCH sources checked for recent updates.  
+   - [ ] ROADMAP.md and phase (sim / testnet / mainnet) still accurate.  
+   - [ ] Before mainnet or real-user flows: legal advice obtained and documented.
+
+This process is manual; a human (or scheduled review) should run it. Regulations change; staying compliant means repeating these steps as the product and the law evolve.
 
 ---
 

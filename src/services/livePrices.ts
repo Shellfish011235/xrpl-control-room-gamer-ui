@@ -25,7 +25,7 @@ export interface PriceUpdate {
 
 // ==================== CONSTANTS ====================
 
-// CoinGecko IDs for popular cryptos
+// CoinGecko IDs for popular cryptos (matches paper trading 24-pair list)
 const COINGECKO_IDS: { [symbol: string]: string } = {
   XRP: 'ripple',
   BTC: 'bitcoin',
@@ -42,27 +42,24 @@ const COINGECKO_IDS: { [symbol: string]: string } = {
   LTC: 'litecoin',
   XLM: 'stellar',
   ALGO: 'algorand',
+  HBAR: 'hedera-hashgraph',
+  NEAR: 'near',
+  FTM: 'fantom',
+  VET: 'vechain',
+  SAND: 'the-sandbox',
+  MANA: 'decentraland',
+  APE: 'apecoin',
+  CRO: 'cronos',
+  SHIB: 'shiba-inu',
 };
 
 // Fallback prices - LAST UPDATED: 2026-01-27
 // These are only used when CoinGecko API fails
-// Update these periodically to keep fallbacks reasonably accurate
 const FALLBACK_PRICES: { [symbol: string]: number } = {
-  XRP: 1.92,    // Updated 2026-01-27
-  BTC: 104500,  // Updated 2026-01-27
-  ETH: 3250,    // Updated 2026-01-27
-  SOL: 245,
-  DOGE: 0.35,
-  ADA: 0.95,
-  LINK: 24.50,
-  DOT: 8.80,
-  AVAX: 38.00,
-  MATIC: 0.55,
-  ATOM: 10.50,
-  UNI: 12.00,
-  LTC: 115.00,
-  XLM: 0.42,
-  ALGO: 0.30,
+  XRP: 1.92, BTC: 104500, ETH: 3250, SOL: 245, DOGE: 0.35, ADA: 0.95,
+  LINK: 24.50, DOT: 8.80, AVAX: 38.00, MATIC: 0.55, ATOM: 10.50, UNI: 12.00,
+  LTC: 115.00, XLM: 0.42, ALGO: 0.30, HBAR: 0.32, NEAR: 6.80, FTM: 0.95,
+  VET: 0.048, SAND: 0.62, MANA: 0.58, APE: 1.85, CRO: 0.12, SHIB: 0.000028,
 };
 
 // Cache for rate limiting

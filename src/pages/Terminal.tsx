@@ -41,11 +41,17 @@ class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNod
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback || (
+      if (this.props.fallback) return this.props.fallback;
+      return (
         <div className="cyber-panel p-4 flex flex-col items-center justify-center min-h-[200px] text-center">
           <AlertTriangle className="w-8 h-8 text-cyber-yellow mb-2" />
           <p className="text-cyber-yellow text-sm">Component failed to load</p>
           <p className="text-cyber-muted text-xs mt-1">Please refresh the page</p>
+          {this.state.error && (
+            <p className="text-cyber-muted text-[10px] mt-2 max-w-full truncate px-2" title={this.state.error.message}>
+              {this.state.error.message}
+            </p>
+          )}
         </div>
       );
     }
@@ -191,12 +197,9 @@ export default function Terminal() {
                     currentPrice={xrpPrice}
                     compact={expandedPanel !== 'heatmap'}
                   />
-                  {priceSource && (
-                    <div className="text-[9px] text-cyber-muted text-right mt-1 pr-2">
-                      Price: {priceSource === 'coingecko' ? 'CoinGecko' : priceSource === 'binance' ? 'Binance' : 'Fallback'} 
-                      {priceSource === 'fallback' && ' (APIs unavailable)'}
-                    </div>
-                  )}
+                  <div className="text-[9px] text-cyber-muted text-right mt-1 pr-2" aria-label="Liquidation heatmap price source">
+                    Price: {priceLoading ? 'Loading…' : priceSource === 'coingecko' ? 'CoinGecko (live)' : priceSource === 'binance' ? 'Binance (live)' : priceSource === 'fallback' ? 'Fallback (APIs unavailable)' : '—'}
+                  </div>
                 </div>
               </ErrorBoundary>
             )}
@@ -257,7 +260,10 @@ export default function Terminal() {
           className="mt-4"
         >
           <ErrorBoundary>
-            <PositionLiquidationRisk currentPrice={xrpPrice} />
+            <PositionLiquidationRisk
+              currentPrice={xrpPrice}
+              priceSourceLabel={priceLoading ? 'Loading…' : priceSource === 'coingecko' ? 'CoinGecko (live)' : priceSource === 'binance' ? 'Binance (live)' : priceSource === 'fallback' ? 'Fallback (APIs unavailable)' : undefined}
+            />
           </ErrorBoundary>
         </motion.div>
       )}
@@ -292,8 +298,8 @@ export default function Terminal() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          <ErrorBoundary>
-            <PaperTradingPanel />
+          <ErrorBoundary fallback={<PaperTradingPanel useLiveFeeds={false} />}>
+            <PaperTradingPanel currentPrices={xrpPrice > 0 ? { XRP: xrpPrice } : undefined} />
           </ErrorBoundary>
         </motion.div>
       </div>

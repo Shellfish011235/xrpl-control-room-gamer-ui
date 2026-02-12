@@ -1,7 +1,7 @@
 // Paper Trading Panel - Simulated wallet for practicing strategies
 // Execute trades based on signals, track performance, compete with yourself
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,13 +12,17 @@ import {
   ShoppingCart, HelpCircle, X, ChevronRight, ChevronLeft,
   GraduationCap, Lightbulb, Target, MousePointer,
   Bell, BellRing, Plus, Trash2, Volume2, VolumeX,
-  Activity, Radio, Eye, CircleDot
+  Activity, Radio, Eye, CircleDot, LineChart
 } from 'lucide-react';
 import { usePaperTradingStore } from '../store/paperTradingStore';
 import { useWalletStore } from '../store/walletStore';
 import { getAgentSuggestion, type AgentSuggestionResult } from '../services/paperTradingAgentSuggestion';
 import { fetchCryptoSentiment } from '../services/freeDataFeeds';
 import { useOrchestraSimStore } from '../store/orchestraSimStore';
+import { generateHistoricalBars, PAPER_TRADING_SYMBOLS, type SimScenario } from '../services/paperTradingSimFeeds';
+import { barsFromOHLCV, runBacktest } from '../services/backtestingEngine';
+import { useRealtimePrices, type AggregatedPrice } from '../services/websocketPriceFeeds';
+import { subscribeToPrices as subscribeLivePrices, getAvailableSymbols } from '../services/livePrices';
 
 // Auto-trade icons
 import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink } from 'lucide-react';
@@ -224,7 +228,16 @@ interface PaperTradingPanelProps {
     reason: string;
     confidence: number;
   }>;
+  /** When not provided, panel uses live feeds (WebSocket + CoinGecko). Pass explicit prices to override. */
   currentPrices?: { [asset: string]: number };
+  /** Use live price feeds (default false for stable load). Set true to attach WebSocket + CoinGecko. */
+  useLiveFeeds?: boolean;
+}
+
+/** Internal: props for the inner panel when used with optional live feed data from parent */
+interface PaperTradingPanelInnerProps extends PaperTradingPanelProps {
+  wsPrices?: Map<string, AggregatedPrice>;
+  wsConnected?: boolean;
 }
 
 // Default prices
@@ -258,13 +271,31 @@ const DEFAULT_PRICES: { [asset: string]: number } = {
   SHIB: 0.000028,
 };
 
-export function PaperTradingPanel({ 
-  compact = false, 
+// Wrapper that only calls useRealtimePrices when live feeds are enabled (avoids hook running in fallback)
+function PaperTradingPanelWithLiveFeeds(props: PaperTradingPanelProps) {
+  const { prices: wsPrices, isConnected: wsConnected } = useRealtimePrices();
+  return (
+    <PaperTradingPanelInner
+      {...props}
+      useLiveFeeds={true}
+      wsPrices={wsPrices}
+      wsConnected={wsConnected}
+    />
+  );
+}
+
+function PaperTradingPanelInner({
+  compact = false,
   suggestedTrades = [],
-  currentPrices = DEFAULT_PRICES 
-}: PaperTradingPanelProps) {
+  currentPrices,
+  useLiveFeeds = false,
+  wsPrices: wsPricesProp,
+  wsConnected: wsConnectedProp = false,
+}: PaperTradingPanelInnerProps) {
   const store = usePaperTradingStore();
   const walletStore = useWalletStore();
+  const wsPrices = wsPricesProp ?? new Map();
+  const wsConnected = wsConnectedProp;
   
   // Live trading state
   const [isLiveMode, setIsLiveMode] = useState(false);
@@ -288,13 +319,14 @@ export function PaperTradingPanel({
   const getTotalPortfolioValue = store?.getTotalPortfolioValue;
 
   // Local state
-  const [activeTab, setActiveTab] = useState<'trade' | 'positions' | 'history' | 'stats' | 'alerts' | 'auto'>('trade');
+  const [activeTab, setActiveTab] = useState<'trade' | 'positions' | 'history' | 'stats' | 'alerts' | 'auto' | 'backtest'>('trade');
   const [tradeAsset, setTradeAsset] = useState('XRP');
   const [tradeAmount, setTradeAmount] = useState('');
   const [tradeType, setTradeType] = useState<'buy' | 'sell'>('buy');
   const [showReset, setShowReset] = useState(false);
   const [expandedPosition, setExpandedPosition] = useState<string | null>(null);
-  const [prices, setPrices] = useState<{ [asset: string]: number }>(currentPrices || DEFAULT_PRICES);
+  const [prices, setPrices] = useState<{ [asset: string]: number }>(() => ({ ...DEFAULT_PRICES, ...currentPrices }));
+  const [liveFeedStatus, setLiveFeedStatus] = useState<'live' | 'cached' | 'fallback' | null>(null);
   
   // Alerts state
   const [priceAlerts, setPriceAlerts] = useState<PriceAlert[]>([]);
@@ -325,6 +357,12 @@ export function PaperTradingPanel({
   const [agentSuggestion, setAgentSuggestion] = useState<AgentSuggestionResult | null>(null);
   const [agentSuggestionLoading, setAgentSuggestionLoading] = useState(false);
   const recordOrchestraSimPayment = useOrchestraSimStore((s) => s.recordPayment);
+
+  // Backtest (Phase 1)
+  const [backtestScenario, setBacktestScenario] = useState<SimScenario>('normal');
+  const [backtestMinutes, setBacktestMinutes] = useState(60);
+  const [backtestRunning, setBacktestRunning] = useState(false);
+  const [backtestResult, setBacktestResult] = useState<ReturnType<typeof runBacktest> | null>(null);
   
   // Simulation Boost - generates realistic trading activity to build history
   const runSimulationBoost = useCallback(async (numTrades: number = 20) => {
@@ -617,12 +655,69 @@ export function PaperTradingPanel({
     setActiveTab('trade'); // Reset to trade tab for tutorial
   };
 
-  // Update prices when prop changes
+  // When parent passes currentPrices (e.g. Terminal XRP), merge into state so dropdown stays accurate
   useEffect(() => {
-    if (currentPrices) {
-      setPrices(prev => ({ ...DEFAULT_PRICES, ...prev, ...currentPrices }));
+    if (currentPrices && Object.keys(currentPrices).length > 0) {
+      setPrices(prev => ({ ...prev, ...currentPrices }));
+      store?.updatePrices?.(currentPrices);
     }
-  }, [currentPrices]);
+  }, [currentPrices, store?.updatePrices]);
+
+  // Refs so subscription callbacks see latest values
+  const wsPricesRef = useRef<{ [s: string]: number }>({});
+  const currentPricesRef = useRef(currentPrices);
+  currentPricesRef.current = currentPrices;
+
+  // When WebSocket prices update, merge into state and store
+  useEffect(() => {
+    if (!useLiveFeeds) return;
+    try {
+      const fromWs: { [s: string]: number } = {};
+      wsPrices.forEach((agg, symbol) => {
+        if (agg?.price != null && agg.price > 0) fromWs[symbol] = agg.price;
+      });
+      wsPricesRef.current = fromWs;
+      if (Object.keys(fromWs).length > 0) {
+        setPrices(prev => {
+          const merged = { ...prev, ...fromWs };
+          try {
+            store?.updatePrices?.(merged);
+            store?.processTwapSlices?.(merged);
+          } catch (e) {
+            console.warn('[PaperTrading] Store update failed:', e);
+          }
+          return merged;
+        });
+      }
+    } catch (e) {
+      console.warn('[PaperTrading] WS price merge failed:', e);
+    }
+  }, [useLiveFeeds, wsPrices, store?.updatePrices, store?.processTwapSlices]);
+
+  // CoinGecko polling: keeps asset dropdown accurate. Parent currentPrices (e.g. Terminal XRP) override.
+  useEffect(() => {
+    try {
+      const symbols = getAvailableSymbols();
+      const unsub = subscribeLivePrices(symbols, (update) => {
+        try {
+          const fromParent = currentPricesRef.current ?? {};
+          const merged = useLiveFeeds
+            ? { ...DEFAULT_PRICES, ...update.prices, ...wsPricesRef.current, ...fromParent }
+            : { ...DEFAULT_PRICES, ...update.prices, ...fromParent };
+          setPrices(merged);
+          store?.updatePrices?.(merged);
+          if (useLiveFeeds) store?.processTwapSlices?.(merged);
+          setLiveFeedStatus(update.source);
+        } catch (e) {
+          console.warn('[PaperTrading] Price update failed:', e);
+        }
+      }, 30000);
+      return unsub;
+    } catch (e) {
+      console.warn('[PaperTrading] Price subscription failed:', e);
+      return () => {};
+    }
+  }, [useLiveFeeds, store?.updatePrices, store?.processTwapSlices]);
   
   // Check price alerts when prices change
   useEffect(() => {
@@ -816,7 +911,20 @@ export function PaperTradingPanel({
           </div>
           <div>
             <h3 className="font-cyber text-sm text-cyber-green">PAPER TRADING</h3>
-            <p className="text-[9px] text-cyber-muted">Practice without risk</p>
+            <p className="text-[9px] text-cyber-muted flex items-center gap-1.5">
+              Practice without risk
+              {useLiveFeeds && (liveFeedStatus || wsConnected) && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-cyber-cyan/20 text-cyber-cyan text-[8px] font-cyber border border-cyber-cyan/40">
+                  <span className="w-1 h-1 rounded-full bg-cyber-cyan animate-pulse" aria-hidden />
+                  Live prices
+                </span>
+              )}
+              {!useLiveFeeds && (
+                <span className="inline-flex px-1.5 py-0.5 rounded bg-cyber-muted/20 text-cyber-muted text-[8px] border border-cyber-border" aria-label="Paper trading price source">
+                  Prices: {liveFeedStatus ? `CoinGecko (${liveFeedStatus})` : 'Loading…'}
+                </span>
+              )}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1114,6 +1222,7 @@ export function PaperTradingPanel({
           { id: 'stats', label: 'Stats', icon: Trophy },
           { id: 'alerts', label: `Alerts${activeAlertCount > 0 ? ` (${activeAlertCount})` : ''}`, icon: Bell },
           { id: 'auto', label: `Auto${autoTradeSettings?.enabled ? ' ●' : ''}`, icon: Bot },
+          { id: 'backtest', label: 'Backtest', icon: LineChart },
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -2627,6 +2736,120 @@ export function PaperTradingPanel({
             </div>
           </motion.div>
         )}
+
+        {/* Backtest Tab (Phase 1) */}
+        {activeTab === 'backtest' && (
+          <motion.div
+            key="backtest"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-4"
+          >
+            <div className="p-3 rounded bg-cyber-darker border border-cyber-border">
+              <div className="flex items-center gap-2 mb-3">
+                <LineChart size={14} className="text-cyber-cyan" />
+                <span className="text-xs text-cyber-cyan font-cyber">BACKTEST (Phase 1)</span>
+              </div>
+              <p className="text-[10px] text-cyber-muted mb-3">
+                Run the Orchestra agent logic over simulated historical bars. No real data; scenario-driven sim.
+              </p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-[9px] text-cyber-muted block mb-1">Scenario</label>
+                  <select
+                    value={backtestScenario}
+                    onChange={(e) => setBacktestScenario(e.target.value as SimScenario)}
+                    className="w-full px-2 py-1.5 rounded bg-cyber-dark border border-cyber-border text-xs text-cyber-text"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="crash">Crash</option>
+                    <option value="pump">Pump</option>
+                    <option value="sideways">Sideways</option>
+                    <option value="volatile">Volatile</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] text-cyber-muted block mb-1">Bars (minutes)</label>
+                  <select
+                    value={backtestMinutes}
+                    onChange={(e) => setBacktestMinutes(Number(e.target.value))}
+                    className="w-full px-2 py-1.5 rounded bg-cyber-dark border border-cyber-border text-xs text-cyber-text"
+                  >
+                    <option value={30}>30</option>
+                    <option value={60}>60</option>
+                    <option value={120}>120</option>
+                    <option value={240}>240</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setBacktestRunning(true);
+                  setBacktestResult(null);
+                  requestAnimationFrame(() => {
+                    const barsBySymbol = generateHistoricalBars(backtestScenario, backtestMinutes, prices);
+                    const symbolOrder = Array.from(PAPER_TRADING_SYMBOLS);
+                    const bars = barsFromOHLCV(barsBySymbol, symbolOrder);
+                    const result = runBacktest(bars, {
+                      initialBalance: startingBalance,
+                      symbols: ['XRP', 'BTC', 'ETH', 'SOL', 'DOGE', 'ADA', 'LINK', 'DOT'],
+                      sentimentScore: 55,
+                      sentimentTrend: 'bullish',
+                      minConfidence: 60,
+                      maxPositionPercent: 10,
+                    });
+                    setBacktestResult(result);
+                    setBacktestRunning(false);
+                  });
+                }}
+                disabled={backtestRunning}
+                className="w-full flex items-center justify-center gap-2 py-2 rounded bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/50 hover:bg-cyber-cyan/30 disabled:opacity-50 text-xs font-cyber"
+              >
+                {backtestRunning ? (
+                  <>Running...</>
+                ) : (
+                  <>
+                <PlayCircle size={12} />
+                Run backtest
+                  </>
+                )}
+              </button>
+            </div>
+            {backtestResult && (
+              <div className="p-3 rounded bg-cyber-darker border border-cyber-border space-y-3">
+                <div className="flex items-center gap-2">
+                  <Trophy size={14} className="text-cyber-yellow" />
+                  <span className="text-xs text-cyber-yellow font-cyber">RESULTS</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[10px]">
+                  <div className="p-2 rounded bg-cyber-dark/50">
+                    <span className="text-cyber-muted">Final balance</span>
+                    <p className="text-cyber-text font-cyber">${backtestResult.finalBalance.toFixed(2)}</p>
+                  </div>
+                  <div className="p-2 rounded bg-cyber-dark/50">
+                    <span className="text-cyber-muted">Return</span>
+                    <p className={backtestResult.totalReturnPercent >= 0 ? 'text-cyber-green font-cyber' : 'text-cyber-red font-cyber'}>
+                      {backtestResult.totalReturnPercent >= 0 ? '+' : ''}{backtestResult.totalReturnPercent.toFixed(2)}%
+                    </p>
+                  </div>
+                  <div className="p-2 rounded bg-cyber-dark/50">
+                    <span className="text-cyber-muted">Trades</span>
+                    <p className="text-cyber-text font-cyber">{backtestResult.stats.totalTrades}</p>
+                  </div>
+                  <div className="p-2 rounded bg-cyber-dark/50">
+                    <span className="text-cyber-muted">Win rate</span>
+                    <p className="text-cyber-text font-cyber">{backtestResult.stats.winRate.toFixed(1)}%</p>
+                  </div>
+                  <div className="p-2 rounded bg-cyber-dark/50 col-span-2">
+                    <span className="text-cyber-muted">Max drawdown</span>
+                    <p className="text-cyber-red font-cyber">{backtestResult.stats.maxDrawdownPercent.toFixed(1)}%</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
       </AnimatePresence>
       
       {/* Alert Notification Popup */}
@@ -2819,6 +3042,14 @@ export function PaperTradingPanel({
       </div>
     </div>
   );
+}
+
+/** Public component: use Inner without live feeds by default so the panel always loads; pass useLiveFeeds={true} for live prices. */
+export function PaperTradingPanel(props: PaperTradingPanelProps) {
+  if (props.useLiveFeeds === true) {
+    return <PaperTradingPanelWithLiveFeeds {...props} />;
+  }
+  return <PaperTradingPanelInner {...props} useLiveFeeds={false} />;
 }
 
 export default PaperTradingPanel;

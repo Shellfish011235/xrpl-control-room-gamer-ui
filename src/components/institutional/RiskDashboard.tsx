@@ -333,6 +333,9 @@ export function RiskDashboard({ compact = false }: RiskDashboardProps) {
           </motion.div>
         )}
       </AnimatePresence>
+      <div className="mt-3 pt-3 border-t border-cyber-border text-[9px] text-cyber-muted text-right" aria-label="Risk dashboard data source">
+        Data: Paper trading store
+      </div>
     </div>
   );
 }

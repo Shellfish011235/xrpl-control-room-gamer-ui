@@ -60,6 +60,32 @@ export interface AutoTradeLog {
   suggestedAction: 'buy' | 'sell';
 }
 
+// Advanced order types (Phase 1 - sim-first)
+export interface TwapOrder {
+  id: string;
+  type: 'twap';
+  asset: string;
+  side: 'buy' | 'sell';
+  totalAmount: number;
+  durationMs: number;
+  numSlices: number;
+  filledSlices: number;
+  startTime: number;
+  status: 'active' | 'completed' | 'cancelled';
+}
+
+export interface IcebergOrder {
+  id: string;
+  type: 'iceberg';
+  asset: string;
+  side: 'buy' | 'sell';
+  totalAmount: number;
+  visiblePercent: number;  // e.g. 10 = show 10% of order at a time (display only in sim)
+  status: 'pending' | 'filled' | 'cancelled';
+}
+
+export type PendingOrder = TwapOrder | IcebergOrder;
+
 export interface PaperPosition {
   asset: string;
   quantity: number;
@@ -111,6 +137,9 @@ interface PaperTradingState {
   // Liquidation Warnings
   liquidationWarnings: LiquidationWarning[];
   
+  // Advanced orders (TWAP, Iceberg)
+  pendingOrders: PendingOrder[];
+  
   // Timestamps
   createdAt: number;
   lastTradeAt: number | null;
@@ -143,6 +172,13 @@ interface PaperTradingState {
   updateLiquidationWarnings: (warnings: LiquidationWarning[]) => void;
   getLiquidationWarning: (asset: string) => LiquidationWarning | undefined;
   hasHighRiskPositions: () => boolean;
+  
+  // Advanced order actions (Phase 1)
+  addTwapOrder: (order: Omit<TwapOrder, 'id' | 'filledSlices' | 'startTime' | 'status'>) => string;
+  addIcebergOrder: (order: Omit<IcebergOrder, 'id' | 'status'>) => string;
+  processTwapSlices: (prices: { [asset: string]: number }) => void;
+  executeIcebergOrder: (orderId: string, price: number) => boolean;
+  cancelPendingOrder: (orderId: string) => void;
 }
 
 // ==================== HELPERS ====================
@@ -199,6 +235,9 @@ export const usePaperTradingStore = create<PaperTradingState>()(
       
       // Liquidation Warnings
       liquidationWarnings: [],
+      
+      // Advanced orders
+      pendingOrders: [],
       
       createdAt: Date.now(),
       lastTradeAt: null,
@@ -675,6 +714,103 @@ export const usePaperTradingStore = create<PaperTradingState>()(
       hasHighRiskPositions: () => {
         const warnings = get().liquidationWarnings;
         return warnings.some(w => w.riskLevel === 'danger' || w.riskLevel === 'warning');
+      },
+      
+      // ==================== ADVANCED ORDERS (TWAP, ICEBERG) ====================
+      
+      addTwapOrder: (order) => {
+        const id = `twap_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const twap: TwapOrder = {
+          ...order,
+          id,
+          filledSlices: 0,
+          startTime: Date.now(),
+          status: 'active',
+        };
+        set((s) => ({ pendingOrders: [...(s.pendingOrders ?? []), twap] }));
+        return id;
+      },
+      
+      addIcebergOrder: (order) => {
+        const id = `iceberg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const iceberg: IcebergOrder = {
+          ...order,
+          id,
+          status: 'pending',
+        };
+        set((s) => ({ pendingOrders: [...(s.pendingOrders ?? []), iceberg] }));
+        return id;
+      },
+      
+      processTwapSlices: (prices) => {
+        const state = get();
+        const pending = state.pendingOrders ?? [];
+        if (pending.length === 0) return;
+        const now = Date.now();
+        let didUpdate = false;
+        const updated = pending.map((o): PendingOrder => {
+          if (o.type !== 'twap' || o.status !== 'active') return o;
+          const elapsed = now - o.startTime;
+          const sliceDuration = o.durationMs / o.numSlices;
+          const targetSlices = Math.min(
+            o.numSlices,
+            Math.floor(elapsed / sliceDuration)
+          );
+          const toFill = targetSlices - o.filledSlices;
+          if (toFill <= 0) return o;
+          const price = prices[o.asset] ?? state.priceCache[o.asset]?.price;
+          if (price == null || price <= 0) return o;
+          const sliceAmount = o.totalAmount / o.numSlices;
+          const fillAmount = toFill * sliceAmount;
+          const success = state.executeTrade({
+            type: o.side,
+            asset: o.asset,
+            amount: fillAmount,
+            price,
+            source: 'manual',
+            notes: `TWAP slice ${o.filledSlices + 1}-${o.filledSlices + toFill}/${o.numSlices}`,
+          });
+          if (success) {
+            didUpdate = true;
+            const newFilled = o.filledSlices + toFill;
+            const status = newFilled >= o.numSlices ? 'completed' : 'active';
+            return { ...o, filledSlices: newFilled, status };
+          }
+          return o;
+        });
+        const filtered = updated.filter(
+          (o) => !(o.type === 'twap' && o.status === 'completed')
+        );
+        if (didUpdate || filtered.length !== pending.length) {
+          set({ pendingOrders: filtered });
+        }
+      },
+      
+      executeIcebergOrder: (orderId, price) => {
+        const state = get();
+        const pending = state.pendingOrders ?? [];
+        const order = pending.find((o) => o.id === orderId);
+        if (!order || order.type !== 'iceberg' || order.status !== 'pending') return false;
+        const success = state.executeTrade({
+          type: order.side,
+          asset: order.asset,
+          amount: order.totalAmount,
+          price,
+          source: 'manual',
+          notes: `Iceberg order (visible ${order.visiblePercent}%)`,
+        });
+        if (success) {
+          set((s) => ({
+            pendingOrders: (s.pendingOrders ?? []).filter((o) => o.id !== orderId),
+          }));
+        }
+        return success;
+      },
+      
+      cancelPendingOrder: (orderId) => {
+        set((s) => ({
+          pendingOrders: (s.pendingOrders ?? []).filter((o) => o.id !== orderId),
+        }));
       },
     }),
     {

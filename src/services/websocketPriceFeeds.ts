@@ -583,15 +583,19 @@ export function useRealtimePrices(): {
   const [status, setStatus] = useState<WebSocketStatus[]>([]);
   
   useEffect(() => {
-    wsFeeds.start();
-    
-    const unsubPrices = wsFeeds.subscribePrices(setPrices);
-    const unsubStatus = wsFeeds.subscribeStatus(setStatus);
-    
-    return () => {
-      unsubPrices();
-      unsubStatus();
-    };
+    if (typeof WebSocket === 'undefined') return;
+    try {
+      wsFeeds.start();
+      const unsubPrices = wsFeeds.subscribePrices(setPrices);
+      const unsubStatus = wsFeeds.subscribeStatus(setStatus);
+      return () => {
+        unsubPrices();
+        unsubStatus();
+      };
+    } catch (e) {
+      console.warn('[WSFeed] useRealtimePrices failed:', e);
+      return () => {};
+    }
   }, []);
   
   const isConnected = status.some(s => s.connected);

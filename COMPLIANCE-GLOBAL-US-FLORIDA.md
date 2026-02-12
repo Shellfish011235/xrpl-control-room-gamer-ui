@@ -63,6 +63,22 @@ To align with evolving AI regulations (e.g. **EU AI Act** full enforcement Aug 2
 
 ---
 
+## Phase 1 Paper Trading Features (Sim-Only)
+
+The following features are **simulation-only**: no real funds, no custody, no transmission of value, no real broker or order routing. They are intended to align with the zero-risk Phase 1 posture described in ROADMAP.md.
+
+| Feature | Description | Compliance posture |
+|--------|-------------|--------------------|
+| **Sim price feeds** | Client-side simulated prices for 24 paper-trading pairs (scenarios: normal, crash, pump, sideways, volatile). | No real market data obligations; no custody; no transmission. |
+| **Backtesting engine** | Runs Orchestra-style agent logic over simulated historical bars; outputs equity curve and stats. | Purely educational/demo; no real orders or real funds. |
+| **TWAP / Iceberg (paper)** | Advanced order types in the **paper trading** store only; execute against simulated wallet via same `executeTrade` flow. | No real broker; no real order routing; sim-only. |
+| **Profile-based agent** | Rule-based strategy (conservative/moderate/aggressive) driven by in-app level/XP; feeds into paper-trading suggestions only. | No execution of real value; explainability (e.g. “Level 7: Moderate strategy”) in UI. |
+
+- **Jurisdiction-specific advice:** This subsection does not replace legal advice. Before enabling any real-user flows, testnet with value-like flows, or mainnet features, consult qualified counsel in your jurisdiction (including Florida and other relevant states).
+- **Staying current:** When regulations or product features change, update this section and re-check [REGULATORY-WATCH.md](./REGULATORY-WATCH.md) so the project stays compliant. See “Staying Compliant: Process” in REGULATORY-WATCH.md.
+
+---
+
 ## Staying Current on Regulations
 
 Regulations change. We maintain a **regulatory watch** so the project can stay current:
@@ -90,9 +106,9 @@ When in doubt, reassess with qualified counsel before enabling mainnet or real-u
 
 - **OPENCLAW-COMPLIANCE-AND-USE.md** — Money transmission, custody, Xaman use, royalties, AI agent economy, liability, and “get a legal opinion” guidance.
 - **docs/AI-AGENT-ECONOMY-INTEGRATION.md** — How AI payments, OpenClaw, and Agent Economy fit together; regulatory scope (no custody, user-signs-only, applicable laws).
-- **This file** — High-level alignment with global, US, and Florida crypto and AI regulation; AI risk policy and explainability; not a substitute for legal advice.
+- **This file** — High-level alignment with global, US, and Florida crypto and AI regulation; AI risk policy and explainability; **Phase 1 paper trading features (sim-only)**; not a substitute for legal advice.
 - **ROADMAP.md** — Phased roadmap (sim → testnet → compliant APIs) with compliance tie-ins.
-- **REGULATORY-WATCH.md** — Where to check for regulatory updates (White House, SEC, EU AI Act, state laws, etc.).
+- **REGULATORY-WATCH.md** — Where to check for regulatory updates and **how to stay current** (sources, process, feature checklist).
 
 ---
 
