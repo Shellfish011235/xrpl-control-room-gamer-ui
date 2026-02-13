@@ -4,6 +4,7 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: '/', // Required for correct asset paths on Vercel (and subpath deployments)
   plugins: [react()],
   server: {
     port: 3000,
