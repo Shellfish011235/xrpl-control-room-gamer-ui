@@ -6,6 +6,7 @@ import {
   AlertCircle, Loader2, Coins, Eye, EyeOff, ChevronDown, TrendingUp, TrendingDown
 } from 'lucide-react';
 import { useWalletStore, walletProviders, DEMO_WALLETS } from '../store/walletStore';
+import { usePlatformModeStore } from '../store/platformModeStore';
 import type { WalletProvider } from '../store/walletStore';
 import { isValidXRPLAddress } from '../services/xrplService';
 
@@ -128,6 +129,7 @@ export function WalletConnect() {
 
   const activeWallet = wallets.find(w => w.id === activeWalletId);
   const hasDemoWallets = wallets.some(w => w.provider === 'demo');
+  const platformLive = usePlatformModeStore((s) => s.mode === 'live');
 
   // Calculate total XRP balance across all wallets (excluding demo)
   const totalXRP = useMemo(() => {
@@ -224,9 +226,12 @@ export function WalletConnect() {
           <div className="flex items-center gap-2">
             <Wallet size={16} className="text-cyber-yellow" />
             <span className="font-cyber text-sm text-cyber-yellow tracking-wider">WALLETS</span>
+            <span className={`px-1.5 py-0.5 text-[10px] rounded border ${platformLive ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/30' : 'bg-cyber-yellow/20 text-cyber-yellow border-cyber-yellow/30'}`}>
+              Platform: {platformLive ? 'LIVE' : 'DEMO'}
+            </span>
             {hasDemoWallets && (
               <span className="px-1.5 py-0.5 text-[10px] rounded bg-cyber-magenta/20 text-cyber-magenta border border-cyber-magenta/30">
-                DEMO
+                Demo wallets
               </span>
             )}
           </div>

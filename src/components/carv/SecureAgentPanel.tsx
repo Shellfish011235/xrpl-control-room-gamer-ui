@@ -16,6 +16,7 @@ import { securePaymentAgent, PaymentPlan, AuditLogEntry, SecurityConfig } from '
 import { xamanService } from '../../services/xaman';
 import { getXamanMode, initializeXaman } from '../../config/xaman';
 import { useWalletStore } from '../../store/walletStore';
+import { usePlatformModeStore } from '../../store/platformModeStore';
 import { getTransaction, waitForTransaction, TransactionResult } from '../../services/xrplService';
 
 // ==================== TYPES ====================
@@ -45,23 +46,34 @@ export function SecureAgentPanel() {
   const [apiSecretInput, setApiSecretInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const platformLive = usePlatformModeStore((s) => s.mode === 'live');
+  const setPlatformMode = usePlatformModeStore((s) => s.setMode);
   const { wallets, activeWalletId } = useWalletStore();
   const activeWallet = wallets.find(w => w.id === activeWalletId);
 
-  // Initialize
+  // Initialize — richer welcome (chatbot-style)
   useEffect(() => {
-    // Welcome message
     const modeMessage = xamanMode === 'production'
-      ? '🔐 **Production Mode** - Real transactions will be signed with Xaman'
-      : '🎮 **Demo Mode** - Transactions are simulated (no real signing)\n\nTo enable real signing, add your Xaman API credentials to .env';
-    
-    setMessages([{
-      id: 'welcome',
-      type: 'system',
-      content: `🛡️ Secure Payment Agent ready.\n\n${modeMessage}\n\nConnect your Xaman wallet to start, then tell me what you want to pay in plain English.\n\nExample: "Pay $50 to rABC123" or "Send 100 XRP to my friend"`,
-      timestamp: new Date(),
-    }]);
-  }, [xamanMode]);
+      ? '🔐 **Real signing is on** — I’ll send transactions to your Xaman app to sign. Use the **Live** toggle at the top to send real payments.'
+      : platformLive
+        ? '📡 **Platform is Live** — add your Xaman API key below (Connect Xaman) to sign real payments.'
+        : 'Switch to **Live** (toggle at top of page) and add your Xaman API key below to send real payments. In Demo, I’ll simulate everything.';
+
+    setMessages([
+      {
+        id: 'welcome-1',
+        type: 'agent',
+        content: `Hi — I’m your **Secure Payment Agent**. I can send XRP or convert and pay in USD/EUR to any XRPL address. You tell me in plain English; I build the payment and you approve it in Xaman.`,
+        timestamp: new Date(),
+      },
+      {
+        id: 'welcome-2',
+        type: 'system',
+        content: `${modeMessage}\n\n**Connect your wallet** above to start, then say something like:\n\n• "Send 10 XRP to rABC..."\n• "Pay $50 to rXYZ..."\n• "How does this work?"`,
+        timestamp: new Date(),
+      },
+    ]);
+  }, [xamanMode, platformLive]);
 
   // Auto-connect wallet if available
   useEffect(() => {
@@ -85,10 +97,25 @@ export function SecureAgentPanel() {
     try {
       await securePaymentAgent.connectWallet(activeWallet.address);
       setWalletConnected(true);
-      addMessage('system', `✅ Connected to wallet: ${activeWallet.label}\n\nYour balance: ${activeWallet.balance?.toFixed(2) || '?'} XRP\n\nI'm ready to help you make payments!`);
+      addMessage('agent', `✅ **Connected** to ${activeWallet.label}.\n\nYour balance: **${activeWallet.balance?.toFixed(2) ?? '?'} XRP**`);
+      addMessage('agent', `What would you like to do? You can say:\n\n• **"Send 5 XRP to r..."** — I’ll build the payment and show you a QR to sign in Xaman.\n• **"Pay $25 to r..."** — I’ll convert to the right amount and do the same.\n• **"Help"** or **"What can you do?"** — I’ll explain more.`);
     } catch (error) {
       addMessage('system', `❌ Failed to connect wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  };
+
+  // Map errors to user-friendly messages (explainability + compliance)
+  const toUserFriendlyError = (error: unknown): string => {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (/network|fetch|failed to fetch|ECONNREFUSED|timeout/i.test(msg)) return 'Network error. Check your connection and try again.';
+    if (/rate limit|too many requests|429/i.test(msg)) return 'Rate limit reached. Please wait a moment before trying again.';
+    if (/daily limit|limit_exceeded/i.test(msg)) return 'Daily spend limit reached. Adjust caps in Agent Economy or try again tomorrow.';
+    if (/whitelist|blocked|not allowed/i.test(msg)) return 'This destination is not on your whitelist. Add it in settings or disable whitelist-only mode.';
+    if (/invalid address|destination|r[A-Za-z0-9]{24,34}/i.test(msg) && msg.length < 80) return 'Invalid or missing destination address. Use a valid XRPL address (r...).';
+    if (/cooldown|wait.*between/i.test(msg)) return 'Please wait a few seconds between transactions (cooldown).';
+    if (/expired|Plan expired/i.test(msg)) return 'This payment plan expired. Please submit your request again.';
+    if (msg && msg.length > 120) return msg.slice(0, 120) + '…';
+    return msg || 'Something went wrong. Please try again.';
   };
 
   // Add message
@@ -114,25 +141,36 @@ export function SecureAgentPanel() {
 
     try {
       if (!walletConnected) {
-        addMessage('agent', "🔒 Please connect your wallet first. Click the 'Connect Wallet' button above.");
+        addMessage('agent', "🔒 Connect your wallet first using the **Connect Wallet** button above — then I can help you send payments.");
+        addMessage('agent', "Once connected, tell me what you want to pay (e.g. \"Send 10 XRP to r...\") and I’ll walk you through it.");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Help / how does this work — reply with conversation, no payment
+      const helpTriggers = /^(help|what can you do|how does this work|how do i|what do you do|explain|hi|hello)\s*$/i;
+      if (helpTriggers.test(userInput.replace(/[.?!]+$/, '').trim())) {
+        addMessage('agent', `Here’s how it works:\n\n1. **You tell me** what to pay — e.g. "Send 20 XRP to rABC..." or "Pay $30 to rXYZ...".\n2. **I build a payment plan** and show you the amount, fees, and destination.\n3. **You tap Confirm** — I’ll show a QR (or link) to open in **Xaman**.\n4. **You sign in Xaman** — the transaction is sent. I never hold your funds; you approve every payment.\n\nYou can send **XRP** or **USD/EUR** (I’ll convert via the XRPL). Want to try a payment? Just type it above.`);
+        setIsProcessing(false);
         return;
       }
 
       // Add thinking indicator
-      addMessage('agent', '🤔 Analyzing your request...');
+      addMessage('agent', '🤔 Looking at your request...');
 
       // Create payment plan
       const plan = await securePaymentAgent.createPaymentPlan(userInput);
       setActivePlan(plan);
 
-      // Remove thinking message and show plan
-      setMessages(prev => prev.filter(m => m.content !== '🤔 Analyzing your request...'));
+      // Remove thinking message, add conversational wrap, then show plan
+      setMessages(prev => prev.filter(m => m.content !== '🤔 Looking at your request...'));
+      addMessage('agent', 'Here’s your **payment plan**. Check the details below — when it looks right, tap **Confirm** and I’ll show you the QR to sign in Xaman.');
       addMessage('plan', '', plan);
 
     } catch (error) {
       // Remove thinking message
       setMessages(prev => prev.filter(m => m.content !== '🤔 Analyzing your request...'));
-      addMessage('agent', `❌ ${error instanceof Error ? error.message : 'Something went wrong'}`);
+      addMessage('agent', `❌ ${toUserFriendlyError(error)}`);
     } finally {
       setIsProcessing(false);
     }
@@ -213,12 +251,17 @@ export function SecureAgentPanel() {
           }
         } else {
           // Demo or manual confirmation mode
+          const isDemoTx = txHash?.startsWith('DEMO_');
+          const demoLine = isDemoTx
+            ? (platformLive
+                ? '📡 **Simulated** — real signing failed or no API key. Add your Xaman API key (Connect Xaman) to sign for real.'
+                : '🎮 **Simulated (demo)** — switch to Live and add Xaman API key to sign for real.')
+            : 'Check your Xaman app for transaction details.';
           addMessage('agent', 
-            `✅ **Payment Processed!**\n\n` +
+            (isDemoTx ? '🔄 **Payment simulated**\n\n' : '✅ **Payment Processed!**\n\n') +
             `Amount: ${result.execution?.actualCost} XRP\n` +
             `Reference: \`${txHash}\`\n\n` +
-            (txHash?.startsWith('DEMO_') ? '🎮 This was a demo transaction.' : 
-             'Check your Xaman app for transaction details.')
+            demoLine
           );
         }
         
@@ -228,12 +271,50 @@ export function SecureAgentPanel() {
             useWalletStore.getState().refreshWallet(activeWallet.id);
           }, 3000);
         }
+
+        addMessage('agent', 'All set. Want to send another? Just type it below — or ask **"help"** if you have questions.');
         
       } else if (result.status === 'failed') {
-        addMessage('agent', `❌ **Payment Failed**\n\n${result.execution?.error || 'Unknown error'}\n\nPlease try again.`);
+        addMessage('agent', `❌ **Payment failed**\n\n${result.execution?.error || 'Unknown error'}`);
+        addMessage('agent', 'You can try again with a different amount or address, or say **"help"** if you want to double-check the format.');
       }
     } catch (error) {
-      addMessage('agent', `❌ ${error instanceof Error ? error.message : 'Transaction failed'}`);
+      setMessages(prev => prev.filter(m => m.content !== '🤔 Looking at your request...'));
+      addMessage('agent', `❌ ${toUserFriendlyError(error)}`);
+      addMessage('agent', 'Want to try again? Make sure you include an amount and an XRPL address (starts with **r**). Or say **"help"** for a quick guide.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Quick message from suggestion chip (same flow as handleSubmit but with explicit text)
+  const handleQuickMessage = async (userText: string) => {
+    if (!userText.trim() || isProcessing) return;
+    setInput('');
+    addMessage('user', userText.trim());
+    setIsProcessing(true);
+    try {
+      if (!walletConnected) {
+        addMessage('agent', "🔒 Connect your wallet first using the **Connect Wallet** button above — then I can help you send payments.");
+        setIsProcessing(false);
+        return;
+      }
+      const helpTriggers = /^(help|what can you do|how does this work|how do i|what do you do|explain|hi|hello)\s*$/i;
+      if (helpTriggers.test(userText.replace(/[.?!]+$/, '').trim())) {
+        addMessage('agent', `Here’s how it works:\n\n1. **You tell me** what to pay — e.g. "Send 20 XRP to rABC..." or "Pay $30 to rXYZ...".\n2. **I build a payment plan** and show you the amount, fees, and destination.\n3. **You tap Confirm** — I’ll show a QR (or link) to open in **Xaman**.\n4. **You sign in Xaman** — the transaction is sent. I never hold your funds; you approve every payment.\n\nYou can send **XRP** or **USD/EUR** (I’ll convert via the XRPL). Want to try a payment? Just type it above.`);
+        setIsProcessing(false);
+        return;
+      }
+      addMessage('agent', '🤔 Looking at your request...');
+      const plan = await securePaymentAgent.createPaymentPlan(userText.trim());
+      setActivePlan(plan);
+      setMessages(prev => prev.filter(m => m.content !== '🤔 Looking at your request...'));
+      addMessage('agent', 'Here’s your **payment plan**. Check the details below — when it looks right, tap **Confirm** and I’ll show you the QR to sign in Xaman.');
+      addMessage('plan', '', plan);
+    } catch (error) {
+      setMessages(prev => prev.filter(m => m.content !== '🤔 Looking at your request...'));
+      addMessage('agent', `❌ ${toUserFriendlyError(error)}`);
+      addMessage('agent', 'You can try again with a different amount or address, or say **"help"** for a quick guide.');
     } finally {
       setIsProcessing(false);
     }
@@ -243,7 +324,8 @@ export function SecureAgentPanel() {
   const handleCancelPlan = (planId: string) => {
     securePaymentAgent.cancelPlan(planId);
     setActivePlan(null);
-    addMessage('agent', '🚫 Payment cancelled.');
+    addMessage('agent', 'No problem — payment cancelled.');
+    addMessage('agent', 'If you want to try again with a different amount or address, just type it below.');
   };
 
   // Update config
@@ -296,12 +378,19 @@ export function SecureAgentPanel() {
                 Daily limit: {securePaymentAgent.getRemainingDailyLimit().toFixed(2)} XRP remaining
               </p>
               <span className={`px-1.5 py-0.5 rounded text-[8px] ${
-                xamanMode === 'production'
-                  ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/30'
-                  : 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30'
+                platformLive ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/30' : 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30'
               }`}>
-                {xamanMode === 'production' ? '🔐 LIVE' : '🎮 DEMO'}
+                {platformLive ? 'LIVE' : 'DEMO'} {xamanMode === 'production' ? '· Xaman' : ''}
               </span>
+              {!platformLive && (
+                <button
+                  type="button"
+                  onClick={() => setPlatformMode('live')}
+                  className="px-3 py-1.5 rounded-lg text-xs font-cyber bg-cyber-green/20 text-cyber-green border border-cyber-green/50 hover:bg-cyber-green/30"
+                >
+                  → Go Live
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -313,11 +402,13 @@ export function SecureAgentPanel() {
             className={`px-3 py-1.5 rounded-lg text-xs flex items-center gap-1 transition-colors ${
               xamanMode === 'production'
                 ? 'bg-cyber-green/20 border border-cyber-green/50 text-cyber-green'
-                : 'bg-cyber-yellow/20 border border-cyber-yellow/50 text-cyber-yellow hover:bg-cyber-yellow/30'
+                : platformLive
+                  ? 'bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan hover:bg-cyber-cyan/30'
+                  : 'bg-cyber-yellow/20 border border-cyber-yellow/50 text-cyber-yellow hover:bg-cyber-yellow/30'
             }`}
           >
             <Smartphone size={14} />
-            {xamanMode === 'production' ? 'Xaman Connected' : 'Connect Xaman'}
+            {xamanMode === 'production' ? 'Xaman Connected' : platformLive ? 'Add Xaman (real signing)' : 'Connect Xaman'}
           </button>
           
           {!walletConnected && activeWallet && (
@@ -391,30 +482,34 @@ export function SecureAgentPanel() {
                       </li>
                       <li>Click "Create new application"</li>
                       <li>Give it a name (e.g., "My Payment Agent")</li>
-                      <li>Copy your <strong>API Key</strong> (required). API Secret is optional (backend only).</li>
-                      <li>Paste your API Key below 👇</li>
+                      <li>Copy your <strong>API Key</strong> (this is all you need).</li>
+                      <li>Paste it below — <strong>leave API Secret blank</strong>.</li>
                     </ol>
                   </div>
+
+                  <p className="text-xs text-cyber-green bg-cyber-green/10 border border-cyber-green/30 rounded-lg px-3 py-2 mb-3">
+                    ✓ Only the <strong>API Key</strong> is required to sign transactions from this app. You do <strong>not</strong> need the API Secret.
+                  </p>
 
                   {/* Input Fields */}
                   <div className="space-y-3">
                     <div>
-                      <label className="text-xs text-cyber-muted block mb-1">API Key</label>
+                      <label className="text-xs text-cyber-muted block mb-1">API Key <span className="text-cyber-green">(required)</span></label>
                       <input
                         type="text"
                         value={apiKeyInput}
                         onChange={(e) => setApiKeyInput(e.target.value)}
-                        placeholder="Paste your API Key here..."
+                        placeholder="Paste your API Key from apps.xumm.dev..."
                         className="w-full px-3 py-2 rounded bg-cyber-darker border border-cyber-border text-sm text-cyber-text placeholder:text-cyber-muted/50"
                       />
                     </div>
                     <div>
-                      <label className="text-xs text-cyber-muted block mb-1">API Secret <span className="text-cyber-muted/70">(optional – backend only)</span></label>
+                      <label className="text-xs text-cyber-muted block mb-1">API Secret <span className="text-cyber-muted/70">(leave blank – not used in this app)</span></label>
                       <input
                         type="password"
                         value={apiSecretInput}
                         onChange={(e) => setApiSecretInput(e.target.value)}
-                        placeholder="Leave blank for browser-only signing"
+                        placeholder="Leave blank"
                         className="w-full px-3 py-2 rounded bg-cyber-darker border border-cyber-border text-sm text-cyber-text placeholder:text-cyber-muted/50"
                       />
                     </div>
@@ -431,7 +526,10 @@ export function SecureAgentPanel() {
                   </button>
 
                   <p className="text-[10px] text-cyber-muted text-center">
-                    🔒 Your credentials are stored securely in your browser only
+                    🔒 Only your API Key is saved in this browser. API Secret is not stored or used.
+                  </p>
+                  <p className="text-[10px] text-cyber-cyan text-center mt-2">
+                    After saving: switch to <strong>Live</strong> with the Platform toggle at the top of the page, then send a payment below.
                   </p>
                 </div>
               ) : (
@@ -440,9 +538,13 @@ export function SecureAgentPanel() {
                   <div className="text-3xl mb-2">✅</div>
                   <h3 className="font-cyber text-cyber-green">Xaman Connected!</h3>
                   <p className="text-xs text-cyber-muted">
-                    Real payments are enabled. Transactions will be signed in your Xaman app.
+                    To send a <strong>real</strong> payment from your wallet:
                   </p>
-                  
+                  <ol className="text-xs text-cyber-muted text-left list-decimal list-inside space-y-1 bg-cyber-darker/50 rounded-lg p-3">
+                    <li>Switch to <strong className="text-cyber-green">Live</strong> using the Platform toggle at the <strong>top of the page</strong> (nav bar or bar below it).</li>
+                    <li>Type your payment below (e.g. &quot;Send 5 XRP to rABC...&quot;) and send.</li>
+                    <li>Confirm the plan, then <strong>scan the QR with Xaman</strong> (or tap Open in Xaman) to sign. The transaction is sent when you approve in the app.</li>
+                  </ol>
                   <div className="bg-cyber-darker/50 rounded-lg p-3">
                     <p className="text-xs text-cyber-muted">API Key</p>
                     <p className="text-sm text-cyber-text font-mono">{xamanService.getMaskedApiKey()}</p>
@@ -556,6 +658,36 @@ export function SecureAgentPanel() {
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-4 border-t border-cyber-border bg-cyber-dark">
+        {/* Suggestion chips — quick ways to start a message */}
+        {walletConnected && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            <span className="text-[10px] text-cyber-muted self-center mr-1">Try:</span>
+            <button
+              type="button"
+              onClick={() => setInput('Send 5 XRP to ')}
+              disabled={isProcessing}
+              className="px-3 py-1.5 rounded-lg text-xs bg-cyber-darker/80 border border-cyber-border text-cyber-muted hover:text-cyber-cyan hover:border-cyber-cyan/50 transition-colors disabled:opacity-50"
+            >
+              Send 5 XRP
+            </button>
+            <button
+              type="button"
+              onClick={() => setInput('Pay $20 to ')}
+              disabled={isProcessing}
+              className="px-3 py-1.5 rounded-lg text-xs bg-cyber-darker/80 border border-cyber-border text-cyber-muted hover:text-cyber-cyan hover:border-cyber-cyan/50 transition-colors disabled:opacity-50"
+            >
+              Pay $20 USD
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickMessage('What can you do?')}
+              disabled={isProcessing}
+              className="px-3 py-1.5 rounded-lg text-xs bg-cyber-darker/80 border border-cyber-border text-cyber-muted hover:text-cyber-cyan hover:border-cyber-cyan/50 transition-colors disabled:opacity-50"
+            >
+              What can you do?
+            </button>
+          </div>
+        )}
         <div className="flex gap-2">
           <input
             type="text"

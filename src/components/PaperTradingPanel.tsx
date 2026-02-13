@@ -2267,6 +2267,7 @@ function PaperTradingPanelInner({
                     {agentSuggestion.sizePercent > 0 && ` · ${agentSuggestion.sizePercent}% size`}
                     {agentSuggestion.usedKelly && ' (Kelly)'}
                   </p>
+                  <p className="text-[8px] text-cyber-muted/80 italic">Based on: price trend + sentiment; size from Kelly when stats available.</p>
                   <p className="text-[9px] text-cyber-muted">{agentSuggestion.reason}</p>
                   <p className="text-[9px] text-cyber-muted">Confidence: {agentSuggestion.confidence}%</p>
                   <div className="flex gap-2 pt-1">

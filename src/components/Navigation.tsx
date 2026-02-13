@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Globe, Skull, User, HeartPulse, Home, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Zap, Wallet } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import defaultLogo from '../assets/profile-default.png'
+import { usePlatformModeStore } from '../store/platformModeStore'
 
 // XRP Price Hook - fetches from CoinGecko
 function useXRPPrice() {
@@ -160,6 +161,30 @@ function useLedgerIndex() {
   return { ledgerIndex, loading, error }
 }
 
+// Platform mode toggle — one click switches entire platform Demo ↔ Live
+function PlatformModeToggle() {
+  const mode = usePlatformModeStore((s) => s.mode)
+  const toggleMode = usePlatformModeStore((s) => s.toggleMode)
+  const isLive = mode === 'live'
+  return (
+    <button
+      type="button"
+      onClick={toggleMode}
+      title={isLive ? 'Switch to Demo mode (platform-wide)' : 'Switch to Live mode (platform-wide)'}
+      className={`flex items-center gap-2 px-3 py-1.5 cyber-panel border rounded-lg transition-colors ${
+        isLive
+          ? 'border-cyber-green/30 hover:border-cyber-green/50 bg-cyber-green/10'
+          : 'border-cyber-yellow/30 hover:border-cyber-yellow/50 bg-cyber-yellow/10'
+      }`}
+    >
+      <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-cyber-green animate-pulse' : 'bg-cyber-yellow'}`} />
+      <span className={`text-xs font-cyber ${isLive ? 'text-cyber-green' : 'text-cyber-yellow'}`}>
+        {isLive ? 'LIVE' : 'DEMO'}
+      </span>
+    </button>
+  )
+}
+
 const navItems = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/terminal', label: 'Terminal', icon: Activity },
@@ -270,11 +295,8 @@ export default function Navigation() {
               )}
             </div>
 
-            {/* Live Status */}
-            <div className="flex items-center gap-2 px-3 py-1.5 cyber-panel border-cyber-green/30">
-              <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
-              <span className="text-xs font-cyber text-cyber-green">LIVE</span>
-            </div>
+            {/* Platform mode: Demo / Live — click to toggle entire platform */}
+            <PlatformModeToggle />
 
             {/* Ledger - Live Feed */}
             <div className="text-right">
@@ -311,6 +333,10 @@ export default function Navigation() {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden border-t border-cyber-border"
           >
+            {/* Mobile: Platform mode toggle */}
+            <div className="px-4 py-3 border-b border-cyber-border/50">
+              <PlatformModeToggle />
+            </div>
             {/* Mobile XRP Price */}
             <div className="px-4 py-3 border-b border-cyber-border/50 flex items-center justify-between">
               <div className="flex items-center gap-2">

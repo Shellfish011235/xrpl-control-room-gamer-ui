@@ -440,8 +440,11 @@ class XamanService {
       
     } catch (error) {
       console.error('[Xaman] SDK error:', error);
-      // Fall back to demo mode
-      console.log('[Xaman] Falling back to demo mode due to error');
+      // If we have credentials, do NOT silently fall back to demo — surface the error so the user can fix it
+      if (this.apiKey && this.xumm) {
+        const msg = error instanceof Error ? error.message : String(error);
+        throw new Error(`Real signing failed: ${msg}. Check your API key at apps.xumm.dev and try again.`);
+      }
       return this.createDemoRequest(type, payload, now, expiresAt);
     }
   }

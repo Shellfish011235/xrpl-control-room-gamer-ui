@@ -8,10 +8,11 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cpu, ListTodo, Receipt, Shield, Zap, ExternalLink, Loader2, CheckCircle,
-  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign
+  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign, ChevronRight
 } from 'lucide-react';
 import { useWalletStore } from '../store/walletStore';
 import { useAgentEconomyStore } from '../store/agentEconomyStore';
+import { usePlatformModeStore } from '../store/platformModeStore';
 import { xamanService } from '../services/xaman';
 import { AGENT_SERVICE_WALLET, POWER_MODE_UNLOCK_XRP, POWER_MODE_DURATION_MS } from '../lib/constants';
 import { getXamanMode } from '../config/xaman';
@@ -54,6 +55,7 @@ function PowerModeUnlockCard() {
   const activeWallet = wallets.find((w) => w.id === activeWalletId);
   const payerAddress = activeWallet?.provider !== 'demo' ? activeWallet?.address : null;
   const xamanProduction = getXamanMode() === 'production';
+  const platformLive = usePlatformModeStore((s) => s.mode === 'live');
   const unlocked = isPowerModeUnlocked();
   const dailySpent = getSpendTotalToday();
   const underCap = dailySpent + POWER_MODE_UNLOCK_XRP <= spendCaps.dailyLimitXRP;
@@ -182,8 +184,11 @@ function PowerModeUnlockCard() {
               <AlertCircle size={12} /> {error}
             </p>
           )}
-          {!xamanProduction && (
-            <p className="text-xs text-cyber-yellow mb-2">Demo mode: configure Xaman API key for real signing.</p>
+          {!xamanProduction && !platformLive && (
+            <p className="text-xs text-cyber-yellow mb-2">Demo mode: switch to Live in the nav bar, or configure Xaman API key for real signing.</p>
+          )}
+          {platformLive && !xamanProduction && (
+            <p className="text-xs text-cyber-cyan mb-2">Platform is Live. Configure Xaman (e.g. in CARV) to sign for real.</p>
           )}
           {signing && signingRequest && (
             <div className="mb-4 p-3 rounded-lg bg-cyber-darker border border-cyber-glow/30">
@@ -235,8 +240,15 @@ function AgentsTab() {
         Marketplace of paid agents. Each action is a fixed price and requires your signature in Xaman.
       </p>
       <PowerModeUnlockCard />
-      <div className="cyber-panel p-4 border border-cyber-border rounded-lg opacity-60">
-        <p className="text-xs text-cyber-muted">More agents coming: Summary, Corridor Scan, Monitor Alerts.</p>
+      <div className="cyber-panel p-4 border border-cyber-border rounded-lg">
+        <p className="text-xs text-cyber-muted mb-2">More paid actions coming: Summary, Corridor Scan, Monitor Alerts. Each will show a fixed XRP price and require your Xaman signature.</p>
+        <Link
+          to="/micropayments"
+          state={{ tab: 'agents' }}
+          className="inline-flex items-center gap-2 text-xs text-cyber-cyan hover:underline"
+        >
+          Run the Orchestra (AI Agents) <ChevronRight size={12} />
+        </Link>
       </div>
     </div>
   );

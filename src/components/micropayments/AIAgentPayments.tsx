@@ -16,7 +16,9 @@ import {
   type MicropaymentStream,
 } from '../../services/micropayments/streamingPayments';
 import { fetchCryptoSentiment, fetchXRPLMetrics } from '../../services/freeDataFeeds';
+import { fetchPolymarketMarkets } from '../../services/predictionMarkets';
 import { useOrchestraSimStore } from '../../store/orchestraSimStore';
+import { usePlatformModeStore } from '../../store/platformModeStore';
 
 // =============================================================================
 // TYPES
@@ -165,6 +167,18 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     totalSpent: 0,
     callsProcessed: 120000,
   },
+  {
+    id: 'prediction-markets',
+    name: 'Prediction Markets (Polymarket)',
+    type: 'data_provider',
+    address: 'rPolymarketPM123',
+    capabilities: ['crypto_markets', 'probabilities', 'signals', 'XRP_relevance'],
+    pricePerCall: 22,
+    status: 'online',
+    totalEarned: 2800000,
+    totalSpent: 0,
+    callsProcessed: 127000,
+  },
 ];
 
 // =============================================================================
@@ -181,8 +195,9 @@ export function AIAgentPayments({
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [orchestraResult, setOrchestraResult] = useState<string | null>(null);
   const [isOrchestraRunning, setIsOrchestraRunning] = useState(false);
-  const [orchestraTask, setOrchestraTask] = useState<'xrp_price' | 'ledger_fee' | 'sentiment' | 'xrpscan_metrics' | 'pathfinder_quote' | 'tx_history' | 'compliance_snapshot' | 'summary' | 'pipeline'>('xrp_price');
+  const [orchestraTask, setOrchestraTask] = useState<'xrp_price' | 'ledger_fee' | 'sentiment' | 'xrpscan_metrics' | 'pathfinder_quote' | 'tx_history' | 'compliance_snapshot' | 'prediction_markets' | 'summary' | 'pipeline'>('xrp_price');
   const simPayments = useOrchestraSimStore((s) => s.payments);
+  const platformLive = usePlatformModeStore((s) => s.mode === 'live');
 
   // Stats
   const stats = useMemo(() => {
@@ -269,6 +284,7 @@ export function AIAgentPayments({
     const pathfinderAgent = agents.find(a => a.id === 'pathfinder')!;
     const txHistoryAgent = agents.find(a => a.id === 'tx-history')!;
     const regulatoryWatchAgent = agents.find(a => a.id === 'regulatory-watch')!;
+    const predictionMarketsAgent = agents.find(a => a.id === 'prediction-markets')!;
     const reasoning = agents.find(a => a.id === 'reasoning')!;
 
     const steps: Array<{ fromId: string; toId: string; amount: number; reason: string; latencyMs: number }> =
@@ -313,6 +329,12 @@ export function AIAgentPayments({
                         { fromId: 'orchestrator', toId: 'regulatory-watch', amount: regulatoryWatchAgent.pricePerCall, reason: 'Request compliance snapshot (regulatory watch)', latencyMs: 28 },
                         { fromId: 'regulatory-watch', toId: 'orchestrator', amount: 5, reason: 'Return watch sources + stance to orchestrator', latencyMs: 8 },
                         { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Summarize how we stay in law', latencyMs: 20 },
+                      ]
+                    : orchestraTask === 'prediction_markets'
+                    ? [
+                        { fromId: 'orchestrator', toId: 'prediction-markets', amount: predictionMarketsAgent.pricePerCall * 2, reason: 'Request crypto prediction markets (Polymarket)', latencyMs: 35 },
+                        { fromId: 'prediction-markets', toId: 'orchestrator', amount: 5, reason: 'Return markets + probabilities to orchestrator', latencyMs: 10 },
+                        { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Summarize prediction signals for user', latencyMs: 22 },
                       ]
                     : orchestraTask === 'summary'
                     ? [
@@ -468,6 +490,20 @@ export function AIAgentPayments({
           'Stance: No custody, user signs only (Xaman), human-in-the-loop. Re-check before scaling (see REGULATORY-WATCH.md).',
         ].join(' ');
         setOrchestraResult(`Orchestra result: ${snapshot} (Orchestrator → Regulatory Watch → Reasoning.)`);
+      } else if (orchestraTask === 'prediction_markets') {
+        let msg = 'Orchestra result: ';
+        try {
+          const markets = await fetchPolymarketMarkets(undefined, 8);
+          const cryptoRelevant = markets.filter(m => m.relevanceToXRP > 20 || m.category?.toLowerCase().includes('crypto')).slice(0, 3);
+          if (cryptoRelevant.length > 0) {
+            msg += `${cryptoRelevant.length} crypto-relevant market(s): ${cryptoRelevant.map(m => `"${m.question.slice(0, 40)}..." (${m.outcomes?.[0]?.probability != null ? (m.outcomes[0].probability * 100).toFixed(0) : '?'}%)`).join('; ')}. (Orchestrator → Polymarket → Reasoning; same as MemeticLab.)`;
+          } else {
+            msg += `${markets.length} Polymarket market(s) fetched. (Orchestrator → Prediction Markets → Reasoning; dashboard data.)`;
+          }
+        } catch {
+          msg += 'Prediction markets unavailable (mock). Orchestrator → Polymarket → Reasoning.';
+        }
+        setOrchestraResult(msg);
       } else if (orchestraTask === 'summary') {
         setOrchestraResult('Orchestra result: "XRPL enables fast, low-fee micropayments for AI agents." (Reasoning agent produced this; payment recorded.)');
       } else {
@@ -504,8 +540,8 @@ export function AIAgentPayments({
           <div className="flex items-center gap-2">
             <Bot size={16} className="text-cyber-green" />
             <span className="font-cyber text-cyber-green text-sm">AI AGENT PAYMENTS</span>
-            <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/40" title="Agents and balances are simulated. Price, ledger, sentiment, XRPScan, pathfinder, and tx history tasks call real dashboard APIs; payments are not on-chain.">
-              DEMO
+            <span className={`px-1.5 py-0.5 rounded text-[8px] border ${platformLive ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/40' : 'bg-cyber-yellow/20 text-cyber-yellow border-cyber-yellow/40'}`} title={platformLive ? 'Platform is Live (agent payments still simulated until real backend).' : 'Agents and balances are simulated. Toggle Live in the nav bar for platform-wide live mode.'}>
+              {platformLive ? 'LIVE' : 'DEMO'}
             </span>
           </div>
           {enableSimulation && (
@@ -547,6 +583,7 @@ export function AIAgentPayments({
               <option value="pathfinder_quote">Path quote (DEX Pathfinder)</option>
               <option value="tx_history">Tx history (xrplcluster)</option>
               <option value="compliance_snapshot">Compliance snapshot (stay in law)</option>
+              <option value="prediction_markets">Prediction markets (Polymarket)</option>
               <option value="summary">Summary (reasoning only)</option>
               <option value="pipeline">Pipeline: Price → Sentiment → Reasoning</option>
             </select>
@@ -572,7 +609,15 @@ export function AIAgentPayments({
           )}
         </div>
 
-        {/* Stats */}
+        {/* Stats — badge reflects platform mode; when live, no demo label */}
+        {!platformLive && (
+          <div className="mb-1 flex items-center gap-2">
+            <span className="text-[8px] text-cyber-yellow bg-cyber-yellow/10 px-1.5 py-0.5 rounded border border-cyber-yellow/30">
+              {transactions.length > 0 || isSimulating ? 'SIMULATED' : 'DEMO'}
+            </span>
+            <span className="text-[8px] text-cyber-muted">Stats from in-app demo; no on-chain payments. Toggle Live in nav to switch.</span>
+          </div>
+        )}
         <div className="grid grid-cols-4 gap-2">
           <div className="p-2 rounded bg-cyber-border/30 text-center">
             <p className="text-lg font-cyber text-cyber-cyan">{stats.onlineAgents}</p>
@@ -801,6 +846,7 @@ function getAgentDashboardSource(agentId: string): string {
     case 'sentiment': return 'freeDataFeeds (SentiCrypt)';
     case 'tx-history': return 'OpenClawDashboard, account_tx (xrplcluster)';
     case 'regulatory-watch': return 'REGULATORY-WATCH.md, COMPLIANCE-GLOBAL-US-FLORIDA.md, regulatoryData';
+    case 'prediction-markets': return 'MemeticLab, predictionMarkets, unifiedAnalyticsAggregator';
     default: return 'Dashboard';
   }
 }

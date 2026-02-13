@@ -444,8 +444,8 @@ function SimpleModeView({
 export default function CARVPage() {
   const [viewMode, setViewMode] = useState<'simple' | 'agent' | 'advanced'>('simple');
   const [showWelcome, setShowWelcome] = useState(true);
-  
   const {
+
     initialized,
     testMode,
     walletAddress,
@@ -589,18 +589,6 @@ export default function CARVPage() {
         />
       )}
 
-      {/* Footer Disclaimer */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4 }}
-        className="mt-6 p-3 rounded-lg bg-cyber-darker/30 border border-cyber-border/50"
-      >
-        <p className="text-[10px] text-cyber-muted text-center">
-          ⚠️ This is practice software. Always double-check before sending real money. 
-          Not financial advice. Keep your own records for taxes.
-        </p>
-      </motion.div>
     </div>
   );
 }

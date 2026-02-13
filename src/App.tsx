@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import Navigation from './components/Navigation'
+import { PlatformModeBar } from './components/PlatformModeBar'
 import { RootErrorBoundary } from './components/RootErrorBoundary'
 
 /** Slower scroll speed site-wide so options in scrollable boxes are easier to see. */
@@ -83,8 +84,9 @@ function App() {
           </div>
           
           <Navigation />
-          
-          <main className="relative z-10">
+
+          <main className="relative z-10 pt-16">
+            <PlatformModeBar />
             <AnimatePresence mode="wait">
               <Routes>
                 <Route path="/" element={<Home />} />
