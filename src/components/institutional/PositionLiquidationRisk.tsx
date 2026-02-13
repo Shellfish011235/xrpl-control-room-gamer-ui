@@ -26,9 +26,11 @@ const riskStyles = {
   danger: { bg: 'bg-cyber-red/10', border: 'border-cyber-red/30', text: 'text-cyber-red', icon: Zap },
 };
 
+type RiskLevelKey = keyof typeof riskStyles;
+
 // Single position risk card
 function PositionRiskCard({ analysis }: { analysis: PositionLiquidationAnalysis }) {
-  const style = riskStyles[analysis.riskLevel];
+  const style = riskStyles[analysis.riskLevel as RiskLevelKey] ?? riskStyles.caution;
   const Icon = style.icon;
   
   return (
@@ -103,7 +105,8 @@ function PositionRiskCard({ analysis }: { analysis: PositionLiquidationAnalysis 
 // Market risk overview card
 function MarketRiskCard({ assessment }: { assessment: LiquidationRiskAssessment }) {
   const riskLevel = assessment.riskLevel;
-  const style = riskStyles[riskLevel === 'extreme' ? 'danger' : riskLevel];
+  const styleKey: RiskLevelKey = riskLevel === 'extreme' ? 'danger' : (riskLevel as RiskLevelKey);
+  const style = riskStyles[styleKey] ?? riskStyles.caution;
   const Icon = style.icon;
   
   return (

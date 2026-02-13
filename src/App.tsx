@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import Navigation from './components/Navigation'
+import { RootErrorBoundary } from './components/RootErrorBoundary'
 
 /** Slower scroll speed site-wide so options in scrollable boxes are easier to see. */
 const SCROLL_SPEED_FACTOR = 0.4
@@ -40,6 +41,19 @@ const queryClient = new QueryClient({
 })
 
 function App() {
+  // Lazy-init Xaman so its import never blocks or breaks first paint (local or Vercel)
+  useEffect(() => {
+    import('./config/xaman').then(({ initializeXaman }) => {
+      try {
+        const xamanConfig = initializeXaman()
+        console.log('🚀 XRPL Control Room ready')
+        console.log(`📱 Xaman mode: ${xamanConfig.mode}`)
+      } catch (e) {
+        console.warn('[Xaman] Init failed (demo mode):', e)
+      }
+    }).catch((e) => console.warn('[Xaman] Load failed:', e))
+  }, [])
+
   useEffect(() => {
     function onWheel(e: WheelEvent) {
       const scrollable = getScrollableElement(e.target as HTMLElement)
@@ -57,9 +71,10 @@ function App() {
   }, [])
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <div className="min-h-screen bg-cyber-darker cyber-grid hex-pattern relative">
+    <RootErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <div className="min-h-screen bg-cyber-darker cyber-grid hex-pattern relative">
           {/* Ambient Background Effects */}
           <div className="fixed inset-0 pointer-events-none">
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyber-glow/5 rounded-full blur-3xl" />
@@ -87,9 +102,10 @@ function App() {
               </Routes>
             </AnimatePresence>
           </main>
-        </div>
-      </Router>
-    </QueryClientProvider>
+          </div>
+        </Router>
+      </QueryClientProvider>
+    </RootErrorBoundary>
   )
 }
 

@@ -440,14 +440,14 @@ class LiquidationHeatmapService {
     if (heatmap.majorLongLiquidationZone) {
       const distFromMajorLong = ((currentPrice - heatmap.majorLongLiquidationZone.price) / currentPrice) * 100;
       if (distFromMajorLong < 5) {
-        insights.push(`🔴 Major long liquidation zone at $${heatmap.majorLongLiquidationZone.price.toLocaleString()} (${distFromMajorLong.toFixed(1)}% below)`);
+        insights.push(`🔴 Major long liquidation zone at $${(heatmap.majorLongLiquidationZone.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} (${distFromMajorLong.toFixed(1)}% below)`);
       }
     }
     
     if (heatmap.majorShortLiquidationZone) {
       const distFromMajorShort = ((heatmap.majorShortLiquidationZone.price - currentPrice) / currentPrice) * 100;
       if (distFromMajorShort < 5) {
-        insights.push(`🟢 Major short liquidation zone at $${heatmap.majorShortLiquidationZone.price.toLocaleString()} (${distFromMajorShort.toFixed(1)}% above)`);
+        insights.push(`🟢 Major short liquidation zone at $${(heatmap.majorShortLiquidationZone.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} (${distFromMajorShort.toFixed(1)}% above)`);
       }
     }
     
@@ -465,7 +465,7 @@ class LiquidationHeatmapService {
     // Magnet price insight
     const magnetDistance = ((heatmap.magnetPrice - currentPrice) / currentPrice) * 100;
     if (Math.abs(magnetDistance) < 10) {
-      insights.push(`🧲 Price magnet at $${heatmap.magnetPrice.toLocaleString()} (${magnetDistance > 0 ? '+' : ''}${magnetDistance.toFixed(1)}%) - high liquidation density`);
+      insights.push(`🧲 Price magnet at $${(heatmap.magnetPrice ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} (${magnetDistance > 0 ? '+' : ''}${magnetDistance.toFixed(1)}%) - high liquidation density`);
     }
     
     return {

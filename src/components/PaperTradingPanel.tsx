@@ -739,7 +739,7 @@ function PaperTradingPanelInner({
           id: `alert_${alert.id}`,
           type: 'price_move',
           asset: alert.asset,
-          message: `${alert.asset} is now ${alert.condition} $${alert.targetPrice.toLocaleString()}!`,
+          message: `${alert.asset} is now ${alert.condition} $${(alert.targetPrice ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}!`,
           severity: 'critical',
           timestamp: Date.now(),
           priceAtSignal: currentPrice,
@@ -1355,7 +1355,7 @@ function PaperTradingPanelInner({
                 >
                   {Object.entries(prices).map(([asset, price]) => (
                     <option key={asset} value={asset}>
-                      {asset} - ${price.toLocaleString()}
+                      {asset} - ${(price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                     </option>
                   ))}
                 </select>
@@ -1397,7 +1397,7 @@ function PaperTradingPanelInner({
               >
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-cyber-muted">Price</span>
-                  <span className="text-cyber-text">${currentPrice.toLocaleString()}</span>
+                  <span className="text-cyber-text">${(currentPrice ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</span>
                 </div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-cyber-muted">Amount</span>
@@ -1640,7 +1640,7 @@ function PaperTradingPanelInner({
                               {trade.type.toUpperCase()} {trade.amount.toLocaleString()} {trade.asset}
                             </p>
                             <p className="text-[9px] text-cyber-muted">
-                              @ ${trade.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+                              @ ${(trade.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                             </p>
                           </div>
                         </div>
@@ -2039,7 +2039,7 @@ function PaperTradingPanelInner({
                         )}
                         <div>
                           <p className="text-xs text-cyber-text">
-                            {alert.asset} {alert.condition} ${alert.targetPrice.toLocaleString()}
+                            {alert.asset} {alert.condition} ${(alert.targetPrice ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                           </p>
                           <p className="text-[9px] text-cyber-muted">
                             {alert.triggered 
@@ -2113,7 +2113,7 @@ function PaperTradingPanelInner({
                           </span>
                           {signal.priceAtSignal && (
                             <span className="text-[8px] text-cyber-cyan">
-                              ${signal.priceAtSignal.toLocaleString()}
+                              ${(signal.priceAtSignal ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
                             </span>
                           )}
                         </div>

@@ -91,7 +91,7 @@ export function LiquidationHeatmap({ symbol, currentPrice, compact = false }: Li
       <div className="flex items-center justify-between mb-4 p-3 rounded bg-cyber-darker/50 border border-cyber-border">
         <div>
           <p className="text-xs text-cyber-muted">Current Price</p>
-          <p className="font-cyber text-lg text-cyber-text">${currentPrice.toLocaleString()}</p>
+          <p className="font-cyber text-lg text-cyber-text">${(currentPrice ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</p>
         </div>
         <div className="text-right">
           <p className="text-xs text-cyber-muted">Liquidation Risk</p>
@@ -149,9 +149,9 @@ export function LiquidationHeatmap({ symbol, currentPrice, compact = false }: Li
                   <span className={`text-[10px] font-medium ${
                     isCurrentPrice ? 'text-cyber-cyan' : 'text-cyber-muted'
                   }`}>
-                    ${level.price.toLocaleString()} 
+                    ${(level.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })} 
                     <span className="opacity-60 ml-1">
-                      ({level.priceFromCurrent > 0 ? '+' : ''}{level.priceFromCurrent.toFixed(1)}%)
+                      ({level.priceFromCurrent > 0 ? '+' : ''}{(level.priceFromCurrent ?? 0).toFixed(1)}%)
                     </span>
                   </span>
                 </div>
@@ -182,7 +182,7 @@ export function LiquidationHeatmap({ symbol, currentPrice, compact = false }: Li
               <span className="text-[10px] text-cyber-red">Major Long Liq Zone</span>
             </div>
             <p className="font-cyber text-sm text-cyber-text">
-              ${heatmap.majorLongLiquidationZone.price.toLocaleString()}
+              ${(heatmap.majorLongLiquidationZone.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
             </p>
             <p className="text-[10px] text-cyber-muted">
               ${(heatmap.majorLongLiquidationZone.value / 1000000).toFixed(1)}M at risk
@@ -197,7 +197,7 @@ export function LiquidationHeatmap({ symbol, currentPrice, compact = false }: Li
               <span className="text-[10px] text-cyber-green">Major Short Liq Zone</span>
             </div>
             <p className="font-cyber text-sm text-cyber-text">
-              ${heatmap.majorShortLiquidationZone.price.toLocaleString()}
+              ${(heatmap.majorShortLiquidationZone.price ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
             </p>
             <p className="text-[10px] text-cyber-muted">
               ${(heatmap.majorShortLiquidationZone.value / 1000000).toFixed(1)}M at risk
@@ -236,7 +236,7 @@ export function LiquidationHeatmap({ symbol, currentPrice, compact = false }: Li
             <div className="p-2 rounded bg-cyber-darker/50 text-center">
               <p className="text-[10px] text-cyber-muted">Magnet Price</p>
               <p className="font-cyber text-sm text-cyber-purple">
-                ${heatmap.magnetPrice.toLocaleString()}
+                ${(heatmap.magnetPrice ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
               </p>
             </div>
           </div>

@@ -235,6 +235,7 @@ export function getAvailableSymbols(): string[] {
  * Format price for display
  */
 export function formatPrice(price: number, symbol?: string): string {
+  if (price == null || Number.isNaN(price)) return '—';
   if (price >= 1000) {
     return '$' + price.toLocaleString(undefined, { maximumFractionDigits: 0 });
   } else if (price >= 1) {
