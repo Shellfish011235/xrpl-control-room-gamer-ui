@@ -463,12 +463,34 @@ function PaperTradingPanelInner({
     setAgentSuggestionLoading(true);
     setAgentSuggestion(null);
     try {
-      const [sentimentData, priceRes] = await Promise.all([
-        fetchCryptoSentiment(),
-        fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true', { mode: 'cors' }).then((r) => r.json()),
-      ]);
-      const price = priceRes?.ripple?.usd ?? prices?.XRP ?? 2.45;
-      const priceChange24h = priceRes?.ripple?.usd_24h_change ?? 0;
+      let price = prices?.XRP ?? 2.45;
+      let priceChange24h = 0;
+      try {
+        const cgRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true', { mode: 'cors' });
+        if (cgRes.ok) {
+          const priceRes = await cgRes.json();
+          if (priceRes?.ripple?.usd != null) {
+            price = priceRes.ripple.usd;
+            priceChange24h = priceRes.ripple.usd_24h_change ?? 0;
+          }
+        }
+        if (price === (prices?.XRP ?? 2.45) && priceChange24h === 0) {
+          const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+          if (binanceRes.ok) {
+            const binanceData = await binanceRes.json();
+            const p = parseFloat(binanceData?.price);
+            if (p > 0) price = p;
+          }
+        }
+      } catch {
+        const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' }).catch(() => null);
+        if (binanceRes?.ok) {
+          const binanceData = await binanceRes.json();
+          const p = parseFloat(binanceData?.price);
+          if (p > 0) price = p;
+        }
+      }
+      const sentimentData = await fetchCryptoSentiment();
       const stats = store?.getStats?.();
       const winRate = stats && stats.totalTrades > 0 ? stats.winRate / 100 : undefined;
       const suggestion = getAgentSuggestion({

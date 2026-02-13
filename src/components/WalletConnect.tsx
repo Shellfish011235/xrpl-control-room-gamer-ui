@@ -51,20 +51,36 @@ function useXRPPrice(currency: CurrencyCode) {
     const fetchPrice = async () => {
       try {
         const response = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=${currency}&include_24hr_change=true`
+          `https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=${currency}&include_24hr_change=true`,
+          { mode: 'cors' }
         );
-        if (!response.ok) throw new Error('Failed to fetch price');
-        const data = await response.json();
-        const p = data.ripple?.[currency];
-        if (typeof p === 'number') {
-          setPrice(p);
-          setChange24h(data.ripple?.[`${currency}_24h_change`] ?? null);
-          setUsingFallback(false);
-        } else {
-          throw new Error('No price in response');
+        if (response.ok) {
+          const data = await response.json();
+          const p = data.ripple?.[currency];
+          if (typeof p === 'number') {
+            setPrice(p);
+            setChange24h(data.ripple?.[`${currency}_24h_change`] ?? null);
+            setUsingFallback(false);
+            return;
+          }
         }
+        // Fallback: Binance XRP/USDT (≈USD) when CoinGecko fails
+        if (currency === 'usd') {
+          const binanceResp = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+          if (binanceResp.ok) {
+            const binanceData = await binanceResp.json();
+            const p = parseFloat(binanceData?.price);
+            if (p > 0) {
+              setPrice(p);
+              setChange24h(null);
+              setUsingFallback(false);
+              return;
+            }
+          }
+        }
+        throw new Error('No price data');
       } catch (err) {
-        console.warn('[Price] XRP price fetch failed, using fallback:', err);
+        console.warn('[Price] XRP feed failed, using fallback:', err);
         setUsingFallback(true);
         setPrice(currency === 'usd' ? FALLBACK_XRP_PRICE_USD : FALLBACK_XRP_PRICE_USD);
         setChange24h(null);

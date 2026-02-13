@@ -130,17 +130,31 @@ export async function fetchLivePrices(symbols: string[] = Object.keys(COINGECKO_
     return priceCache;
 
   } catch (error) {
-    console.warn('[LivePrices] Failed to fetch live prices, using fallback:', error);
-    
-    // Return fallback prices with slight randomization
+    console.warn('[LivePrices] CoinGecko failed, trying Binance for XRP then fallback:', error);
+
     const fallbackWithNoise: { [symbol: string]: number } = {};
     const fallbackChanges: { [symbol: string]: number } = {};
 
+    // Try Binance for XRP so header/dashboard get a real price when CoinGecko is down
+    try {
+      const binanceResp = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+      if (binanceResp.ok) {
+        const data = await binanceResp.json();
+        const xrpPrice = parseFloat(data?.price);
+        if (xrpPrice > 0) {
+          fallbackWithNoise.XRP = xrpPrice;
+          fallbackChanges.XRP = 0;
+        }
+      }
+    } catch (e) {
+      console.warn('[LivePrices] Binance XRP fallback failed:', e);
+    }
+
     for (const [symbol, price] of Object.entries(FALLBACK_PRICES)) {
-      // Add ±0.5% random noise to simulate market movement
+      if (fallbackWithNoise[symbol] != null) continue;
       const noise = 1 + (Math.random() - 0.5) * 0.01;
       fallbackWithNoise[symbol] = price * noise;
-      fallbackChanges[symbol] = (Math.random() - 0.5) * 5; // ±2.5% fake change
+      fallbackChanges[symbol] = (Math.random() - 0.5) * 5;
     }
 
     return {

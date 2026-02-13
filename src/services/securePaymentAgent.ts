@@ -369,6 +369,13 @@ class SecurePaymentAgent {
 
     // Add the payment step
     if (parsed.currency === 'XRP') {
+      // Check balance before creating plan (need amount + 10 XRP reserve)
+      const availableXRP = this.walletState!.xrpBalance - 10;
+      if (availableXRP < parsed.amount) {
+        throw new Error(
+          `Insufficient XRP. You need at least ${(parsed.amount + 10).toFixed(2)} XRP (${parsed.amount} to send + 10 XRP reserve). Your balance: ${this.walletState!.xrpBalance.toFixed(2)} XRP.`
+        );
+      }
       steps.push({
         order: steps.length + 1,
         type: 'payment',
@@ -474,12 +481,16 @@ class SecurePaymentAgent {
       let signingRequest: SigningRequest;
 
       if (step.type === 'payment') {
+        const payerAddress = this.walletState?.address;
+        if (!payerAddress) {
+          throw new Error('Wallet not connected. Please connect your wallet again and try again.');
+        }
         signingRequest = await xamanService.requestPaymentSignature({
           destination: step.to.address!,
           amount: step.to.amount,
           currency: step.to.currency,
           issuer: step.to.issuer,
-        });
+        }, payerAddress);
       } else if (step.type === 'trade') {
         signingRequest = await xamanService.requestTradeSignature({
           sell: {

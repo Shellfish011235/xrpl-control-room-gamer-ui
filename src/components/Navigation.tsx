@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { usePlatformModeStore } from '../store/platformModeStore'
 
-// XRP Price Hook - fetches from CoinGecko
+// XRP Price Hook - tries CoinGecko first, then Binance fallback
 function useXRPPrice() {
   const [price, setPrice] = useState<number | null>(null)
   const [change24h, setChange24h] = useState<number | null>(null)
@@ -15,28 +15,43 @@ function useXRPPrice() {
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true'
+        // Try CoinGecko first
+        const cgResponse = await fetch(
+          'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true',
+          { mode: 'cors' }
         )
-        if (!response.ok) throw new Error('Failed to fetch price')
-        const data = await response.json()
-        setPrice(data.ripple.usd)
-        setChange24h(data.ripple.usd_24h_change)
-        setError(null)
+        if (cgResponse.ok) {
+          const data = await cgResponse.json()
+          if (data?.ripple?.usd != null) {
+            setPrice(data.ripple.usd)
+            setChange24h(data.ripple.usd_24h_change ?? null)
+            setError(null)
+            return
+          }
+        }
+        // Fallback: Binance XRP/USDT
+        const binanceResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' })
+        if (binanceResponse.ok) {
+          const binanceData = await binanceResponse.json()
+          const p = parseFloat(binanceData?.price)
+          if (p > 0) {
+            setPrice(p)
+            setChange24h(null)
+            setError(null)
+            return
+          }
+        }
+        throw new Error('No price data')
       } catch (err) {
-        console.error('[Price] Error fetching XRP price:', err)
+        console.warn('[Price] XRP feed failed (CoinGecko + Binance):', err)
         setError('Failed to load')
       } finally {
         setLoading(false)
       }
     }
 
-    // Fetch immediately
     fetchPrice()
-
-    // Refresh every 30 seconds
     const interval = setInterval(fetchPrice, 30000)
-
     return () => clearInterval(interval)
   }, [])
 

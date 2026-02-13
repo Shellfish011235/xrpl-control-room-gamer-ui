@@ -107,8 +107,12 @@ export function SecureAgentPanel() {
   // Map errors to user-friendly messages (explainability + compliance)
   const toUserFriendlyError = (error: unknown): string => {
     const msg = error instanceof Error ? error.message : String(error);
+    if (/Insufficient XRP/i.test(msg)) return msg; // Keep full balance message
+    if (/wallet not connected|no payer address|connect.*wallet/i.test(msg)) return 'Wallet session lost. Tap **Connect Wallet** again, then try your payment.';
     if (/network|fetch|failed to fetch|ECONNREFUSED|timeout/i.test(msg)) return 'Network error. Check your connection and try again.';
     if (/rate limit|too many requests|429/i.test(msg)) return 'Rate limit reached. Please wait a moment before trying again.';
+    if (/Real signing failed|API key|apps\.xumm/i.test(msg)) return 'Xaman signing failed. Check your API key at apps.xumm.dev and that this site is in your allowed origins.';
+    if (/single transaction limit|exceeds.*limit/i.test(msg)) return msg; // Keep limit message
     if (/daily limit|limit_exceeded/i.test(msg)) return 'Daily spend limit reached. Adjust caps in Agent Economy or try again tomorrow.';
     if (/whitelist|blocked|not allowed/i.test(msg)) return 'This destination is not on your whitelist. Add it in settings or disable whitelist-only mode.';
     if (/invalid address|destination|r[A-Za-z0-9]{24,34}/i.test(msg) && msg.length < 80) return 'Invalid or missing destination address. Use a valid XRPL address (r...).';
@@ -378,11 +382,11 @@ export function SecureAgentPanel() {
                 Daily limit: {securePaymentAgent.getRemainingDailyLimit().toFixed(2)} XRP remaining
               </p>
               <span className={`px-1.5 py-0.5 rounded text-[8px] ${
-                platformLive ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/30' : 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30'
+                (platformLive || xamanMode === 'production') ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/30' : 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30'
               }`}>
-                {platformLive ? 'LIVE' : 'DEMO'} {xamanMode === 'production' ? '· Xaman' : ''}
+                {(platformLive || xamanMode === 'production') ? 'LIVE' : 'DEMO'} {xamanMode === 'production' ? '· Xaman' : ''}
               </span>
-              {!platformLive && (
+              {!platformLive && xamanMode !== 'production' && (
                 <button
                   type="button"
                   onClick={() => setPlatformMode('live')}

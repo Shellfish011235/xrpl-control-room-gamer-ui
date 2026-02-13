@@ -384,10 +384,29 @@ export function AIAgentPayments({
         let priceUsd = '2.45';
         try {
           const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd', { mode: 'cors' });
-          const data = await res.json();
-          if (data?.ripple?.usd != null) priceUsd = String(data.ripple.usd);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.ripple?.usd != null) priceUsd = String(data.ripple.usd);
+          }
+          if (priceUsd === '2.45') {
+            const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+            if (binanceRes.ok) {
+              const binanceData = await binanceRes.json();
+              const p = parseFloat(binanceData?.price);
+              if (p > 0) priceUsd = String(p);
+            }
+          }
         } catch {
-          priceUsd = '2.45 (mock)';
+          try {
+            const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+            if (binanceRes.ok) {
+              const binanceData = await binanceRes.json();
+              const p = parseFloat(binanceData?.price);
+              if (p > 0) priceUsd = String(p);
+            }
+          } catch {
+            priceUsd = '2.45 (mock)';
+          }
         }
         setOrchestraResult(`Orchestra result: XRP/USD = $${priceUsd}. (Orchestrator → Price Feed → Reasoning; each step recorded as a micropayment.)`);
       } else if (orchestraTask === 'ledger_fee') {
@@ -511,15 +530,35 @@ export function AIAgentPayments({
         let trend = 'neutral';
         let score = 50;
         try {
-          const [priceRes, sentimentData] = await Promise.all([
-            fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd', { mode: 'cors' }).then(r => r.json()),
-            fetchCryptoSentiment(),
-          ]);
-          if (priceRes?.ripple?.usd != null) priceUsd = String(priceRes.ripple.usd);
+          const sentimentData = await fetchCryptoSentiment();
           trend = sentimentData.trend;
           score = sentimentData.score;
         } catch {
           trend = 'neutral (mock)';
+        }
+        try {
+          const cgRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd', { mode: 'cors' });
+          if (cgRes.ok) {
+            const priceRes = await cgRes.json();
+            if (priceRes?.ripple?.usd != null) priceUsd = String(priceRes.ripple.usd);
+          }
+          if (priceUsd === '2.45') {
+            const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+            if (binanceRes.ok) {
+              const binanceData = await binanceRes.json();
+              const p = parseFloat(binanceData?.price);
+              if (p > 0) priceUsd = String(p);
+            }
+          }
+        } catch {
+          try {
+            const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+            if (binanceRes.ok) {
+              const binanceData = await binanceRes.json();
+              const p = parseFloat(binanceData?.price);
+              if (p > 0) priceUsd = String(p);
+            }
+          } catch { /* keep 2.45 */ }
         }
         setOrchestraResult(`Orchestra result: XRP/USD = $${priceUsd}, sentiment ${trend} (${score}/100). Price → Sentiment → Reasoning; each step paid via micropayment (dashboard data).`);
       }
