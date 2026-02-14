@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
@@ -22,16 +22,26 @@ function getScrollableElement(el: HTMLElement | null): HTMLElement | null {
   }
   return null
 }
-import Home from './pages/Home'
-import Network from './pages/Network'
-import Underworld from './pages/Underworld'
-import Character from './pages/Character'
-import Clinic from './pages/Clinic'
-import MemeticLab from './pages/MemeticLab'
-import Terminal from './pages/Terminal'
-import CARV from './pages/CARV'
-import Micropayments from './pages/Micropayments'
-import AgentEconomy from './pages/AgentEconomy'
+
+// Lazy-load pages so first load is fast (especially on mobile / in-app browsers like X)
+const Home = lazy(() => import('./pages/Home'))
+const Network = lazy(() => import('./pages/Network'))
+const Underworld = lazy(() => import('./pages/Underworld'))
+const Character = lazy(() => import('./pages/Character'))
+const Clinic = lazy(() => import('./pages/Clinic'))
+const MemeticLab = lazy(() => import('./pages/MemeticLab'))
+const Terminal = lazy(() => import('./pages/Terminal'))
+const CARV = lazy(() => import('./pages/CARV'))
+const Micropayments = lazy(() => import('./pages/Micropayments'))
+const AgentEconomy = lazy(() => import('./pages/AgentEconomy'))
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyber-glow/30 border-t-cyber-glow" />
+    </div>
+  )
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,22 +92,24 @@ function App() {
 
           <main className="relative z-10 pt-16">
             <PlatformModeBar />
-            <AnimatePresence mode="wait">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/network" element={<Network />} />
-                <Route path="/world" element={<Navigate to="/network" replace />} />
-                <Route path="/ilp-map" element={<Navigate to="/network" replace />} />
-                <Route path="/underworld" element={<Underworld />} />
-                <Route path="/character" element={<Character />} />
-                <Route path="/clinic" element={<Clinic />} />
-                <Route path="/memetic-lab" element={<MemeticLab />} />
-                <Route path="/terminal" element={<Terminal />} />
-                <Route path="/carv" element={<CARV />} />
-                <Route path="/micropayments" element={<Micropayments />} />
-                <Route path="/agent-economy" element={<AgentEconomy />} />
-              </Routes>
-            </AnimatePresence>
+            <Suspense fallback={<PageLoader />}>
+              <AnimatePresence mode="wait">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/network" element={<Network />} />
+                  <Route path="/world" element={<Navigate to="/network" replace />} />
+                  <Route path="/ilp-map" element={<Navigate to="/network" replace />} />
+                  <Route path="/underworld" element={<Underworld />} />
+                  <Route path="/character" element={<Character />} />
+                  <Route path="/clinic" element={<Clinic />} />
+                  <Route path="/memetic-lab" element={<MemeticLab />} />
+                  <Route path="/terminal" element={<Terminal />} />
+                  <Route path="/carv" element={<CARV />} />
+                  <Route path="/micropayments" element={<Micropayments />} />
+                  <Route path="/agent-economy" element={<AgentEconomy />} />
+                </Routes>
+              </AnimatePresence>
+            </Suspense>
           </main>
           </div>
         </Router>
