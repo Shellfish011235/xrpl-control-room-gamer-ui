@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Maximize2 } from 'lucide-react';
+import { X, Maximize2, ExternalLink, Link2 } from 'lucide-react';
 import { useILPStore } from '../../store/ilpStore';
 import { getUnifiedTopology } from '../../data/unifiedTopology';
 import type { UnifiedNode, UnifiedEdge, UnifiedNodeType, UnifiedEdgeType } from '../../data/unifiedTopology';
@@ -33,6 +33,178 @@ function toSvg(p: { x: number; y: number }) {
   return { x: CENTER.x + p.x * SCALE, y: CENTER.y - p.y * SCALE };
 }
 
+const NODE_TYPE_LABELS: Record<UnifiedNodeType, string> = {
+  ledger: 'Ledger & ILP',
+  validator_hub: 'Validator hub',
+  odl_partner: 'ODL partner & corridor',
+  chain: 'Chain & bridge',
+  corridor_region: 'Corridor region',
+};
+
+function NodeDetailPanel({
+  node,
+  nodes,
+  edges,
+  onClose,
+}: {
+  node: UnifiedNode;
+  nodes: UnifiedNode[];
+  edges: UnifiedEdge[];
+  onClose: () => void;
+}) {
+  const nodeById = useMemo(() => {
+    const m: Record<string, UnifiedNode> = {};
+    nodes.forEach((n) => { m[n.id] = n; });
+    return m;
+  }, [nodes]);
+
+  const connectedEdges = useMemo(() => {
+    return edges.filter((e) => e.from === node.id || e.to === node.id);
+  }, [edges, node.id]);
+
+  const otherNodeLabel = (edge: UnifiedEdge): string => {
+    const otherId = edge.from === node.id ? edge.to : edge.from;
+    const other = nodeById[otherId];
+    return other ? (other.shortLabel ?? other.label) : otherId;
+  };
+
+  const typeLabel = NODE_TYPE_LABELS[node.type] ?? node.type;
+
+  return (
+    <div
+      className="mt-4 p-4 rounded-lg border border-cyber-cyan/40 bg-cyber-darker/90 text-left flex-shrink-0 max-h-[320px] overflow-y-auto"
+      role="dialog"
+      aria-label={`Details for ${node.label}`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-start justify-between gap-2 mb-3">
+        <div>
+          <h4 className="font-cyber text-cyber-cyan text-sm">{node.label}</h4>
+          <span className="text-[10px] text-cyber-muted uppercase tracking-wider">{typeLabel}</span>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 rounded hover:bg-cyber-border/50 text-cyber-muted hover:text-cyber-text transition-colors"
+          aria-label="Close"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <section className="mb-3">
+        <h5 className="text-[10px] uppercase text-cyber-muted tracking-wider mb-1.5 flex items-center gap-1">
+          <Link2 size={10} /> Integration
+        </h5>
+        <ul className="text-xs text-cyber-text space-y-1">
+          {connectedEdges.length === 0 ? (
+            <li className="text-cyber-muted">No edges in current view</li>
+          ) : (
+            connectedEdges.map((edge) => (
+              <li key={`${edge.from}-${edge.to}-${edge.type}`}>
+                <span className="text-cyber-muted">↔</span>{' '}
+                <span className="text-cyber-glow">{otherNodeLabel(edge)}</span>
+                {' · '}
+                <span className="text-cyber-muted">{edge.type}</span>
+                {edge.label && <span className="text-cyber-muted"> ({edge.label})</span>}
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
+
+      <section>
+        <h5 className="text-[10px] uppercase text-cyber-muted tracking-wider mb-1.5">Details</h5>
+        <div className="text-xs text-cyber-text space-y-1.5">
+          {node.type === 'ledger' && node.data?.ledger && (
+            <>
+              <p>{(node.data.ledger as { name?: string }).name}</p>
+              <p className="text-cyber-muted">Symbol: {(node.data.ledger as { symbol?: string }).symbol ?? node.id}</p>
+            </>
+          )}
+          {node.type === 'validator_hub' && node.data?.hub && (
+            (() => {
+              const hub = node.data.hub as { name: string; city?: string; countryIso2?: string; type?: string; validators?: unknown[] };
+              return (
+                <>
+                  <p>{hub.name}</p>
+                  {(hub.city || hub.countryIso2) && (
+                    <p className="text-cyber-muted">{[hub.city, hub.countryIso2].filter(Boolean).join(', ')}</p>
+                  )}
+                  {hub.type && <p className="text-cyber-muted">Type: {hub.type}</p>}
+                  {Array.isArray(hub.validators) && hub.validators.length > 0 && (
+                    <p className="text-cyber-muted">Validators: {hub.validators.length} linked</p>
+                  )}
+                </>
+              );
+            })()
+          )}
+          {node.type === 'odl_partner' && node.data?.partner && (
+            (() => {
+              const p = node.data.partner as { name: string; type?: string; xrpIntegration?: string; status?: string; corridors?: string[]; website?: string };
+              return (
+                <>
+                  <p>{p.name}</p>
+                  {p.type && <p className="text-cyber-muted">Type: {p.type}</p>}
+                  {(p.xrpIntegration || p.status) && (
+                    <p className="text-cyber-muted">XRPL: {p.xrpIntegration ?? p.status}</p>
+                  )}
+                  {Array.isArray(p.corridors) && p.corridors.length > 0 && (
+                    <p className="text-cyber-muted">Corridors: {p.corridors.length} ({p.corridors.slice(0, 3).join(', ')}{p.corridors.length > 3 ? '…' : ''})</p>
+                  )}
+                  {p.website && (
+                    <a href={p.website.startsWith('http') ? p.website : `https://${p.website}`} target="_blank" rel="noopener noreferrer" className="text-cyber-cyan hover:underline flex items-center gap-1">
+                      <ExternalLink size={10} /> Website
+                    </a>
+                  )}
+                </>
+              );
+            })()
+          )}
+          {node.type === 'chain' && node.data?.chain && (
+            (() => {
+              const c = node.data.chain as { name: string; symbol?: string; xrpBridge?: boolean; status?: string; website?: string; description?: string };
+              return (
+                <>
+                  <p>{c.name}</p>
+                  {c.symbol && <p className="text-cyber-muted">Symbol: {c.symbol}</p>}
+                  {c.xrpBridge != null && <p className="text-cyber-muted">XRP bridge: {c.xrpBridge ? 'Yes' : 'No'}</p>}
+                  {c.status && <p className="text-cyber-muted">Status: {c.status}</p>}
+                  {c.description && <p className="text-cyber-muted mt-1">{c.description.slice(0, 120)}…</p>}
+                  {c.website && (
+                    <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="text-cyber-cyan hover:underline flex items-center gap-1">
+                      <ExternalLink size={10} /> Website
+                    </a>
+                  )}
+                </>
+              );
+            })()
+          )}
+          {node.type === 'corridor_region' && node.data?.corridor && (
+            (() => {
+              const c = node.data.corridor as { name: string; from?: { country?: string; countryCode?: string }; to?: { country?: string; countryCode?: string }; volume?: string; xrpSettlement?: boolean; odlEnabled?: boolean };
+              return (
+                <>
+                  <p>{c.name}</p>
+                  {c.from && c.to && (
+                    <p className="text-cyber-muted">
+                      {typeof c.from === 'object' ? c.from.countryCode ?? c.from.country : c.from} → {typeof c.to === 'object' ? c.to.countryCode ?? c.to.country : c.to}
+                    </p>
+                  )}
+                  {c.volume && <p className="text-cyber-muted">Volume: {c.volume}</p>}
+                  {c.xrpSettlement != null && <p className="text-cyber-muted">XRP settlement: {c.xrpSettlement ? 'Yes' : 'No'}</p>}
+                  {c.odlEnabled != null && <p className="text-cyber-muted">ODL: {c.odlEnabled ? 'Yes' : 'No'}</p>}
+                </>
+              );
+            })()
+          )}
+          {!node.data && node.type === 'ledger' && <p className="text-cyber-muted">Ledger node</p>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function UnifiedNetworkTopology() {
   const ledgers = useILPStore((s) => s.ledgers);
   const corridors = useILPStore((s) => s.corridors);
@@ -40,6 +212,7 @@ export function UnifiedNetworkTopology() {
   const [includeODL, setIncludeODL] = useState(true);
   const [includeBridgesChains, setIncludeBridgesChains] = useState(true);
   const [fullScreen, setFullScreen] = useState(false);
+  const [selectedNode, setSelectedNode] = useState<UnifiedNode | null>(null);
 
   useEffect(() => {
     if (!fullScreen) return;
@@ -119,23 +292,41 @@ export function UnifiedNetworkTopology() {
             if (!pos) return null;
             const color = NODE_COLORS[node.type] ?? '#888';
             const r = node.type === 'ledger' && node.id === 'xrpl' ? 22 : node.type === 'ledger' ? 16 : 12;
+            const isSelected = selectedNode?.id === node.id;
             return (
-              <g key={node.id}>
+              <g
+                key={node.id}
+                style={{ cursor: 'pointer' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedNode((prev) => (prev?.id === node.id ? null : node));
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSelectedNode((prev) => (prev?.id === node.id ? null : node));
+                  }
+                }}
+                aria-label={`${node.label}, ${node.type}. Click for integration details`}
+              >
                 <circle
                   cx={pos.x}
                   cy={pos.y}
                   r={r}
-                  fill="#0a0a1a"
+                  fill={isSelected ? color : '#0a0a1a'}
                   stroke={color}
-                  strokeWidth={node.id === 'xrpl' ? 3 : 1.5}
-                  opacity={0.95}
+                  strokeWidth={node.id === 'xrpl' ? 3 : isSelected ? 2.5 : 1.5}
+                  opacity={isSelected ? 1 : 0.95}
                 />
                 <text
                   x={pos.x}
                   y={pos.y + r + 14}
                   textAnchor="middle"
                   className="fill-cyber-text"
-                  style={{ fontSize: 9, fontFamily: 'system-ui' }}
+                  style={{ fontSize: 9, fontFamily: 'system-ui', pointerEvents: 'none' }}
                 >
                   {node.shortLabel ?? node.label}
                 </text>
@@ -163,8 +354,18 @@ export function UnifiedNetworkTopology() {
         </span>
       </div>
       <p className="text-[10px] text-cyber-muted mt-2 italic flex-shrink-0">
-        {nodes.length} nodes · {edges.length} edges. Toggle layers above to focus on validators, ODL, or bridges.
+        {nodes.length} nodes · {edges.length} edges. Toggle layers above to focus on validators, ODL, or bridges. Click any node for integration details.
       </p>
+
+      {/* Node detail panel – integration proof */}
+      {selectedNode && (
+        <NodeDetailPanel
+          node={selectedNode}
+          nodes={nodes}
+          edges={edges}
+          onClose={() => setSelectedNode(null)}
+        />
+      )}
     </>
   );
 

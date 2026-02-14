@@ -1,0 +1,40 @@
+# Cline CLI: autonomous code review on PRs.
+# Reduces review bottleneck by running AI review on the diff.
+# Add one of: CLINE_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY (or other provider) as repo secret.
+
+name: Cline review
+
+on:
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install Cline
+        run: npm install -g cline
+
+      - name: Run Cline review
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLINE_API_KEY: ${{ secrets.CLINE_API_KEY }}
+        run: |
+          DIFF=$(git diff ${{ github.event.pull_request.base.sha }}...HEAD -- . ':(exclude)*.lock' ':(exclude)*.md' 2>/dev/null || git diff ${{ github.event.pull_request.base.sha }}...HEAD)
+          if [ -z "$DIFF" ]; then
+            echo "No code diff to review (or diff too large)."
+            exit 0
+          fi
+          echo "$DIFF" | cline -y "Review this PR diff. List: 1) potential bugs 2) security issues 3) style/consistency vs project .clinerules. Be concise; output in markdown."
+        continue-on-error: true

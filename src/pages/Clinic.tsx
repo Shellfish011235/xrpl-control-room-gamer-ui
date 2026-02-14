@@ -96,29 +96,10 @@ const resources = [
   },
 ]
 
-export default function Clinic() {
+/** Portfolio section content (RLUSD, ETF, health, charts). Used inside Profile page. */
+export function PortfolioContent() {
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div 
-          className="mb-6"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <HeartPulse className="text-cyber-green" size={28} />
-            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">CLINIC</h1>
-            <div className="ml-auto flex items-center gap-2">
-              <button className="flex items-center gap-2 px-3 py-1.5 rounded bg-cyber-darker border border-cyber-border hover:border-cyber-green/50 transition-colors">
-                <RefreshCw size={14} className="text-cyber-green" />
-                <span className="text-xs text-cyber-text">Refresh Data</span>
-              </button>
-            </div>
-          </div>
-          <p className="text-cyber-muted">Portfolio Health, Stablecoins, ETFs & Resources</p>
-        </motion.div>
-        
+    <>
         {/* Top Stats Row */}
         <motion.div 
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
@@ -435,6 +416,22 @@ export default function Clinic() {
             </div>
           </motion.div>
         </div>
+    </>
+  )
+}
+
+export default function Clinic() {
+  return (
+    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <motion.div className="mb-6" initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center gap-3 mb-2">
+            <HeartPulse className="text-cyber-green" size={28} />
+            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">PORTFOLIO</h1>
+          </div>
+          <p className="text-cyber-muted">Portfolio Health, Stablecoins, ETFs & Resources</p>
+        </motion.div>
+        <PortfolioContent />
       </div>
     </div>
   )

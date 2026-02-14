@@ -1190,7 +1190,7 @@ export default function MemeticLab() {
         >
           <div className="flex items-center gap-3 mb-2">
             <Brain className="text-cyber-purple" size={28} />
-            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">MEMETIC LAB</h1>
+            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">TRENDING</h1>
             <div className="ml-auto flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1 rounded bg-cyber-purple/10 border border-cyber-purple/30">
                 <Activity size={14} className="text-cyber-purple animate-pulse" />

@@ -112,6 +112,8 @@ export interface XRPLConnectedChain {
   /** e.g. "Feb 7, 2026" */
   dataAsOf?: string;
   status: ProjectStatus;
+  /** True if chain supports agent economy / one-sign-many-actions (Hooks emitted txs, Smart Accounts, EVM batch, etc.). See docs/AGENT-ECONOMY-UNTIL-BATCH.md */
+  supportsAgentEconomy?: boolean;
 }
 
 export interface GitHubRepo {
@@ -710,6 +712,7 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
     ],
     useCases: ['Gaming', 'Metaverse', 'NFTs', 'Digital collectibles'],
     status: 'mainnet',
+    supportsAgentEconomy: true,
   },
   {
     id: 'flare-network',
@@ -800,6 +803,7 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
     ],
     useCases: ['Testing', 'Development', 'Governance'],
     status: 'mainnet',
+    supportsAgentEconomy: true,
   },
   {
     id: 'coreum',
@@ -907,6 +911,7 @@ export const xrplConnectedChains: XRPLConnectedChain[] = [
     dataSource: 'Chain explorer',
     dataAsOf: 'Feb 2026',
     status: 'mainnet',
+    supportsAgentEconomy: true,
   },
   {
     id: 'evernode',
@@ -1201,8 +1206,20 @@ export function getActiveChains(): XRPLConnectedChain[] {
   return xrplConnectedChains.filter(c => c.status === 'mainnet');
 }
 
+/** Chains that support agent economy / one-sign-many-actions (see docs/AGENT-ECONOMY-UNTIL-BATCH.md) */
+export function getChainsSupportingAgentEconomy(): XRPLConnectedChain[] {
+  return xrplConnectedChains.filter(c => c.supportsAgentEconomy === true);
+}
+
 export function getActiveBridges(): CrossChainBridge[] {
   return crossChainBridges.filter(b => b.status === 'mainnet');
+}
+
+/** Bridge(s) that connect XRPL to a given chain (chains array includes 'xrpl' and chain id). Mainnet only. */
+export function getBridgesToChain(chainId: string): CrossChainBridge[] {
+  return crossChainBridges.filter(
+    b => b.status === 'mainnet' && b.chains.includes('xrpl') && b.chains.includes(chainId)
+  );
 }
 
 export function getAllGitHubRepos(): GitHubRepo[] {

@@ -282,6 +282,23 @@ class XamanService {
   }
 
   /**
+   * Request signature for any XRPL transaction (e.g. PaymentChannelCreate, PaymentChannelClaim).
+   * Use for payment channels and other transaction types not covered by the helpers above.
+   */
+  async requestCustomTransactionSignature(
+    tx: XRPLTransaction,
+    sourceAccount?: string
+  ): Promise<SigningRequest> {
+    const account = sourceAccount ?? this.session?.address;
+    if (!account) {
+      throw new Error('No payer address. Connect Xaman or add a wallet in the app.');
+    }
+    const payload = { ...tx, Account: tx.Account ?? account };
+    const type = (payload.TransactionType as SigningRequest['type']) || 'other';
+    return this.createSigningRequest(type, payload);
+  }
+
+  /**
    * Create a TrustSet signing request
    */
   async requestTrustlineSignature(

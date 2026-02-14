@@ -1,9 +1,10 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe, Skull, User, HeartPulse, Home, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Zap, Wallet } from 'lucide-react'
+import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Wallet, Bot, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { usePlatformModeStore } from '../store/platformModeStore'
+import { useAgentPanelStore } from '../store/agentPanelStore'
 
 // XRP Price Hook - tries CoinGecko first, then Binance fallback
 function useXRPPrice() {
@@ -201,16 +202,12 @@ function PlatformModeToggle() {
 }
 
 const navItems = [
-  { path: '/', label: 'Home', icon: Home },
-  { path: '/terminal', label: 'Terminal', icon: Activity },
-  { path: '/micropayments', label: 'Micropay', icon: Zap },
-  { path: '/agent-economy', label: 'Agents', icon: Wallet },
-  { path: '/carv', label: 'CARV', icon: Cpu },
+  { path: '/', label: 'Home', icon: User },
   { path: '/network', label: 'Network', icon: Globe },
-  { path: '/underworld', label: 'Underworld', icon: Skull },
-  { path: '/memetic-lab', label: 'Memetic Lab', icon: Brain },
-  { path: '/character', label: 'Character', icon: User },
-  { path: '/clinic', label: 'Clinic', icon: HeartPulse },
+  { path: '/terminal', label: 'Terminal', icon: Activity },
+  { path: '/learn', label: 'Learn', icon: BookOpen },
+  { path: '/underworld', label: 'Regulations', icon: Skull },
+  { path: '/memetic-lab', label: 'Trending', icon: Brain },
 ]
 
 export default function Navigation() {
@@ -218,6 +215,7 @@ export default function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { price, change24h, loading } = useXRPPrice()
   const { ledgerIndex, loading: ledgerLoading } = useLedgerIndex()
+  const setAgentOpen = useAgentPanelStore((s) => s.setOpen)
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -310,6 +308,17 @@ export default function Navigation() {
               )}
             </div>
 
+            {/* Agent — open from any tab */}
+            <button
+              type="button"
+              onClick={() => setAgentOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg border border-cyber-cyan/40 text-cyber-cyan hover:bg-cyber-cyan/10 transition-colors"
+              title="Open payment agent"
+            >
+              <Bot size={18} />
+              <span className="font-cyber text-xs uppercase">Agent</span>
+            </button>
+
             {/* Platform mode: Demo / Live — click to toggle entire platform */}
             <PlatformModeToggle />
 
@@ -381,6 +390,14 @@ export default function Navigation() {
               )}
             </div>
 
+            <button
+                type="button"
+                onClick={() => { setAgentOpen(true); setMobileMenuOpen(false); }}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg w-full text-left text-cyber-cyan hover:bg-cyber-cyan/10 border border-cyber-cyan/30"
+              >
+                <Bot size={20} />
+                <span className="font-cyber tracking-wider uppercase">Payment agent</span>
+              </button>
             <div className="py-4 space-y-2">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path

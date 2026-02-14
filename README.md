@@ -208,6 +208,33 @@ docker build -t xrpl-control-room .
 docker run -p 3000:3000 xrpl-control-room
 ```
 
+## 🤖 Cline CLI (AI code review)
+
+This repo is set up for [Cline CLI](https://cline.bot/cli) so you can run AI-assisted review and automation from the terminal (and in CI), with lower API bottleneck by using multiple providers or local models.
+
+### Setup (local)
+```bash
+npm install -g cline
+cline auth
+```
+Use Node 20+ and your preferred provider (Anthropic, OpenAI, Ollama, etc.).
+
+### Project rules
+Cline reads **`.clinerules/`** in this repo for project context:
+- **01-stack-and-structure.md** – React 19, TypeScript, Vite, Tailwind, Zustand, paths.
+- **02-xrpl-and-payments.md** – XRPL (drops, addresses), Xaman, payment channels, agent panel.
+- **03-conventions.md** – Code style, imports, errors, a11y.
+
+### NPM scripts
+| Script | Description |
+|--------|-------------|
+| `npm run cline:review` | Review **unstaged** diff (requires `cline` on PATH). |
+| `npm run cline:review-staged` | Review **staged** changes. |
+| `npm run cline:deps` | Ask Cline to check `package.json` for CVEs/outdated deps. |
+
+### CI (optional)
+The workflow **`.github/workflows/cline-review.yml`** runs on pull requests and pipes the PR diff to Cline in autonomous mode (`-y`). To enable it, add one of these as a repository secret: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `CLINE_API_KEY`. If no secret is set, the step is skipped without failing the PR.
+
 ## 🗺️ Roadmap
 
 **Phased strategy:** Prototypes and community feedback first; see **[ROADMAP.md](./ROADMAP.md)** for the full plan (simulations → testnet → compliant APIs → funding → document & audit). **Regulatory watch:** [REGULATORY-WATCH.md](./REGULATORY-WATCH.md).

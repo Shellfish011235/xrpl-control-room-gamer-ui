@@ -84,6 +84,20 @@ interface ServerInfoResult {
   };
 }
 
+export interface PaymentChannelLedgerEntry {
+  index: string;
+  LedgerEntryType: 'PayChannel';
+  Account: string;
+  Destination: string;
+  Amount: string;
+  Balance: string;
+  SettleDelay: number;
+  Expiration?: number;
+  CancelAfter?: number;
+  PublicKey: string;
+  DestinationTag?: number;
+}
+
 interface AccountTxResult {
   account: string;
   ledger_index_max: number;
@@ -272,6 +286,49 @@ export async function getAccountInfo(address: string): Promise<{
     }
     throw error;
   }
+}
+
+/**
+ * Get payment channels owned by an account (real ledger data).
+ */
+export async function getPaymentChannels(account: string): Promise<PaymentChannelLedgerEntry[]> {
+  try {
+    const result = await xrplRequest<{ account_objects: PaymentChannelLedgerEntry[] }>(
+      'account_objects',
+      [{ account, type: 'payment_channel', ledger_index: 'validated' }]
+    );
+    const list = result.account_objects || [];
+    return Array.isArray(list) ? list : [];
+  } catch (err) {
+    if (err instanceof Error && (err.message.includes('actNotFound') || err.message.includes('account'))) {
+      return [];
+    }
+    throw err;
+  }
+}
+
+/**
+ * Build a PaymentChannelCreate transaction (to be signed by Xaman).
+ * PublicKey must be hex (64 chars for secp256k1). Get it from your wallet.
+ */
+export function buildPaymentChannelCreateTx(params: {
+  account: string;
+  amountXRP: number;
+  destination: string;
+  settleDelaySeconds: number;
+  publicKeyHex: string;
+  cancelAfter?: number;
+}): Record<string, unknown> {
+  const amountDrops = Math.floor(params.amountXRP * 1_000_000).toString();
+  return {
+    TransactionType: 'PaymentChannelCreate',
+    Account: params.account,
+    Amount: amountDrops,
+    Destination: params.destination,
+    SettleDelay: params.settleDelaySeconds,
+    PublicKey: params.publicKeyHex.toUpperCase(),
+    ...(params.cancelAfter != null && { CancelAfter: params.cancelAfter }),
+  };
 }
 
 // Get account creation year by fetching the earliest transaction

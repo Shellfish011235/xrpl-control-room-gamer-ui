@@ -19,13 +19,13 @@ import { getXamanMode } from '../config/xaman';
 
 // ==================== TABS ====================
 
-type TabId = 'agents' | 'requests' | 'caps' | 'receipts';
+export type AgentEconomyTabId = 'agents' | 'requests' | 'caps' | 'receipts';
 
-const tabs: { id: TabId; label: string; icon: typeof Cpu }[] = [
-  { id: 'agents', label: 'Agents', icon: Cpu },
-  { id: 'requests', label: 'Requests', icon: ListTodo },
-  { id: 'caps', label: 'Spend Caps', icon: Shield },
+export const agentEconomyTabs: { id: AgentEconomyTabId; label: string; icon: typeof Cpu }[] = [
   { id: 'receipts', label: 'Receipts', icon: Receipt },
+  { id: 'caps', label: 'Limits', icon: Shield },
+  { id: 'requests', label: 'Pending', icon: ListTodo },
+  { id: 'agents', label: 'Tools', icon: Cpu },
 ];
 
 // ==================== POWER MODE UNLOCK CARD ====================
@@ -35,7 +35,7 @@ interface SigningRequestDisplay {
   deepLink?: string;
 }
 
-function PowerModeUnlockCard() {
+export function PowerModeUnlockCard() {
   const [signing, setSigning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signingRequest, setSigningRequest] = useState<SigningRequestDisplay | null>(null);
@@ -162,7 +162,7 @@ function PowerModeUnlockCard() {
         <h3 className="font-cyber text-cyber-text">Power Mode Unlock</h3>
       </div>
       <p className="text-xs text-cyber-muted mb-4">
-        Pay {POWER_MODE_UNLOCK_XRP} XRP to unlock Advanced panels for 24 hours. Funds go to the service wallet (non-custodial).
+        Optional: pay {POWER_MODE_UNLOCK_XRP} XRP to unlock Advanced panels for 24 hours. Only if it’s worth it to you. Funds go to the service wallet (non-custodial).
       </p>
       {unlocked && expiresAt ? (
         <div className="flex items-center gap-2 text-cyber-green">
@@ -233,17 +233,17 @@ function PowerModeUnlockCard() {
 
 // ==================== AGENTS TAB ====================
 
-function AgentsTab() {
+export function AgentsTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-cyber-muted">
-        Marketplace of paid agents. Each action is a fixed price and requires your signature in Xaman.
+        Optional paid tools. You choose what to pay for—only when it helps you do more or earn back.
       </p>
       <PowerModeUnlockCard />
       <div className="cyber-panel p-4 border border-cyber-border rounded-lg">
         <p className="text-xs text-cyber-muted mb-2">More paid actions coming: Summary, Corridor Scan, Monitor Alerts. Each will show a fixed XRP price and require your Xaman signature.</p>
         <Link
-          to="/micropayments"
+          to="/pay"
           state={{ tab: 'agents' }}
           className="inline-flex items-center gap-2 text-xs text-cyber-cyan hover:underline"
         >
@@ -256,13 +256,13 @@ function AgentsTab() {
 
 // ==================== REQUESTS TAB ====================
 
-function RequestsTab() {
+export function RequestsTab() {
   const { pending } = useAgentEconomyStore();
   const active = pending.filter((p) => p.status === 'pending' || p.status === 'signing');
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-cyber-muted">Queued tasks awaiting your signature.</p>
+      <p className="text-sm text-cyber-muted">Actions waiting for your approval. You decide what to sign—nothing goes out without you.</p>
       {active.length === 0 ? (
         <p className="text-xs text-cyber-muted">No pending requests.</p>
       ) : (
@@ -286,13 +286,13 @@ function RequestsTab() {
 
 // ==================== CAPS TAB ====================
 
-function CapsTab() {
+export function CapsTab() {
   const { spendCaps, setSpendCaps, getSpendTotalToday } = useAgentEconomyStore();
   const spent = getSpendTotalToday();
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-cyber-muted">Daily and weekly limits. Enforced client-side; server-side recommended for production.</p>
+      <p className="text-sm text-cyber-muted">Set limits so the agent never spends more than you’re comfortable with. Keeps you in control.</p>
       <div className="cyber-panel p-4 border border-cyber-border rounded-lg space-y-4">
         <div>
           <label className="text-xs text-cyber-muted block mb-1">Daily limit (XRP)</label>
@@ -326,12 +326,12 @@ function CapsTab() {
 
 // ==================== RECEIPTS TAB ====================
 
-function ReceiptsTab() {
+export function ReceiptsTab() {
   const { receipts } = useAgentEconomyStore();
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-cyber-muted">Proof of payment: tx hash, job id, result.</p>
+      <p className="text-sm text-cyber-muted">Proof of what you paid or received. For taxes, records, and disputes.</p>
       {receipts.length === 0 ? (
         <p className="text-xs text-cyber-muted">No receipts yet.</p>
       ) : (
@@ -364,7 +364,7 @@ function ReceiptsTab() {
 // ==================== PAGE ====================
 
 export default function AgentEconomy() {
-  const [tab, setTab] = useState<TabId>('agents');
+  const [tab, setTab] = useState<AgentEconomyTabId>('agents');
 
   return (
     <div className="min-h-screen p-4 md:p-8 pt-24 md:pt-28">
@@ -392,14 +392,14 @@ export default function AgentEconomy() {
             <p className="text-[11px] text-cyber-muted uppercase tracking-wider font-medium mb-3">AI agent economy in this app</p>
             <div className="flex flex-wrap gap-2">
               <Link
-                to="/micropayments"
+                to="/pay"
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-glow/10 border border-cyber-glow/30 text-cyber-glow hover:bg-cyber-glow/20 text-xs font-cyber transition-colors"
               >
                 <Zap size={14} />
                 Micropayments · OpenClaw &amp; AI streams
               </Link>
               <Link
-                to="/micropayments"
+                to="/pay"
                 state={{ tab: 'openclaw' }}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-green/10 border border-cyber-green/30 text-cyber-green hover:bg-cyber-green/20 text-xs font-cyber transition-colors"
               >
@@ -407,7 +407,7 @@ export default function AgentEconomy() {
                 OpenClaw revenue
               </Link>
               <Link
-                to="/carv"
+                to="/pay/carv"
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/20 text-xs font-cyber transition-colors"
               >
                 <Bot size={14} />
@@ -421,7 +421,7 @@ export default function AgentEconomy() {
 
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-cyber-border pb-2">
-          {tabs.map((t) => {
+          {agentEconomyTabs.map((t) => {
             const Icon = t.icon;
             const isActive = tab === t.id;
             return (

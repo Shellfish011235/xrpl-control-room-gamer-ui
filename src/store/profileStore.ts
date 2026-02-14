@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type BackgroundStyle = 'auto' | 'gradient' | 'mesh' | 'bubbles' | 'cyber';
+export type BackgroundStyle = 'auto' | 'gradient' | 'mesh' | 'bubbles' | 'cyber' | 'generated';
 
 interface ProfileState {
   profileImage: string | null;

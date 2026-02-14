@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   User, Star, Trophy, Zap, Github, Twitter, Globe, 
-  ChevronRight, Code, GitBranch, Users,
+  ChevronRight, Code, Users,
   Calendar, MessageSquare, Heart, ExternalLink,
   Image as ImageIcon, Loader2, X as XIcon, RefreshCw, Coins, Copy, Check, Edit2,
-  Palette, Sparkles, UserCircle
+  Palette, Sparkles, UserCircle, PieChart as PieChartIcon,
+  Skull, BookOpen, Activity, Brain, Database, TrendingUp
 } from 'lucide-react'
-import { AreaChart, Area, ResponsiveContainer } from 'recharts'
+import { PortfolioContent } from './Clinic'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { WalletConnect } from '../components/WalletConnect'
 import { useProfileStore, type BackgroundStyle } from '../store/profileStore'
@@ -15,70 +17,8 @@ import { useWalletStore } from '../store/walletStore'
 import { useAssetsStore } from '../store/assetsStore'
 import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/themeStore'
 import type { NFTAsset, MemeToken } from '../store/assetsStore'
-
-const contributors = [
-  {
-    name: 'David Schwartz',
-    role: 'CTO, Ripple',
-    avatar: 'DS',
-    commits: 2847,
-    repos: 12,
-    followers: '125K',
-    color: 'cyber-glow'
-  },
-  {
-    name: 'Wietse Wind',
-    role: 'Founder, XRPL Labs',
-    avatar: 'WW',
-    commits: 1923,
-    repos: 45,
-    followers: '89K',
-    color: 'cyber-purple'
-  },
-  {
-    name: 'Nik Bougalis',
-    role: 'Senior Staff Engineer',
-    avatar: 'NB',
-    commits: 1654,
-    repos: 8,
-    followers: '45K',
-    color: 'cyber-cyan'
-  },
-  {
-    name: 'Scott Chamberlain',
-    role: 'Developer Advocate',
-    avatar: 'SC',
-    commits: 892,
-    repos: 23,
-    followers: '32K',
-    color: 'cyber-green'
-  },
-  {
-    name: 'Denis Angell',
-    role: 'Core Developer',
-    avatar: 'DA',
-    commits: 756,
-    repos: 15,
-    followers: '18K',
-    color: 'cyber-yellow'
-  },
-  {
-    name: 'Richard Holland',
-    role: 'Hooks Developer',
-    avatar: 'RH',
-    commits: 634,
-    repos: 11,
-    followers: '28K',
-    color: 'cyber-orange'
-  },
-]
-
-const activityData = Array.from({ length: 30 }, (_, i) => ({
-  day: i + 1,
-  commits: Math.floor(Math.random() * 15) + 2,
-  prs: Math.floor(Math.random() * 5)
-}))
-
+import { BackgroundPreview } from '../modules/theme/BackgroundPreview'
+import { LedgerImpactTool } from '../components/LedgerImpactTool'
 // Upcoming events: XRP/XRPL/Ripple + major crypto. endDate = last day (YYYY-MM-DD); events drop off after that.
 const communityEventsAll: { date: string; title: string; type: string; url: string; endDate: string }[] = [
   { date: 'Feb 10–12, 2026', title: 'Consensus Hong Kong — policy, DeFi, institutions (XRP/crypto)', type: 'conference', url: 'https://www.coindesk.com/events/consensus-hong-kong-2026/', endDate: '2026-02-12' },
@@ -471,7 +411,7 @@ function NftDetailModal({
 }
 
 export default function Character() {
-  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle, setMemberSinceYear, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
+  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle, setMemberSinceYear, profileImage, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
   const { wallets, refreshAllWallets } = useWalletStore()
   const { nfts, memeTokens, isLoading, fetchAllAssets, lastUpdated } = useAssetsStore()
   const nextLevel = 10000
@@ -480,7 +420,8 @@ export default function Character() {
   const [selectedMeme, setSelectedMeme] = useState<MemeToken | null>(null)
   const [activeTab, setActiveTab] = useState<'nfts' | 'memes'>('nfts')
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null)
-  
+  const [section, setSection] = useState<'profile' | 'portfolio'>('profile')
+
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editName, setEditName] = useState(displayName)
@@ -547,12 +488,41 @@ export default function Character() {
         >
           <div className="flex items-center gap-3 mb-2">
             <User className="text-cyber-cyan" size={28} />
-            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">CHARACTER</h1>
+            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">PROFILE</h1>
           </div>
-          <p className="text-cyber-muted">Digital Profile & Community Hub</p>
+          <p className="text-cyber-muted">Account, portfolio, achievements & community</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              type="button"
+              onClick={() => setSection('profile')}
+              className={`px-4 py-2 rounded-lg text-sm font-cyber transition-colors ${
+                section === 'profile'
+                  ? 'bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/50'
+                  : 'bg-cyber-darker border border-cyber-border text-cyber-muted hover:text-cyber-text'
+              }`}
+            >
+              <User size={14} className="inline mr-2" />
+              Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => setSection('portfolio')}
+              className={`px-4 py-2 rounded-lg text-sm font-cyber transition-colors ${
+                section === 'portfolio'
+                  ? 'bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/50'
+                  : 'bg-cyber-darker border border-cyber-border text-cyber-muted hover:text-cyber-text'
+              }`}
+            >
+              <PieChartIcon size={14} className="inline mr-2" />
+              Portfolio
+            </button>
+          </div>
         </motion.div>
-        
-        {/* Main Grid */}
+
+        {section === 'portfolio' ? (
+          <PortfolioContent />
+        ) : (
+        /* Main Grid - Profile */
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column - Profile Card */}
           <motion.div 
@@ -696,6 +666,7 @@ export default function Character() {
                   <option value="gradient">Gradient orbs</option>
                   <option value="mesh">Mesh gradient</option>
                   <option value="bubbles">Bubbles</option>
+                  <option value="generated">Generated (image + palette)</option>
                   <option value="cyber">Cyber default</option>
                 </select>
                 <div>
@@ -713,6 +684,17 @@ export default function Character() {
                     className="w-full h-1.5 rounded-full appearance-none bg-cyber-border accent-cyber-glow"
                   />
                 </div>
+                {/* Zero-cost generated background preview (NFT/profile image + palette) */}
+                {profileImage && profileImage !== '/profile-default.png' && !profileImage.startsWith('/profile-default.png') && (
+                  <div className="pt-2 border-t border-cyber-border/50">
+                    <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber mb-2">Generated preview</p>
+                    <BackgroundPreview
+                      imageUrl={profileImage}
+                      onUseAsBackground={() => setBackgroundStyle('generated')}
+                      isActive={backgroundStyle === 'generated'}
+                    />
+                  </div>
+                )}
               </div>
               
               {/* Social Links */}
@@ -751,16 +733,122 @@ export default function Character() {
             
           </motion.div>
           
-          {/* Center Column - NFTs/Memes (LARGE) + Contributors Grid (BELOW) */}
+          {/* Center Column - Ledger Impact (top) + Nav boxes + Profile/Portfolio section boxes */}
           <motion.div 
-            className="lg:col-span-6 space-y-6"
+            className="lg:col-span-6 space-y-4"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {/* NFTs & Memes Collection - LARGE CENTER DISPLAY */}
+            {/* 1) Ledger Impact - main top box */}
+            <div className="cyber-panel p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-cyber text-xl tracking-wider">
+                  <span className="text-cyber-text">LEDGER</span>
+                  <span className="text-cyber-glow ml-2">IMPACT</span>
+                  <span className="text-cyber-muted ml-2">ANALYZER</span>
+                </h2>
+                <Zap size={16} className="text-cyber-glow" />
+              </div>
+              <div className="bg-cyber-darker/50 rounded-lg p-4 border border-cyber-glow/30 mb-4">
+                <p className="text-xs text-cyber-muted mb-3 tracking-wider">Proposed Amendment Forecast</p>
+                <div className="flex items-center gap-6 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp size={20} className="text-cyber-green" />
+                    <span className="font-cyber text-lg text-cyber-green">+8.4%</span>
+                    <span className="text-xs text-cyber-muted">efficiency</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Database size={20} className="text-cyber-glow" />
+                    <span className="font-cyber text-lg text-cyber-glow">+115k</span>
+                    <span className="text-xs text-cyber-muted">TPS capacity</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Activity size={20} className="text-cyber-cyan" />
+                    <span className="font-cyber text-lg text-cyber-cyan">-12%</span>
+                    <span className="text-xs text-cyber-muted">latency</span>
+                  </div>
+                </div>
+              </div>
+              <LedgerImpactTool />
+            </div>
+
+            {/* 2) Nav boxes: Network, Terminal, Learn, Regulation, Trending */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {[
+                { path: '/network', title: 'Network', subtitle: 'Topology', icon: Globe, gradient: 'from-cyber-glow/20 to-cyber-blue/10' },
+                { path: '/terminal', title: 'Terminal', subtitle: 'Activity', icon: Activity, gradient: 'from-cyber-cyan/20 to-cyber-glow/10' },
+                { path: '/learn', title: 'Learn', subtitle: 'Micropayments', icon: BookOpen, gradient: 'from-cyan-500/20 to-teal-500/10' },
+                { path: '/underworld', title: 'Regulation', subtitle: 'Intel', icon: Skull, gradient: 'from-cyber-purple/20 to-cyber-magenta/10' },
+                { path: '/memetic-lab', title: 'Trending', subtitle: 'Memetic Lab', icon: Brain, gradient: 'from-cyber-yellow/20 to-cyber-orange/10' },
+              ].map((card) => {
+                const Icon = card.icon
+                return (
+                  <Link
+                    key={card.path}
+                    to={card.path}
+                    className={`rounded-lg border border-cyber-border bg-gradient-to-br ${card.gradient} p-4 hover:border-cyber-cyan/50 transition-colors block`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon size={18} className="text-cyber-cyan" />
+                      <span className="font-cyber text-sm text-cyber-text">{card.title}</span>
+                    </div>
+                    <p className="text-[10px] text-cyber-muted">{card.subtitle}</p>
+                    <ChevronRight size={14} className="text-cyber-muted mt-2" />
+                  </Link>
+                )
+              })}
+            </div>
+
+            {/* 3) Profile & Portfolio section boxes (switch to that tab) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setSection('profile')}
+                className={`cyber-panel p-6 text-left rounded-lg border-2 transition-all hover:border-cyber-cyan/60 group ${
+                  section === 'profile'
+                    ? 'border-cyber-cyan/50 bg-cyber-cyan/10'
+                    : 'border-cyber-border hover:bg-cyber-darker/50'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${section === 'profile' ? 'bg-cyber-cyan/20' : 'bg-cyber-darker border border-cyber-border'} group-hover:border-cyber-cyan/50`}>
+                    <User size={24} className={section === 'profile' ? 'text-cyber-cyan' : 'text-cyber-muted group-hover:text-cyber-cyan'} />
+                  </div>
+                  <div>
+                    <h3 className="font-cyber text-lg text-cyber-text">Profile</h3>
+                    <p className="text-xs text-cyber-muted">Account, stats, wallet & theme</p>
+                  </div>
+                  <ChevronRight size={20} className={`ml-auto ${section === 'profile' ? 'text-cyber-cyan' : 'text-cyber-muted group-hover:text-cyber-cyan'}`} />
+                </div>
+                <p className="text-sm text-cyber-muted">View your digital profile, reputation, and connected wallet.</p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSection('portfolio')}
+                className={`cyber-panel p-6 text-left rounded-lg border-2 transition-all hover:border-cyber-glow/60 group ${
+                  section === 'portfolio'
+                    ? 'border-cyber-glow/50 bg-cyber-glow/10'
+                    : 'border-cyber-border hover:bg-cyber-darker/50'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${section === 'portfolio' ? 'bg-cyber-glow/20' : 'bg-cyber-darker border border-cyber-border'} group-hover:border-cyber-glow/50`}>
+                    <PieChartIcon size={24} className={section === 'portfolio' ? 'text-cyber-glow' : 'text-cyber-muted group-hover:text-cyber-glow'} />
+                  </div>
+                  <div>
+                    <h3 className="font-cyber text-lg text-cyber-text">Portfolio</h3>
+                    <p className="text-xs text-cyber-muted">RLUSD, ETF, health & holdings</p>
+                  </div>
+                  <ChevronRight size={20} className={`ml-auto ${section === 'portfolio' ? 'text-cyber-glow' : 'text-cyber-muted group-hover:text-cyber-glow'}`} />
+                </div>
+                <p className="text-sm text-cyber-muted">Track positions, RLUSD, ETF exposure, and portfolio health.</p>
+              </button>
+            </div>
+
+            {/* NFTs & Memes – choose for profile / theme, viewer gallery */}
             <div className="cyber-panel p-4 cyber-glow">
-              {/* Header with Tabs */}
               <div className="flex items-center justify-between mb-4 pb-3 border-b border-cyber-border">
                 <div className="flex items-center gap-2">
                   <button
@@ -805,26 +893,24 @@ export default function Character() {
                   <RefreshCw size={16} className={`text-cyber-muted ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
-              
-              {/* Content */}
+              <p className="text-[10px] text-cyber-muted mb-3">Tap an NFT to view and set as profile picture or theme.</p>
               {isLoading ? (
-                <div className="flex items-center justify-center py-16">
+                <div className="flex items-center justify-center py-12">
                   <Loader2 size={32} className="animate-spin text-cyber-glow" />
                 </div>
               ) : wallets.filter(w => w.provider !== 'demo').length === 0 ? (
-                <div className="text-center py-16">
+                <div className="text-center py-12">
                   <ImageIcon size={48} className="mx-auto text-cyber-muted/50 mb-3" />
                   <p className="text-cyber-muted">Connect a wallet to see your collection</p>
                 </div>
               ) : activeTab === 'nfts' ? (
                 <>
-                  {/* NFT Grid - Scrollable to show ALL NFTs */}
-                  <div className="max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                  <div className="max-h-[320px] overflow-y-auto custom-scrollbar pr-2">
                     <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-3">
                       {nfts.length === 0 ? (
-                        <div className="col-span-full text-center py-12">
+                        <div className="col-span-full text-center py-8">
                           <ImageIcon size={40} className="mx-auto text-cyber-muted/30 mb-2" />
-                          <p className="text-sm text-cyber-muted">No NFTs found</p>
+                          <p className="text-sm text-cyber-muted">No NFTs in this wallet</p>
                         </div>
                       ) : (
                         nfts.map((nft, idx) => (
@@ -834,7 +920,7 @@ export default function Character() {
                             className="aspect-square rounded-lg border-2 border-cyber-purple/30 bg-cyber-darker/50 cursor-pointer overflow-hidden hover:border-cyber-purple hover:shadow-lg hover:shadow-cyber-purple/20 transition-all group"
                             initial={{ opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ delay: Math.min(idx * 0.02, 0.5) }}
+                            transition={{ delay: Math.min(idx * 0.02, 0.4) }}
                             whileHover={{ scale: 1.05, y: -2 }}
                           >
                             {nft.isLoading ? (
@@ -843,15 +929,12 @@ export default function Character() {
                               </div>
                             ) : nft.image ? (
                               <div className="relative w-full h-full">
-                                <img 
-                                  src={nft.image} 
-                                  alt={nft.name || 'NFT'} 
+                                <img
+                                  src={nft.image}
+                                  alt={nft.name || 'NFT'}
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).style.display = 'none'
-                                  }}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                 />
-                                {/* Hover overlay with name */}
                                 <div className="absolute inset-0 bg-gradient-to-t from-cyber-darker/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
                                   <p className="text-[10px] text-cyber-text truncate w-full">{nft.name || `#${nft.serial}`}</p>
                                 </div>
@@ -867,19 +950,15 @@ export default function Character() {
                       )}
                     </div>
                   </div>
-                  
                   {lastUpdated && (
-                    <p className="text-[10px] text-cyber-muted/50 mt-4 text-center">
-                      Updated {new Date(lastUpdated).toLocaleTimeString()}
-                    </p>
+                    <p className="text-[10px] text-cyber-muted/50 mt-3 text-center">Updated {new Date(lastUpdated).toLocaleTimeString()}</p>
                   )}
                 </>
               ) : (
                 <>
-                  {/* Meme Tokens Grid - LARGER */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 max-h-[320px] overflow-y-auto custom-scrollbar pr-2">
                     {memeTokens.length === 0 ? (
-                      <div className="col-span-full text-center py-12">
+                      <div className="col-span-full text-center py-8">
                         <Coins size={40} className="mx-auto text-cyber-muted/30 mb-2" />
                         <p className="text-sm text-cyber-muted">No meme tokens found</p>
                       </div>
@@ -894,9 +973,9 @@ export default function Character() {
                           transition={{ delay: idx * 0.05 }}
                           whileHover={{ y: -2 }}
                         >
-                          <div className="flex items-center gap-3 mb-3">
-                            <div 
-                              className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                          <div className="flex items-center gap-3 mb-2">
+                            <div
+                              className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
                               style={{ backgroundColor: `${token.color}20` }}
                             >
                               {token.icon || '🪙'}
@@ -906,109 +985,18 @@ export default function Character() {
                               <p className="text-[10px] text-cyber-muted truncate">{token.symbol}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-cyber" style={{ color: token.color }}>
-                              {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                            </p>
-                            <p className="text-[10px] text-cyber-muted">from {token.walletLabel}</p>
-                          </div>
+                          <p className="text-lg font-cyber" style={{ color: token.color }}>
+                            {token.balance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </p>
                         </motion.div>
                       ))
                     )}
                   </div>
-                  
                   {lastUpdated && (
-                    <p className="text-[10px] text-cyber-muted/50 mt-4 text-center">
-                      Updated {new Date(lastUpdated).toLocaleTimeString()}
-                    </p>
+                    <p className="text-[10px] text-cyber-muted/50 mt-3 text-center">Updated {new Date(lastUpdated).toLocaleTimeString()}</p>
                   )}
                 </>
               )}
-            </div>
-            
-            {/* Top Contributors - NOW BELOW NFTs/Memes */}
-            <div className="cyber-panel p-4">
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-cyber-border">
-                <div className="flex items-center gap-2">
-                  <Users size={16} className="text-cyber-purple" />
-                  <span className="font-cyber text-sm text-cyber-purple">TOP CONTRIBUTORS</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="px-3 py-1 text-xs rounded bg-cyber-glow/20 text-cyber-glow border border-cyber-glow/30">All Time</button>
-                  <button className="px-3 py-1 text-xs rounded bg-cyber-darker text-cyber-muted border border-cyber-border hover:border-cyber-glow/30">This Month</button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {contributors.map((contributor, idx) => (
-                  <motion.div
-                    key={contributor.name}
-                    className={`p-4 rounded-lg bg-cyber-darker/50 border border-cyber-border/50 hover:border-${contributor.color}/50 transition-all cursor-pointer group`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + idx * 0.05 }}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Avatar */}
-                      <div className={`w-12 h-12 rounded-lg bg-gradient-to-br from-${contributor.color}/30 to-${contributor.color}/10 border border-${contributor.color}/50 flex items-center justify-center shrink-0`}>
-                        <span className={`font-cyber text-sm text-${contributor.color}`}>{contributor.avatar}</span>
-                      </div>
-                      
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-cyber text-sm text-cyber-text truncate">{contributor.name}</h3>
-                          <ExternalLink size={12} className="text-cyber-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                        </div>
-                        <p className="text-xs text-cyber-muted mb-2">{contributor.role}</p>
-                        
-                        {/* Stats */}
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-1">
-                            <GitBranch size={12} className="text-cyber-green" />
-                            <span className="text-xs text-cyber-text">{contributor.commits}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Code size={12} className="text-cyber-purple" />
-                            <span className="text-xs text-cyber-text">{contributor.repos}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users size={12} className="text-cyber-glow" />
-                            <span className="text-xs text-cyber-text">{contributor.followers}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-              
-              {/* Activity Chart */}
-              <div className="mt-6 pt-4 border-t border-cyber-border">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-cyber text-sm text-cyber-glow">COMMUNITY ACTIVITY</span>
-                  <span className="text-xs text-cyber-muted">Last 30 days</span>
-                </div>
-                <div className="h-24">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={activityData}>
-                      <defs>
-                        <linearGradient id="activityGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <Area 
-                        type="monotone" 
-                        dataKey="commits" 
-                        stroke="#a855f7" 
-                        fill="url(#activityGradient)" 
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
             </div>
           </motion.div>
           
@@ -1127,6 +1115,7 @@ export default function Character() {
             </div>
           </motion.div>
         </div>
+        )}
       </div>
 
       {/* NFT Detail Modal - Enhanced with Theme/PFP Actions */}

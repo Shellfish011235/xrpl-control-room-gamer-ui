@@ -1,13 +1,16 @@
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, lazy, Suspense } from 'react'
 import { 
   Globe, Server, Users, Link2,
   Route, Scale, Building, Eye, X, RefreshCw, Wifi, WifiOff,
   ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock, HelpCircle,
+  Activity,
 } from 'lucide-react'
 import { WorldGlobe } from '../components/globe/WorldGlobe'
 import { useGlobeStore } from '../store/globeStore'
 import { useLiveNetworkData } from '../hooks/useLiveNetworkData'
+import { useLiveLedgerStream } from '../hooks/useLiveLedgerStream'
 import { 
   lensMetadata, 
   getHubs, 
@@ -78,6 +81,14 @@ import {
 import { ConnectorMap } from '../components/ilp'
 import { UnifiedNetworkTopology } from '../components/network'
 import { useILPStore } from '../store/ilpStore'
+import InnovationRadar from '../components/InnovationRadar'
+import LedgerHeartbeat from '../modules/visualization/LedgerHeartbeat'
+import ReactorCoreView from '../modules/visualization/ReactorCoreView'
+
+// Load regulations section only when regulation lens is active (avoids import/name resolution issues)
+const RegulationsContent = lazy(() =>
+  import('./Underworld').then((m) => ({ default: m.RegulationsContent }))
+)
 
 // Lens icons mapping
 const lensIcons: Record<GlobeLens, React.ReactNode> = {
@@ -161,6 +172,7 @@ export default function Network() {
     toggleShowLiveData,
     refetch: refetchLiveData
   } = useLiveNetworkData({ refreshInterval: 60000 })
+  const { connected: liveStreamConnected, pulses: livePulses } = useLiveLedgerStream()
   
   const hubs = useMemo(() => getHubs(), [])
   const corridors = useMemo(() => getCorridors(), [])
@@ -797,7 +809,11 @@ export default function Network() {
           >
             <div className="map-inner">
               <div className="map-panel flex flex-col overflow-hidden min-h-[400px] w-full">
-                <WorldGlobe className="h-full w-full" />
+                <WorldGlobe
+                  className="h-full w-full"
+                  livePulses={showLiveData ? livePulses : []}
+                  liveStreamConnected={showLiveData ? liveStreamConnected : false}
+                />
               </div>
               <p className="text-xs text-cyber-muted text-center flex-shrink-0 py-2">
                 Click a country or hub for details · Drag when map is unlocked
@@ -1966,7 +1982,16 @@ export default function Network() {
                 {/* XRPL-Connected Chains */}
                 {(corridorFilter === 'all' || corridorFilter === 'chains') && (
                   <div className="mb-4">
-                    <p className="text-[10px] text-cyber-muted mb-2">XRPL-Connected Chains ({xrplConnectedChains.filter(c => c.status === 'mainnet').length} mainnet)</p>
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <p className="text-[10px] text-cyber-muted">XRPL-Connected Chains ({xrplConnectedChains.filter(c => c.status === 'mainnet').length} mainnet)</p>
+                      <Link
+                        to="/learn"
+                        state={{ section: 'agenteconomy' }}
+                        className="text-[10px] text-cyber-cyan hover:underline whitespace-nowrap"
+                      >
+                        Use on XRPL now →
+                      </Link>
+                    </div>
                     <div className="max-h-[150px] overflow-y-auto space-y-1.5 custom-scrollbar">
                       {xrplConnectedChains.filter(c => c.status === 'mainnet').map((chain) => (
                         <button
@@ -1983,7 +2008,10 @@ export default function Network() {
                               <span className="text-xs text-cyber-text font-medium truncate">{chain.name}</span>
                               <span className="text-[9px] text-cyber-glow">{chain.symbol}</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {chain.supportsAgentEconomy && (
+                                <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-yellow/20 text-cyber-yellow" title="Supports agent economy (fewer signs)">AE</span>
+                              )}
                               {chain.evmCompatible && (
                                 <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-purple/20 text-cyber-purple">EVM</span>
                               )}
@@ -2652,13 +2680,57 @@ export default function Network() {
           </motion.aside>
         </div>
 
-        {/* Ledger Topology - single card, clear hierarchy */}
-        <LedgerTopologySection />
+        {/* When Community lens: Innovation Radar; when Regulation lens: Regulations content; otherwise Ledger Topology */}
+        {activeLens === 'community' ? (
+          <InnovationRadarSection />
+        ) : activeLens === 'regulation' ? (
+          <motion.section
+            className="w-full block pb-8"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <Suspense fallback={<div className="cyber-panel p-8 text-center text-cyber-muted">Loading regulations…</div>}>
+              <RegulationsContent />
+            </Suspense>
+          </motion.section>
+        ) : (
+          <LedgerTopologySection />
+        )}
 
-        {/* Full Network Topology - all tabs (Validators, ILP, Corridors, Bridges & Chains) */}
+        {/* Full Network Topology + Live Radar (merged: map + realtime movement) */}
         <FullNetworkTopologySection />
       </div>
     </div>
+  )
+}
+
+// ==================== INNOVATION RADAR SECTION (Community / Projects) ====================
+function InnovationRadarSection() {
+  return (
+    <motion.section
+      className="w-full block pb-8"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.15 }}
+    >
+      <div className="cyber-panel p-6 rounded-2xl border border-cyber-border/80 overflow-visible">
+        <div className="flex flex-wrap items-center gap-4 mb-5 pb-4 border-b border-cyber-border/60 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-cyber-purple/10">
+              <Users size={20} className="text-cyber-purple" />
+            </div>
+            <div>
+              <h2 className="font-cyber text-lg text-cyber-text tracking-tight">Innovation Radar</h2>
+              <p className="text-xs text-cyber-muted mt-0.5">
+                New &amp; active XRPL projects (GitHub) · Watchlist · Strategic intel
+              </p>
+            </div>
+          </div>
+        </div>
+        <InnovationRadar />
+      </div>
+    </motion.section>
   )
 }
 
@@ -2746,10 +2818,11 @@ function LedgerTopologySection() {
   )
 }
 
-// ==================== FULL NETWORK TOPOLOGY SECTION ====================
+// ==================== FULL NETWORK TOPOLOGY + LIVE RADAR (merged) ====================
 function FullNetworkTopologySection() {
   const initialize = useILPStore((s) => s.initialize)
   const initialized = useILPStore((s) => s.initialized)
+  const [radarView, setRadarView] = useState<'reactor' | 'data'>('reactor')
 
   useEffect(() => {
     if (!initialized) initialize()
@@ -2769,9 +2842,9 @@ function FullNetworkTopologySection() {
               <Route size={20} className="text-cyber-purple" />
             </div>
             <div>
-              <h2 className="font-cyber text-lg text-cyber-text tracking-tight">Full network topology</h2>
+              <h2 className="font-cyber text-lg text-cyber-text tracking-tight">Network topology &amp; live activity</h2>
               <p className="text-xs text-cyber-muted mt-0.5">
-                One graph from all Network tabs: validators, ILP ledgers, payment corridors, ODL partners, bridges &amp; chains
+                Validators, ILP ledgers, payment corridors, ODL partners, bridges &amp; chains · realtime ledger movement below
               </p>
             </div>
           </div>
@@ -2781,6 +2854,54 @@ function FullNetworkTopologySection() {
         ) : (
           <div className="py-12 text-center text-cyber-muted text-sm">Loading…</div>
         )}
+
+        {/* Live radar (realtime tx movement) — same data as former Radar section */}
+        <div className="mt-8 pt-6 border-t border-cyber-border/60">
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-cyber-cyan/10">
+                <Activity size={20} className="text-cyber-cyan" />
+              </div>
+              <div>
+                <h3 className="font-cyber text-sm text-cyber-text tracking-tight">Live ledger activity</h3>
+                <p className="text-[11px] text-cyber-muted mt-0.5">
+                  Realtime XRPL transactions · Reactor (pulses) or Data (TPS &amp; recent txs)
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={() => setRadarView('reactor')}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                  radarView === 'reactor'
+                    ? 'border-cyber-glow/50 bg-cyber-glow/10 text-cyber-glow'
+                    : 'border-cyber-border text-cyber-muted hover:text-cyber-text'
+                }`}
+              >
+                Reactor
+              </button>
+              <button
+                type="button"
+                onClick={() => setRadarView('data')}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                  radarView === 'data'
+                    ? 'border-cyber-glow/50 bg-cyber-glow/10 text-cyber-glow'
+                    : 'border-cyber-border text-cyber-muted hover:text-cyber-text'
+                }`}
+              >
+                Data
+              </button>
+            </div>
+          </div>
+          {radarView === 'reactor' ? (
+            <ReactorCoreView />
+          ) : (
+            <div className="rounded-xl border border-cyber-border/50 bg-cyber-darker/30 overflow-hidden">
+              <LedgerHeartbeat />
+            </div>
+          )}
+        </div>
       </div>
     </motion.section>
   )

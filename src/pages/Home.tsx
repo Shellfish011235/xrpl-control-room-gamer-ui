@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { 
-  Globe, Skull, User, HeartPulse, Zap, TrendingUp, TrendingDown, 
+  Globe, Skull, User, Zap, TrendingUp, TrendingDown, 
   Activity, Wallet, Database, ArrowRight, Star, Trophy, Coins,
   Image as ImageIcon, ChevronRight, Github, Twitter, Edit2, Check, X,
   Users, FileText
@@ -32,7 +32,7 @@ const pageCards = [
   },
   {
     path: '/underworld',
-    title: 'Underworld',
+    title: 'Regulations',
     subtitle: 'Regulatory Intel',
     icon: Skull,
     color: 'cyber-purple',
@@ -45,28 +45,15 @@ const pageCards = [
   },
   {
     path: '/character',
-    title: 'Character',
-    subtitle: 'Digital Profile',
+    title: 'Profile',
+    subtitle: 'Account, Portfolio & Community',
     icon: User,
     color: 'cyber-cyan',
     gradient: 'from-cyan-500/20 to-teal-500/10',
-    description: 'Manage your profile, achievements, and community standing',
+    description: 'Your profile, portfolio (RLUSD, ETF, health), achievements & community',
     stats: [
       { label: 'Level', value: '42' },
       { label: 'Rep', value: '820' },
-    ]
-  },
-  {
-    path: '/clinic',
-    title: 'Clinic',
-    subtitle: 'Health Metrics',
-    icon: HeartPulse,
-    color: 'cyber-green',
-    gradient: 'from-cyber-green/20 to-emerald-500/10',
-    description: 'Monitor stablecoins, ETFs, and portfolio diagnostics',
-    stats: [
-      { label: 'RLUSD', value: '$1.00' },
-      { label: 'ETF', value: '+8.4%' },
     ]
   },
 ]
@@ -359,6 +346,11 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
+            <div className="flex flex-wrap items-center gap-2 mb-3 text-xs">
+              <Link to="/pay" className="text-cyber-cyan hover:underline">Send</Link>
+              <span className="text-cyber-muted">·</span>
+              <Link to="/learn" className="text-cyber-muted hover:text-cyber-text">Learn</Link>
+            </div>
             {/* Tab Content */}
             <AnimatePresence mode="wait">
               {activeTab === 'regulations' && (

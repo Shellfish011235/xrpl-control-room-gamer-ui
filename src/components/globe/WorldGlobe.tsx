@@ -41,6 +41,7 @@ import {
 import { clsx } from 'clsx';
 import type { GlobeHub, GlobeCorridor, LiveValidatorMarker, LiveNodeMarker } from '../../types/globe';
 import { getValidatorStatusColor, getNodeStatusColor } from '../../services/xrpScanService';
+import type { LivePulse } from '../../hooks/useLiveLedgerStream';
 
 // Geography type from react-simple-maps
 interface GeoFeature {
@@ -92,11 +93,23 @@ const regulatoryColors: Record<string, string> = {
 /** Canonical map view: same center/zoom on every Network lens so alignment is consistent */
 const GLOBE_CANONICAL_VIEW = { coordinates: [0, 20] as [number, number], zoom: 1 };
 
+const PULSE_MAX_AGE_MS = 800;
+const PULSE_COLORS: Record<LivePulse['type'], string> = {
+  Payment: 'rgba(100, 255, 180, 0.9)',
+  'AMM/DEX': 'rgba(100, 180, 255, 0.9)',
+  NFTs: 'rgba(220, 140, 255, 0.9)',
+  Trustlines: 'rgba(255, 200, 100, 0.9)',
+  Other: 'rgba(200, 200, 220, 0.9)',
+};
+
 interface WorldGlobeProps {
   className?: string;
+  /** Live ledger pulses to show as expanding rings on the map (radar overlay) */
+  livePulses?: LivePulse[];
+  liveStreamConnected?: boolean;
 }
 
-export function WorldGlobe({ className }: WorldGlobeProps) {
+export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: WorldGlobeProps) {
   const { 
     activeLens, 
     selection, 
@@ -113,6 +126,14 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
   useEffect(() => {
     setPosition(GLOBE_CANONICAL_VIEW);
   }, [activeLens]);
+
+  // Tick for live pulse animation when overlay is active
+  useEffect(() => {
+    if (!livePulses?.length) return;
+    const id = setInterval(() => setTick(Date.now()), 60);
+    return () => clearInterval(id);
+  }, [livePulses?.length]);
+  const [tick, setTick] = useState(() => Date.now());
   const [hoveredValidator, setHoveredValidator] = useState<LiveValidatorMarker | null>(null);
   const [hoveredNode, setHoveredNode] = useState<LiveNodeMarker | null>(null);
   const [hoveredConnector, setHoveredConnector] = useState<ILPConnectorInstance | null>(null);
@@ -552,6 +573,31 @@ export function WorldGlobe({ className }: WorldGlobeProps) {
               </Marker>
             );
           })}
+          
+          {/* Live ledger pulse overlay (radar-style movement on map) */}
+          {showLiveData && liveStreamConnected && livePulses?.length > 0 && livePulses
+            .filter((p) => tick - p.timestamp < PULSE_MAX_AGE_MS)
+            .map((pulse) => {
+              const age = tick - pulse.timestamp;
+              const progress = age / PULSE_MAX_AGE_MS;
+              const r = 2 + progress * 18;
+              const opacity = 1 - progress;
+              const fill = PULSE_COLORS[pulse.type];
+              return (
+                <Marker key={pulse.id} coordinates={pulse.coordinates}>
+                  <g pointerEvents="none">
+                    <circle
+                      r={r}
+                      fill="none"
+                      stroke={fill}
+                      strokeWidth={1.5}
+                      opacity={opacity * 0.8}
+                    />
+                    <circle r={Math.max(0.5, r * 0.3)} fill={fill} opacity={opacity} />
+                  </g>
+                </Marker>
+              );
+            })}
           
           {/* Live Nodes from XRPScan - shown on validators, community, and corridors lenses */}
           {showLiveData && (activeLens === 'validators' || activeLens === 'community' || activeLens === 'corridors') && liveNodes.map((node) => {

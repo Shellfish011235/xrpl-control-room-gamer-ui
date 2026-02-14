@@ -7,6 +7,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useProfileStore, type BackgroundStyle } from '../store/profileStore';
 import { extractPaletteFromImage, type ColorPalette } from '../services/themeService';
+import { generateDashboardBackground } from '../modules/theme/generateBackground';
 
 const DEFAULT_PROFILE_IMAGE = '/profile-default.png';
 
@@ -16,6 +17,8 @@ function isDefaultProfileImage(src: string | null): boolean {
 
 // Cache palette by image URL so we don't re-extract on every render
 const paletteCache = new Map<string, ColorPalette>();
+// Cache generated background data URL by image URL (zero-cost: no server)
+const generatedBgCache = new Map<string, string>();
 
 async function getPaletteForImage(url: string): Promise<ColorPalette | null> {
   const cached = paletteCache.get(url);
@@ -29,16 +32,38 @@ async function getPaletteForImage(url: string): Promise<ColorPalette | null> {
   }
 }
 
+async function getGeneratedBackground(url: string): Promise<string | null> {
+  const cached = generatedBgCache.get(url);
+  if (cached) return cached;
+  const palette = await getPaletteForImage(url);
+  if (!palette) return null;
+  try {
+    const dataUrl = await generateDashboardBackground(url, {
+      primary: palette.dominant,
+      secondary: palette.secondary,
+      accent: palette.accent,
+    });
+    generatedBgCache.set(url, dataUrl);
+    return dataUrl;
+  } catch {
+    return null;
+  }
+}
+
 export function ProfileBackground() {
   const { profileImage, backgroundStyle, backgroundIntensity } = useProfileStore();
   const [palette, setPalette] = useState<ColorPalette | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
+  const [generatedLoading, setGeneratedLoading] = useState(false);
 
   const useProfileColors = useMemo(() => {
-    if (backgroundStyle === 'cyber') return false;
+    if (backgroundStyle === 'cyber' || backgroundStyle === 'generated') return false;
     if (backgroundStyle === 'auto') return !isDefaultProfileImage(profileImage);
     return true; // gradient | mesh | bubbles
   }, [backgroundStyle, profileImage]);
+
+  const useGenerated = backgroundStyle === 'generated' && profileImage && !isDefaultProfileImage(profileImage);
 
   useEffect(() => {
     if (!useProfileColors || !profileImage || isDefaultProfileImage(profileImage)) {
@@ -53,17 +78,39 @@ export function ProfileBackground() {
       .finally(() => setLoading(false));
   }, [useProfileColors, profileImage]);
 
+  useEffect(() => {
+    if (!useGenerated || !profileImage) {
+      setGeneratedUrl(null);
+      return;
+    }
+    setGeneratedLoading(true);
+    getGeneratedBackground(profileImage)
+      .then((url) => {
+        setGeneratedUrl(url ?? null);
+      })
+      .finally(() => setGeneratedLoading(false));
+  }, [useGenerated, profileImage]);
+
   const opacity = 0.04 + backgroundIntensity * 0.14; // ~0.06–0.18 so it's subtle but visible
 
-  // Always render the base layer (dark + grid/hex). Then overlay profile-colored effects when applicable.
+  // Always render the base layer (dark + grid/hex). Then overlay generated image or profile-colored effects.
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden" aria-hidden>
       {/* Base: dark and pattern — always present */}
       <div className="absolute inset-0 bg-[#050810]" />
       <div className="absolute inset-0 cyber-grid hex-pattern opacity-100" />
 
-      {/* Ambient orbs: profile colors or default cyber */}
-      {(!useProfileColors || loading || !palette) && (
+      {/* Generated background (blurred image + palette wash + vignette + noise + stars) */}
+      {useGenerated && generatedUrl && !generatedLoading && (
+        <img
+          src={generatedUrl}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      )}
+
+      {/* Ambient orbs: when not generated, and when no profile colors or still loading */}
+      {!useGenerated && (!useProfileColors || loading || !palette) && (
         <>
           <div className="absolute top-0 left-1/4 w-96 h-96 rounded-full blur-3xl bg-cyber-glow/5" />
           <div className="absolute bottom-1/4 right-1/4 w-80 h-80 rounded-full blur-3xl bg-cyber-purple/5" />

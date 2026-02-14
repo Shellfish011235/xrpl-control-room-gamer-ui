@@ -2,15 +2,14 @@ import { motion } from 'framer-motion'
 import { useMemo, useState } from 'react'
 import { 
   Skull, Shield, AlertTriangle, Scale, FileText, Clock,
-  ChevronRight, Globe, Gavel, TrendingUp, TrendingDown,
-  Eye, Bell, MapPin, ExternalLink, Building, Landmark,
-  CheckCircle, XCircle, HelpCircle, Activity
+  ChevronRight, Globe, TrendingUp,
+  Eye, Bell, ExternalLink, Building, Landmark,
+  CheckCircle, Activity
 } from 'lucide-react'
-import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Cell, PieChart, Pie } from 'recharts'
+import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts'
 import {
   regulatoryItems,
   regulatoryAgencies,
-  countryRegulatoryProfiles,
   getRegulatoryStats,
   getItemsByStatus,
   getImpactColor,
@@ -44,34 +43,6 @@ const calculateRiskMetrics = () => {
     { subject: 'Tax Framework', value: 70, fullMark: 100 }, // IRS reporting active
     { subject: 'DeFi Regs', value: Math.round(proposedItems.filter(i => i.categories.includes('dlt')).length > 0 ? 45 : 60), fullMark: 100 },
   ]
-}
-
-// Build jurisdiction data from country profiles
-const buildJurisdictionData = () => {
-  const statusScores: Record<string, number> = {
-    favorable: 90,
-    regulated: 80,
-    developing: 60,
-    restricted: 25,
-    unclear: 40,
-  }
-  
-  const statusColors: Record<string, string> = {
-    favorable: '#00ff88',
-    regulated: '#00d4ff',
-    developing: '#ffd700',
-    restricted: '#ff4444',
-    unclear: '#a855f7',
-  }
-  
-  return countryRegulatoryProfiles.slice(0, 10).map(profile => ({
-    country: profile.countryName.length > 12 ? profile.countryCode : profile.countryName,
-    score: statusScores[profile.overallStatus] + Math.floor(Math.random() * 10) - 5,
-    status: profile.overallStatus,
-    color: statusColors[profile.overallStatus],
-    cbdc: profile.cbdcStatus,
-    xrpl: profile.xrplPresence,
-  })).sort((a, b) => b.score - a.score)
 }
 
 // Build timeline from regulatory items
@@ -127,41 +98,18 @@ const buildAlerts = () => {
   }))
 }
 
-export default function Underworld() {
+/** Regulations content: used standalone on /underworld and embedded in Network → Regulation lens */
+export function RegulationsContent() {
   const [selectedJurisdiction, setSelectedJurisdiction] = useState<string | null>(null)
   
   const riskMetrics = useMemo(() => calculateRiskMetrics(), [])
-  const jurisdictionData = useMemo(() => buildJurisdictionData(), [])
   const regulatoryTimeline = useMemo(() => buildRegulatoryTimeline(), [])
   const alerts = useMemo(() => buildAlerts(), [])
   const stats = useMemo(() => getRegulatoryStats(), [])
   const corridorStats = useMemo(() => getCorridorStats(), [])
   
-  // Status distribution for pie chart
-  const statusDistribution = useMemo(() => [
-    { name: 'Active', value: stats.active, color: '#00ff88' },
-    { name: 'Pending', value: stats.pending, color: '#ffd700' },
-    { name: 'Proposed', value: stats.proposed, color: '#f97316' },
-    { name: 'Watch', value: stats.watch, color: '#a855f7' },
-  ], [stats])
-  
-  // Impact distribution
-  const impactDistribution = useMemo(() => {
-    const positive = regulatoryItems.filter(i => i.xrplImpact === 'positive').length
-    const negative = regulatoryItems.filter(i => i.xrplImpact === 'negative').length
-    const neutral = regulatoryItems.filter(i => i.xrplImpact === 'neutral').length
-    const mixed = regulatoryItems.filter(i => i.xrplImpact === 'mixed').length
-    return [
-      { name: 'Positive', value: positive, color: '#00ff88' },
-      { name: 'Negative', value: negative, color: '#ff4444' },
-      { name: 'Neutral', value: neutral, color: '#64748b' },
-      { name: 'Mixed', value: mixed, color: '#ffd700' },
-    ]
-  }, [])
-  
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div 
           className="mb-6"
@@ -170,7 +118,7 @@ export default function Underworld() {
         >
           <div className="flex items-center gap-3 mb-2">
             <Skull className="text-cyber-purple" size={28} />
-            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">UNDERWORLD</h1>
+            <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">REGULATIONS</h1>
             <div className="ml-auto flex items-center gap-3">
               <div className="flex items-center gap-2 px-3 py-1 rounded bg-cyber-green/10 border border-cyber-green/30">
                 <CheckCircle size={14} className="text-cyber-green" />
@@ -324,44 +272,6 @@ export default function Underworld() {
                 ))}
               </div>
             </div>
-            
-            {/* Status Distribution */}
-            <div className="cyber-panel p-4 border-cyber-purple/30">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <Activity size={16} className="text-cyber-glow" />
-                <span className="font-cyber text-sm text-cyber-glow">STATUS BREAKDOWN</span>
-              </div>
-              
-              <div className="h-40">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={30}
-                      outerRadius={55}
-                      dataKey="value"
-                      stroke="transparent"
-                    >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {statusDistribution.map((item) => (
-                  <div key={item.name} className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-xs text-cyber-muted">{item.name}</span>
-                    <span className="text-xs font-cyber ml-auto" style={{ color: item.color }}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </motion.div>
           
           {/* Center Column - Timeline */}
@@ -433,92 +343,13 @@ export default function Underworld() {
             </div>
           </motion.div>
           
-          {/* Right Column - Jurisdictions & Alerts */}
+          {/* Right Column - Recent Alerts */}
           <motion.div 
             className="lg:col-span-3 space-y-4"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
           >
-            {/* Jurisdiction Scores */}
-            <div className="cyber-panel p-4 border-cyber-purple/30">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <MapPin size={16} className="text-cyber-cyan" />
-                <span className="font-cyber text-sm text-cyber-cyan">JURISDICTION SCORES</span>
-              </div>
-              
-              <div className="h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={jurisdictionData} layout="vertical">
-                    <XAxis type="number" domain={[0, 100]} hide />
-                    <YAxis 
-                      dataKey="country" 
-                      type="category" 
-                      width={55}
-                      tick={{ fill: '#64748b', fontSize: 10 }}
-                    />
-                    <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-                      {jurisdictionData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="flex items-center justify-center gap-4 mt-4 pt-4 border-t border-cyber-border">
-                {[
-                  { label: 'Favorable', color: 'bg-cyber-green' },
-                  { label: 'Regulated', color: 'bg-cyber-glow' },
-                  { label: 'Developing', color: 'bg-cyber-yellow' },
-                  { label: 'Restrictive', color: 'bg-cyber-red' },
-                ].map((item) => (
-                  <div key={item.label} className="flex items-center gap-1">
-                    <div className={`w-2 h-2 rounded-full ${item.color}`} />
-                    <span className="text-[9px] text-cyber-muted">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
-            {/* XRPL Impact */}
-            <div className="cyber-panel p-4 border-cyber-purple/30">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <TrendingUp size={16} className="text-cyber-green" />
-                <span className="font-cyber text-sm text-cyber-green">XRPL IMPACT</span>
-              </div>
-              
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={impactDistribution}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={25}
-                      outerRadius={45}
-                      dataKey="value"
-                      stroke="transparent"
-                    >
-                      {impactDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-1 mt-2">
-                {impactDistribution.map((item) => (
-                  <div key={item.name} className="flex items-center gap-1">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[10px] text-cyber-muted">{item.name}</span>
-                    <span className="text-[10px] font-cyber ml-auto" style={{ color: item.color }}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
             {/* Recent Alerts */}
             <div className="cyber-panel p-4 border-cyber-purple/30">
               <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
@@ -681,7 +512,14 @@ export default function Underworld() {
             ))}
           </div>
         </motion.div>
-      </div>
+    </div>
+  )
+}
+
+export default function Underworld() {
+  return (
+    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
+      <RegulationsContent />
     </div>
   )
 }
