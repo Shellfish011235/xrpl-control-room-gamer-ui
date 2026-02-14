@@ -74,7 +74,7 @@ export function ProfileBackground() {
       {useProfileColors && palette && !loading && (
         <ProfileColoredLayer
           palette={palette}
-          style={backgroundStyle === 'auto' ? 'gradient' : backgroundStyle}
+          style={(backgroundStyle === 'auto' ? 'gradient' : backgroundStyle === 'cyber' ? 'gradient' : backgroundStyle) as 'gradient' | 'mesh' | 'bubbles'}
           opacity={opacity}
         />
       )}
