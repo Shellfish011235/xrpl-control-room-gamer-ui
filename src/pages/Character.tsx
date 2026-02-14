@@ -79,20 +79,25 @@ const activityData = Array.from({ length: 30 }, (_, i) => ({
   prs: Math.floor(Math.random() * 5)
 }))
 
-// Upcoming events: XRP/XRPL/Ripple + major crypto (see Character page). Refresh app if list looks old.
-const communityEvents = [
-  { date: 'Feb 10–12, 2026', title: 'Consensus Hong Kong — policy, DeFi, institutions (XRP/crypto)', type: 'conference' },
-  { date: 'Feb 11–12, 2026', title: 'XRP Community Day 2026 — virtual, EMEA/Americas/APAC (Ripple)', type: 'summit' },
-  { date: 'Feb 17–21, 2026', title: 'ETHDenver — builder fest; XRPL/ecosystem often represented', type: 'conference' },
-  { date: 'Mar 12–15, 2026', title: 'ETHMumbai — India Web3; cross-chain & XRPL topics', type: 'conference' },
-  { date: 'Mar 30 – Apr 2, 2026', title: 'ETHCC Cannes — core dev & infra; blockchain-wide', type: 'conference' },
-  { date: 'Apr 29–30, 2026', title: 'TOKEN2049 Dubai — liquidity, Web3 leaders, Ripple/XRP', type: 'conference' },
-  { date: 'May 5–7, 2026', title: 'Consensus Miami — largest Americas crypto conf (XRP/Ripple)', type: 'conference' },
-  { date: 'May 8–10, 2026', title: 'ETHPrague — European builders; multi-chain', type: 'conference' },
-  { date: 'Oct 7–8, 2026', title: 'TOKEN2049 Singapore — global Web3; XRP/XRPL ecosystem', type: 'conference' },
-  { date: 'Oct 27–29, 2026', title: 'Ripple Swell 2026 — NYC (unified Swell + Apex, XRPL flagship)', type: 'summit' },
-  { date: 'TBD 2026', title: 'Apex: Innovating with XRP — Miami (investors, enterprise, devs)', type: 'summit' },
+// Upcoming events: XRP/XRPL/Ripple + major crypto. endDate = last day (YYYY-MM-DD); events drop off after that.
+const communityEventsAll: { date: string; title: string; type: string; url: string; endDate: string }[] = [
+  { date: 'Feb 10–12, 2026', title: 'Consensus Hong Kong — policy, DeFi, institutions (XRP/crypto)', type: 'conference', url: 'https://www.coindesk.com/events/consensus-hong-kong-2026/', endDate: '2026-02-12' },
+  { date: 'Feb 11–12, 2026', title: 'XRP Community Day 2026 — virtual, EMEA/Americas/APAC (Ripple)', type: 'summit', url: 'https://ripple.com/insights/xrp-community-day-2026-what-to-expect/', endDate: '2026-02-12' },
+  { date: 'Feb 17–21, 2026', title: 'ETHDenver — builder fest; XRPL/ecosystem often represented', type: 'conference', url: 'https://www.ethdenver.com/', endDate: '2026-02-21' },
+  { date: 'Mar 12–15, 2026', title: 'ETHMumbai — India Web3; cross-chain & XRPL topics', type: 'conference', url: 'https://ethmumbai.net/', endDate: '2026-03-15' },
+  { date: 'Mar 30 – Apr 2, 2026', title: 'ETHCC Cannes — core dev & infra; blockchain-wide', type: 'conference', url: 'https://ethcc.io/', endDate: '2026-04-02' },
+  { date: 'Apr 29–30, 2026', title: 'TOKEN2049 Dubai — liquidity, Web3 leaders, Ripple/XRP', type: 'conference', url: 'https://www.token2049.com/dubai', endDate: '2026-04-30' },
+  { date: 'May 5–7, 2026', title: 'Consensus Miami — largest Americas crypto conf (XRP/Ripple)', type: 'conference', url: 'https://consensus.coindesk.com/', endDate: '2026-05-07' },
+  { date: 'May 8–10, 2026', title: 'ETHPrague — European builders; multi-chain', type: 'conference', url: 'https://ethprague.com/', endDate: '2026-05-10' },
+  { date: 'Oct 7–8, 2026', title: 'TOKEN2049 Singapore — global Web3; XRP/XRPL ecosystem', type: 'conference', url: 'https://www.token2049.com/singapore', endDate: '2026-10-08' },
+  { date: 'Oct 27–29, 2026', title: 'Ripple Swell 2026 — NYC (unified Swell + Apex, XRPL flagship)', type: 'summit', url: 'https://ripple.com/events/swell/', endDate: '2026-10-29' },
+  { date: 'TBD 2026', title: 'Apex: Innovating with XRP — Miami (investors, enterprise, devs)', type: 'summit', url: 'https://www.apexrippleevent.com/', endDate: '2026-12-31' },
 ]
+
+function getUpcomingEvents() {
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  return communityEventsAll.filter((e) => e.endDate >= today)
+}
 
 // Truncate address for display
 const truncateAddress = (address: string) => {
@@ -1022,33 +1027,46 @@ export default function Character() {
               </div>
               
               <div className="space-y-3">
-                {communityEvents.map((event, idx) => {
-                  const typeColors: Record<string, string> = {
-                    conference: 'border-cyber-glow/50 text-cyber-glow',
-                    summit: 'border-cyber-cyan/50 text-cyber-cyan',
-                    hackathon: 'border-cyber-purple/50 text-cyber-purple',
-                    ama: 'border-cyber-yellow/50 text-cyber-yellow',
-                    workshop: 'border-cyber-green/50 text-cyber-green'
+                {(() => {
+                  const upcoming = getUpcomingEvents()
+                  if (upcoming.length === 0) {
+                    return (
+                      <p className="text-sm text-cyber-muted p-3 rounded bg-cyber-darker/50 border border-cyber-border/50">
+                        No upcoming events right now. Check <a href="https://ripple.com/events" target="_blank" rel="noopener noreferrer" className="text-cyber-glow hover:underline">ripple.com/events</a> for the latest.
+                      </p>
+                    )
                   }
-                  
-                  return (
-                    <motion.div
-                      key={event.title}
-                      className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/30 transition-colors cursor-pointer"
-                      initial={{ opacity: 0, x: 10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + idx * 0.1 }}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-cyber-muted">{event.date}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded border ${typeColors[event.type] ?? 'border-cyber-border text-cyber-muted'}`}>
-                          {event.type}
-                        </span>
-                      </div>
-                      <p className="text-sm text-cyber-text">{event.title}</p>
-                    </motion.div>
-                  )
-                })}
+                  return upcoming.map((event, idx) => {
+                    const typeColors: Record<string, string> = {
+                      conference: 'border-cyber-glow/50 text-cyber-glow',
+                      summit: 'border-cyber-cyan/50 text-cyber-cyan',
+                      hackathon: 'border-cyber-purple/50 text-cyber-purple',
+                      ama: 'border-cyber-yellow/50 text-cyber-yellow',
+                      workshop: 'border-cyber-green/50 text-cyber-green'
+                    }
+                    
+                    return (
+                      <motion.a
+                        key={event.title}
+                        href={event.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block p-3 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/30 transition-colors cursor-pointer"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4 + idx * 0.1 }}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-cyber-muted">{event.date}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded border ${typeColors[event.type] ?? 'border-cyber-border text-cyber-muted'}`}>
+                            {event.type}
+                          </span>
+                        </div>
+                        <p className="text-sm text-cyber-text">{event.title}</p>
+                      </motion.a>
+                    )
+                  })
+                })()}
               </div>
             </div>
             

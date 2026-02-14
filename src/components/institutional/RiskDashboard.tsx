@@ -11,6 +11,7 @@ import {
 import {
   useRiskMetrics,
   useStressTests,
+  calculatePositionSize,
   type RiskMetrics,
   type ScenarioAnalysis,
   type PortfolioData
@@ -412,8 +413,6 @@ function PositionSizerWidget({ portfolioValue }: { portfolioValue: number }) {
   const [avgWin, setAvgWin] = useState(15);
   const [avgLoss, setAvgLoss] = useState(10);
   const [volatility, setVolatility] = useState(5);
-  
-  const { calculatePositionSize } = require('../../services/advancedRiskMetrics');
   
   const sizing = useMemo(() => {
     return calculatePositionSize(

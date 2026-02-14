@@ -160,7 +160,7 @@ export default function Underworld() {
   }, [])
   
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8 bg-gradient-to-b from-cyber-darker via-[#0a0512] to-cyber-darker">
+    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div 
