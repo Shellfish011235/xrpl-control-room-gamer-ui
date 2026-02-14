@@ -10,7 +10,7 @@ import {
 import { AreaChart, Area, ResponsiveContainer } from 'recharts'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { WalletConnect } from '../components/WalletConnect'
-import { useProfileStore } from '../store/profileStore'
+import { useProfileStore, type BackgroundStyle } from '../store/profileStore'
 import { useWalletStore } from '../store/walletStore'
 import { useAssetsStore } from '../store/assetsStore'
 import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/themeStore'
@@ -79,11 +79,19 @@ const activityData = Array.from({ length: 30 }, (_, i) => ({
   prs: Math.floor(Math.random() * 5)
 }))
 
+// Upcoming events: XRP/XRPL/Ripple + major crypto (see Character page). Refresh app if list looks old.
 const communityEvents = [
-  { date: 'Jan 25', title: 'XRPL Developer Summit', type: 'conference' },
-  { date: 'Feb 10', title: 'Hooks Hackathon', type: 'hackathon' },
-  { date: 'Feb 20', title: 'Community AMA', type: 'ama' },
-  { date: 'Mar 5', title: 'Validator Workshop', type: 'workshop' },
+  { date: 'Feb 10–12, 2026', title: 'Consensus Hong Kong — policy, DeFi, institutions (XRP/crypto)', type: 'conference' },
+  { date: 'Feb 11–12, 2026', title: 'XRP Community Day 2026 — virtual, EMEA/Americas/APAC (Ripple)', type: 'summit' },
+  { date: 'Feb 17–21, 2026', title: 'ETHDenver — builder fest; XRPL/ecosystem often represented', type: 'conference' },
+  { date: 'Mar 12–15, 2026', title: 'ETHMumbai — India Web3; cross-chain & XRPL topics', type: 'conference' },
+  { date: 'Mar 30 – Apr 2, 2026', title: 'ETHCC Cannes — core dev & infra; blockchain-wide', type: 'conference' },
+  { date: 'Apr 29–30, 2026', title: 'TOKEN2049 Dubai — liquidity, Web3 leaders, Ripple/XRP', type: 'conference' },
+  { date: 'May 5–7, 2026', title: 'Consensus Miami — largest Americas crypto conf (XRP/Ripple)', type: 'conference' },
+  { date: 'May 8–10, 2026', title: 'ETHPrague — European builders; multi-chain', type: 'conference' },
+  { date: 'Oct 7–8, 2026', title: 'TOKEN2049 Singapore — global Web3; XRP/XRPL ecosystem', type: 'conference' },
+  { date: 'Oct 27–29, 2026', title: 'Ripple Swell 2026 — NYC (unified Swell + Apex, XRPL flagship)', type: 'summit' },
+  { date: 'TBD 2026', title: 'Apex: Innovating with XRP — Miami (investors, enterprise, devs)', type: 'summit' },
 ]
 
 // Truncate address for display
@@ -458,7 +466,7 @@ function NftDetailModal({
 }
 
 export default function Character() {
-  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle, setMemberSinceYear } = useProfileStore()
+  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle, setMemberSinceYear, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
   const { wallets, refreshAllWallets } = useWalletStore()
   const { nfts, memeTokens, isLoading, fetchAllAssets, lastUpdated } = useAssetsStore()
   const nextLevel = 10000
@@ -669,6 +677,37 @@ export default function Character() {
                     <p className="text-xs text-cyber-muted">{stat.label}</p>
                   </div>
                 ))}
+              </div>
+
+              {/* Background - coordinates with profile picture */}
+              <div className="mb-4 p-3 rounded bg-cyber-darker/50 border border-cyber-border/50 space-y-2">
+                <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber">Background</p>
+                <select
+                  value={backgroundStyle}
+                  onChange={(e) => setBackgroundStyle(e.target.value as BackgroundStyle)}
+                  className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-xs text-cyber-text focus:border-cyber-glow focus:outline-none"
+                >
+                  <option value="auto">Auto (profile colors when custom pic)</option>
+                  <option value="gradient">Gradient orbs</option>
+                  <option value="mesh">Mesh gradient</option>
+                  <option value="bubbles">Bubbles</option>
+                  <option value="cyber">Cyber default</option>
+                </select>
+                <div>
+                  <div className="flex justify-between text-[10px] text-cyber-muted mb-0.5">
+                    <span>Intensity</span>
+                    <span>{Math.round(backgroundIntensity * 100)}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.2"
+                    max="1"
+                    step="0.1"
+                    value={backgroundIntensity}
+                    onChange={(e) => setBackgroundIntensity(parseFloat(e.target.value))}
+                    className="w-full h-1.5 rounded-full appearance-none bg-cyber-border accent-cyber-glow"
+                  />
+                </div>
               </div>
               
               {/* Social Links */}
@@ -984,8 +1023,9 @@ export default function Character() {
               
               <div className="space-y-3">
                 {communityEvents.map((event, idx) => {
-                  const typeColors = {
+                  const typeColors: Record<string, string> = {
                     conference: 'border-cyber-glow/50 text-cyber-glow',
+                    summit: 'border-cyber-cyan/50 text-cyber-cyan',
                     hackathon: 'border-cyber-purple/50 text-cyber-purple',
                     ama: 'border-cyber-yellow/50 text-cyber-yellow',
                     workshop: 'border-cyber-green/50 text-cyber-green'
@@ -1001,7 +1041,7 @@ export default function Character() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-cyber-muted">{event.date}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded border ${typeColors[event.type as keyof typeof typeColors]}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded border ${typeColors[event.type] ?? 'border-cyber-border text-cyber-muted'}`}>
                           {event.type}
                         </span>
                       </div>
