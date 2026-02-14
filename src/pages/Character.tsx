@@ -828,20 +828,20 @@ export default function Character() {
                 type="button"
                 onClick={() => setSection('portfolio')}
                 className={`cyber-panel p-6 text-left rounded-lg border-2 transition-all hover:border-cyber-glow/60 group ${
-                  section === 'portfolio'
+                  (section as 'profile' | 'portfolio') === 'portfolio'
                     ? 'border-cyber-glow/50 bg-cyber-glow/10'
                     : 'border-cyber-border hover:bg-cyber-darker/50'
                 }`}
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${section === 'portfolio' ? 'bg-cyber-glow/20' : 'bg-cyber-darker border border-cyber-border'} group-hover:border-cyber-glow/50`}>
-                    <PieChartIcon size={24} className={section === 'portfolio' ? 'text-cyber-glow' : 'text-cyber-muted group-hover:text-cyber-glow'} />
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${(section as 'profile' | 'portfolio') === 'portfolio' ? 'bg-cyber-glow/20' : 'bg-cyber-darker border border-cyber-border'} group-hover:border-cyber-glow/50`}>
+                    <PieChartIcon size={24} className={(section as 'profile' | 'portfolio') === 'portfolio' ? 'text-cyber-glow' : 'text-cyber-muted group-hover:text-cyber-glow'} />
                   </div>
                   <div>
                     <h3 className="font-cyber text-lg text-cyber-text">Portfolio</h3>
                     <p className="text-xs text-cyber-muted">RLUSD, ETF, health & holdings</p>
                   </div>
-                  <ChevronRight size={20} className={`ml-auto ${section === 'portfolio' ? 'text-cyber-glow' : 'text-cyber-muted group-hover:text-cyber-glow'}`} />
+                  <ChevronRight size={20} className={`ml-auto ${(section as 'profile' | 'portfolio') === 'portfolio' ? 'text-cyber-glow' : 'text-cyber-muted group-hover:text-cyber-glow'}`} />
                 </div>
                 <p className="text-sm text-cyber-muted">Track positions, RLUSD, ETF exposure, and portfolio health.</p>
               </button>
