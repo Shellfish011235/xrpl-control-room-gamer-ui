@@ -14,8 +14,10 @@ let cached: XRPLClientLike | null = null;
  */
 export async function connectOptionalXRPLClient(): Promise<XRPLClientLike> {
   if (cached) return cached;
-  const { Client } = await import('xrpl');
-  const client = new Client('wss://s.altnet.rippletest.net:51233');
+  const moduleName = 'xrpl';
+  const xrpl = await import(/* @vite-ignore */ moduleName).catch(() => null) as { Client?: new (url: string) => { connect: () => Promise<void> } } | null;
+  if (!xrpl?.Client) throw new Error('xrpl package not installed. Run: npm install xrpl');
+  const client = new xrpl.Client('wss://s.altnet.rippletest.net:51233');
   await client.connect();
   cached = client as unknown as XRPLClientLike;
   return cached;

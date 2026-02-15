@@ -79,9 +79,9 @@ export async function initiatePayment(
         xamanService.off('signingExpired', onExpired);
       };
 
-      xamanService.once('signingSigned', onSigned);
-      xamanService.once('signingRejected', onRejected);
-      xamanService.once('signingExpired', onExpired);
+      xamanService.on('signingSigned', onSigned);
+      xamanService.on('signingRejected', onRejected);
+      xamanService.on('signingExpired', onExpired);
 
       setTimeout(() => {
         cleanup();

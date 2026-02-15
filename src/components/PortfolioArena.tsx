@@ -21,11 +21,12 @@ export function PortfolioArena({ visual, className = '', width = 320, height = 2
     if (!container) return;
 
     let cancelled = false;
-    let renderer: import('three').WebGLRenderer | null = null;
+    let renderer: { domElement: HTMLElement; setSize: (w: number, h: number) => void; setPixelRatio: (n: number) => void; render: (scene: unknown, camera: unknown) => void; dispose: () => void } | null = null;
     let frameId = 0;
 
     (async () => {
-      const THREE = await import('three');
+      const threeMod = 'three';
+      const THREE = await import(/* @vite-ignore */ threeMod);
       if (cancelled) return;
       const w = width;
       const h = height;
@@ -49,7 +50,7 @@ export function PortfolioArena({ visual, className = '', width = 320, height = 2
         opacity: 0.9,
       });
 
-      const meshes: import('three').Mesh[] = [];
+      const meshes: Array<{ position: { set: (x: number, y: number, z: number) => void; y?: number }; rotation: { y?: number }; geometry: { dispose: () => void }; material: { dispose: () => void } }> = [];
       const n = Math.min(12, Math.max(1, visual.fighterCount));
       for (let i = 0; i < n; i++) {
         const geometry = new THREE.SphereGeometry(0.15, 8, 6);
