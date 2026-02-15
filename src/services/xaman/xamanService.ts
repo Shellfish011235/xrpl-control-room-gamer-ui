@@ -29,6 +29,8 @@ export interface SigningRequest {
   payload: XRPLTransaction;
   status: 'pending' | 'signed' | 'rejected' | 'expired';
   qrCodeUrl?: string;
+  /** Open this URL in a browser tab to sign (desktop-safe). Always https://xumm.app/sign/{id} for real payloads. */
+  browserSignUrl?: string;
   deepLink?: string;
   websocketUrl?: string;
   createdAt: Date;
@@ -397,6 +399,7 @@ class XamanService {
         payload,
         status: 'pending',
         qrCodeUrl: created.refs.qr_png,
+        browserSignUrl: `https://xumm.app/sign/${created.uuid}`,
         deepLink: created.next.always,
         websocketUrl: created.refs.websocket_status,
         createdAt: now,
@@ -460,7 +463,11 @@ class XamanService {
       // If we have credentials, do NOT silently fall back to demo — surface the error so the user can fix it
       if (this.apiKey && this.xumm) {
         const msg = error instanceof Error ? error.message : String(error);
-        throw new Error(`Real signing failed: ${msg}. Check your API key at apps.xumm.dev and try again.`);
+        const isConnectionError = /fetch|network|cors|Failed to fetch|connect|server not found|ECONNREFUSED|timeout/i.test(msg);
+        const hint = isConnectionError
+          ? ' Add your site URL to Allowed origins at apps.xumm.dev (Your app → Allowed origins).'
+          : '';
+        throw new Error(`Real signing failed: ${msg}.${hint} Check API key and allowed origins at apps.xumm.dev.`);
       }
       return this.createDemoRequest(type, payload, now, expiresAt);
     }
@@ -483,6 +490,7 @@ class XamanService {
       payload,
       status: 'pending',
       qrCodeUrl: `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=demo-${id}`,
+      browserSignUrl: 'https://xumm.app',
       deepLink: `xumm://xumm.app/sign/${id}`,
       createdAt: now,
       expiresAt,
@@ -601,10 +609,12 @@ class XamanService {
     return request.id.startsWith('demo_') || request.id.startsWith('local_');
   }
 
+  /** Open the sign page in a new tab (desktop-safe). Use browserSignUrl, not deep link, to avoid "server not found". */
   openXamanApp(request: SigningRequest): void {
-    if (request.deepLink) {
-      window.location.href = request.deepLink;
-    }
+    const url = request.browserSignUrl ?? (request.id && !request.id.startsWith('demo_')
+      ? `https://xumm.app/sign/${request.id}`
+      : 'https://xumm.app');
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 }
 

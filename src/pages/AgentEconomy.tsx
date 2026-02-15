@@ -32,6 +32,7 @@ export const agentEconomyTabs: { id: AgentEconomyTabId; label: string; icon: typ
 
 interface SigningRequestDisplay {
   qrCodeUrl?: string;
+  browserSignUrl?: string;
   deepLink?: string;
 }
 
@@ -92,7 +93,7 @@ export function PowerModeUnlockCard() {
         payerAddress
       );
 
-      setSigningRequest({ qrCodeUrl: request.qrCodeUrl, deepLink: request.deepLink });
+      setSigningRequest({ qrCodeUrl: request.qrCodeUrl, browserSignUrl: request.browserSignUrl, deepLink: request.deepLink });
       updatePending(pendingId, { payloadId: request.id, status: 'signing' });
 
       const signed = await new Promise<{ txHash: string } | { rejected: true }>((resolve) => {
@@ -196,15 +197,19 @@ export function PowerModeUnlockCard() {
               {signingRequest.qrCodeUrl && (
                 <img src={signingRequest.qrCodeUrl} alt="Sign in Xaman" className="w-40 h-40 mx-auto mb-2 rounded" />
               )}
-              {signingRequest.deepLink && (
-                <a
-                  href={signingRequest.deepLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-center text-xs text-cyber-cyan hover:underline"
+              {(signingRequest.browserSignUrl ?? signingRequest.deepLink) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const url = signingRequest.browserSignUrl ?? (signingRequest.deepLink?.startsWith('http')
+                      ? signingRequest.deepLink
+                      : 'https://xumm.app');
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="block w-full text-center text-xs text-cyber-cyan hover:underline"
                 >
                   Open in Xaman
-                </a>
+                </button>
               )}
             </div>
           )}

@@ -135,37 +135,51 @@ class SecurePaymentAgent {
 
   // ==================== WALLET INTEGRATION ====================
 
+  /** Connect with a mock balance (e.g. Demo wallet). No ledger fetch. */
+  async connectDemoWallet(address: string, mockBalanceXRP: number = 10_000): Promise<WalletState> {
+    await xamanService.connect(address);
+    this.walletState = this.makeWalletState(address, mockBalanceXRP, []);
+    this.log('wallet_connected', { address, balance: mockBalanceXRP, demo: true }, 'success');
+    return this.walletState;
+  }
+
+  private makeWalletState(
+    address: string,
+    xrpBalance: number,
+    tokens: Array<{ currency: string; issuer: string; balance: number }>
+  ): WalletState {
+    return {
+      address,
+      xrpBalance,
+      tokens,
+      canPay: (amount: number, currency: string, issuer?: string) => {
+        if (currency === 'XRP') {
+          return this.walletState!.xrpBalance - 10 >= amount;
+        }
+        const token = this.walletState!.tokens.find(
+          t => t.currency === currency && t.issuer === issuer
+        );
+        return token ? token.balance >= amount : false;
+      },
+    };
+  }
+
   async connectWallet(address: string): Promise<WalletState> {
     try {
-      // Connect to Xaman service
       await xamanService.connect(address);
-      
-      // Fetch wallet data
       const [accountInfo, trustlines] = await Promise.all([
         getAccountInfo(address),
         getAccountLines(address),
       ]);
-
-      this.walletState = {
+      this.walletState = this.makeWalletState(
         address,
-        xrpBalance: accountInfo.balance,
-        tokens: trustlines.map(t => ({
+        accountInfo.balance,
+        trustlines.map(t => ({
           currency: t.currency,
           issuer: t.issuer,
           balance: t.balance,
-        })),
-        canPay: (amount: number, currency: string, issuer?: string) => {
-          if (currency === 'XRP') {
-            // Keep 10 XRP reserve
-            return this.walletState!.xrpBalance - 10 >= amount;
-          }
-          const token = this.walletState!.tokens.find(
-            t => t.currency === currency && t.issuer === issuer
-          );
-          return token ? token.balance >= amount : false;
-        },
-      };
-
+        }))
+      );
       this.log('wallet_connected', { address, balance: accountInfo.balance }, 'success');
       return this.walletState;
     } catch (error) {
@@ -176,6 +190,11 @@ class SecurePaymentAgent {
 
   getWalletState(): WalletState | null {
     return this.walletState;
+  }
+
+  /** Get a pending plan by id (e.g. to show fallback sign UI when startSigning fails). */
+  getPendingPlan(planId: string): PaymentPlan | null {
+    return this.pendingPlans.get(planId) ?? null;
   }
 
   async refreshWallet(): Promise<WalletState | null> {

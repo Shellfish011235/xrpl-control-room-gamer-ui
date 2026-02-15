@@ -27,6 +27,8 @@ interface Message {
   content: string;
   timestamp: Date;
   plan?: PaymentPlan;
+  /** When true, show "Sign in Xaman" fallback UI (copy address/amount, Open Xaman) even without QR */
+  planFallbackSign?: boolean;
 }
 
 // ==================== MAIN COMPONENT ====================
@@ -41,10 +43,13 @@ export function SecureAgentPanel() {
   const [config, setConfig] = useState<SecurityConfig>(securePaymentAgent.getConfig());
   const [walletConnected, setWalletConnected] = useState(false);
   const [activePlan, setActivePlan] = useState<PaymentPlan | null>(null);
+  const [signingPhase, setSigningPhase] = useState<'idle' | 'preparing' | 'waiting'>('idle');
   const [xamanMode, setXamanMode] = useState(getXamanMode());
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiSecretInput, setApiSecretInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const SIGNING_REQUEST_TIMEOUT_MS = 20000;
 
   const platformLive = usePlatformModeStore((s) => s.mode === 'live');
   const setPlatformMode = usePlatformModeStore((s) => s.setMode);
@@ -54,10 +59,10 @@ export function SecureAgentPanel() {
   // Initialize — richer welcome (chatbot-style)
   useEffect(() => {
     const modeMessage = xamanMode === 'production'
-      ? '🔐 **Real signing is on** — I’ll send transactions to your Xaman app to sign. Use the **Live** toggle at the top to send real payments.'
+      ? '🔐 **Real signing is on** — When you tap Confirm, a QR will appear. Scan it in Xaman to sign.'
       : platformLive
-        ? '📡 **Platform is Live** — add your Xaman API key below (Connect Xaman) to sign real payments.'
-        : 'Switch to **Live** (toggle at top of page) and add your Xaman API key below to send real payments. In Demo, I’ll simulate everything.';
+        ? '📡 **To get the real QR:** tap **Connect Xaman** above, paste your API key from apps.xumm.dev, then Save. Send a payment and tap Confirm.'
+        : '**To sign in Xaman:** 1) Tap **Connect Xaman** above and add your API key from apps.xumm.dev. 2) Tap **Go Live**. Then the QR will work.';
 
     setMessages([
       {
@@ -75,12 +80,24 @@ export function SecureAgentPanel() {
     ]);
   }, [xamanMode, platformLive]);
 
-  // Auto-connect wallet if available
+  // Sync Xaman mode on mount (e.g. key was saved in a previous session)
   useEffect(() => {
-    if (activeWallet && !walletConnected && activeWallet.provider !== 'demo') {
+    setXamanMode(getXamanMode());
+  }, []);
+
+  // Auto-connect wallet if available (any provider — real signing still requires Xaman API key)
+  useEffect(() => {
+    if (activeWallet && !walletConnected) {
       connectWallet();
     }
   }, [activeWallet]);
+
+  // Keep header in sync: if UI says connected but agent lost state (e.g. refresh), re-connect or show disconnected
+  useEffect(() => {
+    if (!walletConnected || !activeWallet) return;
+    if (securePaymentAgent.getWalletState() != null) return;
+    ensureWalletSynced();
+  }, [walletConnected, activeWallet?.id]);
 
   // Auto-scroll
   useEffect(() => {
@@ -90,14 +107,20 @@ export function SecureAgentPanel() {
   // Connect wallet
   const connectWallet = async () => {
     if (!activeWallet) {
-      addMessage('system', '⚠️ No wallet selected. Add a wallet first.');
+      addMessage('system', '⚠️ No wallet selected. Add a wallet above (e.g. Demo) to start.');
       return;
     }
 
+    const isDemo = activeWallet.provider === 'demo';
     try {
-      await securePaymentAgent.connectWallet(activeWallet.address);
+      if (isDemo) {
+        await securePaymentAgent.connectDemoWallet(activeWallet.address);
+      } else {
+        await securePaymentAgent.connectWallet(activeWallet.address);
+      }
       setWalletConnected(true);
-      addMessage('agent', `✅ **Connected** to ${activeWallet.label}.\n\nYour balance: **${activeWallet.balance?.toFixed(2) ?? '?'} XRP**`);
+      const balanceStr = isDemo ? '10,000 (demo)' : (activeWallet.balance?.toFixed(2) ?? '?');
+      addMessage('agent', `✅ **Connected** to ${activeWallet.label}.\n\nBalance: **${balanceStr} XRP**${isDemo ? ' — use **Connect Xaman** above for real signing.' : '.'}`);
       addMessage('agent', `What would you like to do? You can say:\n\n• **"Send 5 XRP to r..."** — I’ll build the payment and show you a QR to sign in Xaman.\n• **"Pay $25 to r..."** — I’ll convert to the right amount and do the same.\n• **"Help"** or **"What can you do?"** — I’ll explain more.`);
     } catch (error) {
       addMessage('system', `❌ Failed to connect wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -109,9 +132,12 @@ export function SecureAgentPanel() {
     const msg = error instanceof Error ? error.message : String(error);
     if (/Insufficient XRP/i.test(msg)) return msg; // Keep full balance message
     if (/wallet not connected|no payer address|connect.*wallet/i.test(msg)) return 'Wallet session lost. Tap **Connect Wallet** again, then try your payment.';
-    if (/network|fetch|failed to fetch|ECONNREFUSED|timeout/i.test(msg)) return 'Network error. Check your connection and try again.';
+    if (/server not found|failed to connect to the server|can't connect|ERR_NAME_NOT_RESOLVED|getaddrinfo|ENOTFOUND|connect.*server/i.test(msg)) {
+      return 'Xaman server unreachable. (1) At [apps.xumm.dev](https://apps.xumm.dev) add **Allowed origins**: `' + (typeof window !== 'undefined' ? window.location.origin : '') + '` (2) If the sign page won\'t load, your network may block xumm.app — try another network or complete the payment in the Xaman app (Send → paste address).';
+    }
+    if (/network|fetch|failed to fetch|ECONNREFUSED|timeout|cors/i.test(msg)) return 'Network error — Xaman API unreachable. Add this origin at [apps.xumm.dev](https://apps.xumm.dev) → Your app → **Allowed origins**: `' + (typeof window !== 'undefined' ? window.location.origin : '') + '` then try **Confirm** again.';
     if (/rate limit|too many requests|429/i.test(msg)) return 'Rate limit reached. Please wait a moment before trying again.';
-    if (/Real signing failed|API key|apps\.xumm/i.test(msg)) return 'Xaman signing failed. Check your API key at apps.xumm.dev and that this site is in your allowed origins.';
+    if (/Real signing failed|API key|apps\.xumm|Timeout creating Xaman/i.test(msg)) return 'Xaman signing failed. At [apps.xumm.dev](https://apps.xumm.dev): check your API key and add this site to **Allowed origins**. Then try **Confirm** again.';
     if (/single transaction limit|exceeds.*limit/i.test(msg)) return msg; // Keep limit message
     if (/daily limit|limit_exceeded/i.test(msg)) return 'Daily spend limit reached. Adjust caps in Agent Economy or try again tomorrow.';
     if (/whitelist|blocked|not allowed/i.test(msg)) return 'This destination is not on your whitelist. Add it in settings or disable whitelist-only mode.';
@@ -131,6 +157,28 @@ export function SecureAgentPanel() {
       timestamp: new Date(),
       plan,
     }]);
+  };
+
+  // Keep agent wallet state in sync with UI (e.g. after HMR or session restore). Returns true if we can create payments.
+  const ensureWalletSynced = async (): Promise<boolean> => {
+    if (securePaymentAgent.getWalletState() != null) return true;
+    if (!activeWallet) {
+      setWalletConnected(false);
+      return false;
+    }
+    try {
+      const isDemo = activeWallet.provider === 'demo';
+      if (isDemo) {
+        await securePaymentAgent.connectDemoWallet(activeWallet.address);
+      } else {
+        await securePaymentAgent.connectWallet(activeWallet.address);
+      }
+      setWalletConnected(true);
+      return true;
+    } catch {
+      setWalletConnected(false);
+      return false;
+    }
   };
 
   // Handle user input
@@ -159,6 +207,14 @@ export function SecureAgentPanel() {
         return;
       }
 
+      // Sync agent wallet state (recover if UI said connected but agent lost state, e.g. after refresh)
+      const synced = await ensureWalletSynced();
+      if (!synced) {
+        addMessage('agent', '🔒 Wallet session was lost. Tap **Connect Wallet** above, then try your payment again.');
+        setIsProcessing(false);
+        return;
+      }
+
       // Add thinking indicator
       addMessage('agent', '🤔 Looking at your request...');
 
@@ -183,12 +239,29 @@ export function SecureAgentPanel() {
   // Confirm and execute plan - two step process
   const handleConfirmPlan = async (planId: string) => {
     setIsProcessing(true);
-    
-    // Step 1: Start signing - this returns immediately with the signing request
+    setSigningPhase('preparing');
+
     try {
-      const planWithSigningRequest = await securePaymentAgent.startSigning(planId);
-      
-      // Update the UI immediately to show signing instructions
+      // Transaction step needs the agent's wallet state; sync so it doesn't fail with "wallet not connected"
+      const synced = await ensureWalletSynced();
+      if (!synced) {
+        addMessage('agent', '🔒 **Transaction step needs your wallet.** Tap **Connect Wallet** above in this panel, then tap **Confirm** again.');
+        setIsProcessing(false);
+        setSigningPhase('idle');
+        return;
+      }
+
+      // Step 1: Start signing - create payload and get QR / deep link (with timeout so we don't hang)
+      const planWithSigningRequest = await Promise.race([
+        securePaymentAgent.startSigning(planId),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Signing request timed out. Check your connection and add this site to Allowed origins at apps.xumm.dev, then try again.')), SIGNING_REQUEST_TIMEOUT_MS)
+        ),
+      ]);
+
+      setSigningPhase('waiting');
+
+      // Update the UI immediately so the QR / "Open in Xaman" appears
       setMessages(prev => prev.map(m => {
         if (m.plan?.id === planId) {
           return {
@@ -203,8 +276,10 @@ export function SecureAgentPanel() {
         return m;
       }));
 
-      // Now the UI shows the signing instructions - user can sign manually
-      // Step 2: Wait for the signing to complete
+      // Let the QR / signing UI paint before we block on waitForSigning
+      await new Promise(r => setTimeout(r, 100));
+
+      // Step 2: Wait for the user to sign in Xaman (or reject/expire)
       const result = await securePaymentAgent.waitForSigning(planId);
       
       setActivePlan(null);
@@ -284,10 +359,26 @@ export function SecureAgentPanel() {
       }
     } catch (error) {
       setMessages(prev => prev.filter(m => m.content !== '🤔 Looking at your request...'));
-      addMessage('agent', `❌ ${toUserFriendlyError(error)}`);
-      addMessage('agent', 'Want to try again? Make sure you include an amount and an XRPL address (starts with **r**). Or say **"help"** for a quick guide.');
+      addMessage('agent', `❌ **Transaction step failed** — ${toUserFriendlyError(error)}`);
+      addMessage('agent', '**To fix:** (1) Tap **Connect Wallet** above if it says disconnected. (2) For real signing, tap **Connect Xaman** and add your API key from [apps.xumm.dev](https://apps.xumm.dev), and add this site to **Allowed origins**. Then tap **Confirm** again.');
+      // Always show a way to complete: if we have the plan, show "Sign in Xaman" fallback (copy + Open Xaman)
+      const fallbackPlan = securePaymentAgent.getPendingPlan(planId);
+      if (fallbackPlan?.intent?.destination && fallbackPlan?.intent?.targetAmount) {
+        setMessages(prev => [...prev, {
+          id: `fallback-${Date.now()}`,
+          type: 'plan' as const,
+          content: '',
+          timestamp: new Date(),
+          plan: fallbackPlan,
+          planFallbackSign: true,
+        }]);
+        addMessage('agent', 'You can still complete this payment in Xaman using the details below — copy the address and amount, or tap **Open in Xaman**.');
+      } else {
+        addMessage('agent', 'Want to try again? Make sure you include an amount and an XRPL address (starts with **r**). Or say **"help"** for a quick guide.');
+      }
     } finally {
       setIsProcessing(false);
+      setSigningPhase('idle');
     }
   };
 
@@ -306,6 +397,12 @@ export function SecureAgentPanel() {
       const helpTriggers = /^(help|what can you do|how does this work|how do i|what do you do|explain|hi|hello)\s*$/i;
       if (helpTriggers.test(userText.replace(/[.?!]+$/, '').trim())) {
         addMessage('agent', `Here’s how it works:\n\n1. **You tell me** what to pay — e.g. "Send 20 XRP to rABC..." or "Pay $30 to rXYZ...".\n2. **I build a payment plan** and show you the amount, fees, and destination.\n3. **You tap Confirm** — I’ll show a QR (or link) to open in **Xaman**.\n4. **You sign in Xaman** — the transaction is sent. I never hold your funds; you approve every payment.\n\nYou can send **XRP** or **USD/EUR** (I’ll convert via the XRPL). Want to try a payment? Just type it above.`);
+        setIsProcessing(false);
+        return;
+      }
+      const synced = await ensureWalletSynced();
+      if (!synced) {
+        addMessage('agent', '🔒 Wallet session was lost. Tap **Connect Wallet** above, then try your payment again.');
         setIsProcessing(false);
         return;
       }
@@ -374,7 +471,7 @@ export function SecureAgentPanel() {
                   ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/30'
                   : 'bg-cyber-yellow/20 text-cyber-yellow border-cyber-yellow/30'
               }`}>
-                {walletConnected ? '🔐 CONNECTED' : '🔓 DISCONNECTED'}
+                {walletConnected ? '🔐 CONNECTED' : activeWallet ? '🔓 Tap Connect Wallet' : '🔓 Select wallet above'}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -386,6 +483,11 @@ export function SecureAgentPanel() {
               }`}>
                 {(platformLive || xamanMode === 'production') ? 'LIVE' : 'DEMO'} {xamanMode === 'production' ? '· Xaman' : ''}
               </span>
+              {xamanMode !== 'production' && (
+                <span className="text-[9px] text-cyber-muted ml-1">
+                  Tap &quot;Connect Xaman&quot; for real signing
+                </span>
+              )}
               {!platformLive && xamanMode !== 'production' && (
                 <button
                   type="button"
@@ -517,6 +619,16 @@ export function SecureAgentPanel() {
                         className="w-full px-3 py-2 rounded bg-cyber-darker border border-cyber-border text-sm text-cyber-text placeholder:text-cyber-muted/50"
                       />
                     </div>
+                  </div>
+
+                  {/* Allowed origins — must add at apps.xumm.dev or "connect to server" fails */}
+                  <div className="rounded-lg bg-cyber-yellow/10 border border-cyber-yellow/30 p-3">
+                    <p className="text-[10px] text-cyber-yellow font-medium mb-1">Required: Add this origin at apps.xumm.dev</p>
+                    <p className="text-[10px] text-cyber-muted mb-1">Go to <a href="https://apps.xumm.dev" target="_blank" rel="noopener noreferrer" className="text-cyber-cyan underline">apps.xumm.dev</a> → Your app → <strong>Allowed origins</strong> → add:</p>
+                    <code className="block text-xs text-cyber-text bg-cyber-dark px-2 py-1.5 rounded break-all font-mono">
+                      {typeof window !== 'undefined' ? window.location.origin : 'https://your-site.com'}
+                    </code>
+                    <p className="text-[9px] text-cyber-muted mt-1">If this is missing, you’ll see &quot;failed to connect to the server&quot; when signing.</p>
                   </div>
 
                   {/* Save Button */}
@@ -655,6 +767,7 @@ export function SecureAgentPanel() {
             onConfirm={handleConfirmPlan}
             onCancel={handleCancelPlan}
             isProcessing={isProcessing}
+            signingPhase={signingPhase}
           />
         ))}
         <div ref={messagesEndRef} />
@@ -737,16 +850,27 @@ function MessageBubble({
   onConfirm,
   onCancel,
   isProcessing,
+  signingPhase,
 }: {
   message: Message;
   onConfirm: (planId: string) => void;
   onCancel: (planId: string) => void;
   isProcessing: boolean;
+  signingPhase?: 'idle' | 'preparing' | 'waiting';
 }) {
   const [showDetails, setShowDetails] = useState(false);
 
   if (message.type === 'plan' && message.plan) {
-    return <PaymentPlanCard plan={message.plan} onConfirm={onConfirm} onCancel={onCancel} isProcessing={isProcessing} />;
+    return (
+      <PaymentPlanCard
+        plan={message.plan}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+        isProcessing={isProcessing}
+        signingPhase={signingPhase}
+        fallbackSignOnly={message.planFallbackSign}
+      />
+    );
   }
 
   const isUser = message.type === 'user';
@@ -867,18 +991,30 @@ function PaymentPlanCard({
   onConfirm,
   onCancel,
   isProcessing,
+  signingPhase = 'idle',
+  fallbackSignOnly,
 }: {
   plan: PaymentPlan;
   onConfirm: (planId: string) => void;
   onCancel: (planId: string) => void;
   isProcessing: boolean;
+  signingPhase?: 'idle' | 'preparing' | 'waiting';
+  fallbackSignOnly?: boolean;
 }) {
   const [showSteps, setShowSteps] = useState(true);
   const [showQR, setShowQR] = useState(false);
+  const signingSectionRef = useRef<HTMLDivElement>(null);
 
   const isExpired = new Date() > plan.expiresAt;
   const canConfirm = plan.status === 'draft' && !isExpired && !isProcessing;
   const signingRequest = plan.execution?.signingRequest;
+
+  // Scroll QR / sign section into view when it appears
+  useEffect(() => {
+    if ((plan.status === 'signing' && signingRequest) || fallbackSignOnly) {
+      signingSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [plan.status, signingRequest, fallbackSignOnly]);
 
   return (
     <motion.div
@@ -902,12 +1038,13 @@ function PaymentPlanCard({
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-cyber text-cyber-text">{plan.intent.description}</h3>
             <span className={`px-2 py-0.5 rounded text-[10px] ${
+              fallbackSignOnly ? 'bg-cyber-yellow/20 text-cyber-yellow' :
               plan.status === 'draft' ? 'bg-cyber-cyan/20 text-cyber-cyan' :
               plan.status === 'completed' ? 'bg-cyber-green/20 text-cyber-green' :
               plan.status === 'failed' ? 'bg-cyber-red/20 text-cyber-red' :
               'bg-cyber-yellow/20 text-cyber-yellow'
             }`}>
-              {plan.status.toUpperCase()}
+              {fallbackSignOnly ? 'SIGN IN XAMAN' : plan.status.toUpperCase()}
             </span>
           </div>
           <p className="text-xs text-cyber-muted">
@@ -983,8 +1120,8 @@ function PaymentPlanCard({
             </div>
           )}
 
-          {/* Actions */}
-          {plan.status === 'draft' && (
+          {/* Actions — hide when showing fallback-only (user already tapped Confirm, API failed) */}
+          {plan.status === 'draft' && !fallbackSignOnly && (
             <div className="flex gap-2">
               <button
                 onClick={() => onCancel(plan.id)}
@@ -1001,7 +1138,7 @@ function PaymentPlanCard({
                 {isProcessing ? (
                   <>
                     <Loader size={14} className="animate-spin" />
-                    Signing...
+                    {signingPhase === 'preparing' ? 'Preparing QR…' : 'Signing…'}
                   </>
                 ) : (
                   <>
@@ -1019,21 +1156,116 @@ function PaymentPlanCard({
             </p>
           )}
 
-          {/* QR Code for Xaman signing */}
-          {plan.status === 'signing' && signingRequest && (
-            <XamanSigningUI 
-              signingRequest={signingRequest} 
-              planId={plan.id}
-              txDetails={{
-                destination: plan.intent.destination,
-                amount: plan.intent.targetAmount,
-                currency: plan.intent.targetCurrency,
-              }}
-            />
+          {/* QR Code / Sign in Xaman — always show when signing or fallback */}
+          {(plan.status === 'signing' && signingRequest) && (
+            <div ref={signingSectionRef} className="scroll-mt-4">
+              <XamanSigningUI 
+                signingRequest={signingRequest} 
+                planId={plan.id}
+                txDetails={{
+                  destination: plan.intent.destination,
+                  amount: plan.intent.targetAmount,
+                  currency: plan.intent.targetCurrency,
+                }}
+              />
+            </div>
+          )}
+          {/* Fallback: no QR (API failed) but still show how to complete in Xaman */}
+          {fallbackSignOnly && plan.intent?.destination && (
+            <div ref={signingSectionRef} className="mt-4 pt-4 border-t-2 border-cyber-cyan/50">
+              <SignInXamanFallback
+                destination={plan.intent.destination}
+                amount={plan.intent.targetAmount}
+                currency={plan.intent.targetCurrency}
+              />
+            </div>
           )}
         </div>
       </div>
     </motion.div>
+  );
+}
+
+// ==================== SIGN IN XAMAN FALLBACK (when QR/API fails) ====================
+
+function SignInXamanFallback({
+  destination,
+  amount,
+  currency,
+}: {
+  destination: string;
+  amount: string;
+  currency: string;
+}) {
+  const [copied, setCopied] = useState<string | null>(null);
+  const copyToClipboard = async (text: string, label: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 2000);
+  };
+  return (
+    <div className="rounded-lg bg-cyber-cyan/10 border-2 border-cyber-cyan/50 p-4">
+      <div className="flex items-center justify-center gap-2 mb-4">
+        <QrCode size={20} className="text-cyber-cyan" />
+        <span className="text-sm font-cyber text-cyber-cyan">SIGN IN XAMAN TO COMPLETE</span>
+      </div>
+      <p className="text-xs text-cyber-muted text-center mb-4">
+        QR could not be loaded. Complete the payment in Xaman using the details below:
+      </p>
+      <div className="space-y-3 mb-4">
+        <div>
+          <p className="text-[10px] text-cyber-muted mb-1">Amount</p>
+          <div className="flex items-center gap-2">
+            <span className="font-cyber text-lg text-cyber-green">{amount} {currency}</span>
+            <button
+              onClick={() => copyToClipboard(`${amount} ${currency}`, 'amount')}
+              className="p-2 rounded bg-cyber-cyan/20 text-cyber-cyan hover:bg-cyber-cyan/30"
+              title="Copy"
+            >
+              {copied === 'amount' ? <CheckCircle size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+        </div>
+        <div>
+          <p className="text-[10px] text-cyber-muted mb-1">To address</p>
+          <div className="flex items-center gap-2">
+            <code className="text-xs text-cyber-text bg-cyber-dark px-2 py-1 rounded font-mono break-all flex-1">
+              {destination}
+            </code>
+            <button
+              onClick={() => copyToClipboard(destination, 'addr')}
+              className="p-2 rounded bg-cyber-cyan/20 text-cyber-cyan hover:bg-cyber-cyan/30 shrink-0"
+              title="Copy address"
+            >
+              {copied === 'addr' ? <CheckCircle size={14} /> : <Copy size={14} />}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => window.open('https://xumm.app', '_blank', 'noopener,noreferrer')}
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-lg bg-cyber-cyan/20 border-2 border-cyber-cyan text-cyber-cyan text-sm font-medium hover:bg-cyber-cyan/30 transition-colors"
+        >
+          <Smartphone size={18} />
+          Open Xaman (xumm.app)
+        </button>
+        <button
+          type="button"
+          onClick={() => window.open('https://xaman.app', '_blank', 'noopener,noreferrer')}
+          className="flex items-center justify-center gap-2 w-full py-2 rounded-lg bg-cyber-dark border border-cyber-border text-cyber-muted text-xs hover:text-cyber-cyan hover:border-cyber-cyan/50 transition-colors"
+        >
+          If that fails, try xaman.app
+        </button>
+      </div>
+      <p className="text-[10px] text-cyber-muted text-center mt-3">
+        In Xaman: Send → paste address → enter amount → sign.
+      </p>
+      <p className="text-[9px] text-cyber-muted/80 text-center mt-1">
+        If both links show &quot;server not found&quot;, use the Xaman app directly and paste the address and amount above.
+      </p>
+    </div>
   );
 }
 
@@ -1047,6 +1279,7 @@ function XamanSigningUI({
   signingRequest: {
     id: string;
     qrCodeUrl?: string;
+    browserSignUrl?: string;
     deepLink?: string;
     status: string;
   };
@@ -1106,10 +1339,11 @@ function XamanSigningUI({
   }, [signingRequest.id]);
 
   const handleOpenXaman = () => {
-    if (signingRequest.deepLink) {
-      // Try to open the deep link
-      window.location.href = signingRequest.deepLink;
-    }
+    // Open the sign page in a new tab (desktop-safe). Avoids "server not found" from xumm:// deep links in browser.
+    const url = signingRequest.browserSignUrl ?? (signingRequest.id && !signingRequest.id.startsWith('demo_')
+      ? `https://xumm.app/sign/${signingRequest.id}`
+      : 'https://xumm.app');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleManualConfirm = () => {
@@ -1122,6 +1356,9 @@ function XamanSigningUI({
 
   return (
     <div className="mt-4 pt-4 border-t border-cyber-border/50">
+      <p className="text-xs text-cyber-cyan font-medium mb-3 text-center">
+        Complete in Xaman — scan the QR below or tap &quot;Open in Xaman&quot; to sign and finish the transaction.
+      </p>
       <div className="text-center">
         {/* Deep Link Fallback - Manual Signing Mode */}
         {isDeepLinkFallback && txDetails && (
@@ -1181,20 +1418,20 @@ function XamanSigningUI({
           </div>
         )}
 
-        {/* Regular API Mode - QR Code */}
+        {/* Regular API Mode - QR Code (prominent so user always sees sign step) */}
         {!isDeepLinkFallback && (
           <>
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <QrCode size={16} className="text-cyber-cyan" />
-              <span className="text-sm text-cyber-cyan font-cyber">SCAN WITH XAMAN</span>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <QrCode size={20} className="text-cyber-cyan" />
+              <span className="text-base font-cyber text-cyber-cyan">SCAN WITH XAMAN TO SIGN</span>
             </div>
             
             {signingRequest.qrCodeUrl && (
-              <div className="bg-white p-4 rounded-lg inline-block mb-3">
+              <div className="bg-white p-5 rounded-xl inline-block mb-4 border-2 border-cyber-cyan/30 shadow-lg shadow-cyber-cyan/10">
                 <img 
                   src={signingRequest.qrCodeUrl} 
-                  alt="Scan with Xaman" 
-                  className="w-48 h-48"
+                  alt="Scan with Xaman to sign this transaction" 
+                  className="w-64 h-64"
                 />
               </div>
             )}
@@ -1206,9 +1443,9 @@ function XamanSigningUI({
               
               <button
                 onClick={handleOpenXaman}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-cyber-cyan/20 border-2 border-cyber-cyan text-cyber-cyan text-sm font-medium hover:bg-cyber-cyan/30 transition-colors"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-cyber-cyan/20 border-2 border-cyber-cyan text-cyber-cyan text-base font-medium hover:bg-cyber-cyan/30 transition-colors"
               >
-                <Smartphone size={18} />
+                <Smartphone size={20} />
                 Open in Xaman
               </button>
             </div>
