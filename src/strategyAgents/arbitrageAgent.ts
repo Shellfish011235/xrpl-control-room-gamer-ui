@@ -26,18 +26,20 @@ export class ArbitrageAgent implements Agent {
     const maxExposure = (ctx.readState('strategy:shared:maxExposureXRP') as number) ?? 1000;
     if (exposure >= maxExposure) return;
 
-    const clobMid = (ctx.readState('strategy:arb:clobMid') as number) | undefined;
-    const ammQuote = (ctx.readState('strategy:arb:ammQuote') as number) | undefined;
+    const clobMid = ctx.readState('strategy:arb:clobMid') as number | undefined;
+    const ammQuote = ctx.readState('strategy:arb:ammQuote') as number | undefined;
     if (clobMid == null || ammQuote == null || clobMid <= 0) return;
 
-    const spreadBps = Math.abs(clobMid - ammQuote) / clobMid * 10000;
+    const c = clobMid as number;
+    const a = ammQuote as number;
+    const spreadBps = Math.abs(c - a) / c * 10000;
     if (spreadBps < MIN_PROFIT_BPS) return;
 
     const lastEmit = (ctx.readState('strategy:arb:lastEmit') as number) ?? 0;
     if (ctx.now() - lastEmit < COOLDOWN_MS) return;
 
     const owner = (ctx.readState('wallet:address') as string) || 'rUSER0000000000000000000000000000000';
-    const buyCheapSellDear = ammQuote < clobMid;
+    const buyCheapSellDear = a < c;
 
     if (buyCheapSellDear) {
       const intent: OfferMakeIntent = {
@@ -47,7 +49,7 @@ export class ArbitrageAgent implements Agent {
         createdAt: ctx.now(),
         owner,
         takerGets: { asset: { kind: 'XRP' }, amount: ARB_ORDER_SIZE_XRP.toFixed(6) },
-        takerPays: { asset: { kind: 'IOU', currency: 'USD', issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B' }, amount: (ARB_ORDER_SIZE_XRP * ammQuote).toFixed(2) },
+        takerPays: { asset: { kind: 'IOU', currency: 'USD', issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B' }, amount: (ARB_ORDER_SIZE_XRP * a).toFixed(2) },
         memo: `arb_buy_${spreadBps.toFixed(0)}bps`,
       };
       ctx.emit(intent);
@@ -58,7 +60,7 @@ export class ArbitrageAgent implements Agent {
         type: 'OFFER_MAKE',
         createdAt: ctx.now(),
         owner,
-        takerGets: { asset: { kind: 'IOU', currency: 'USD', issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B' }, amount: (ARB_ORDER_SIZE_XRP * clobMid).toFixed(2) },
+        takerGets: { asset: { kind: 'IOU', currency: 'USD', issuer: 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B' }, amount: (ARB_ORDER_SIZE_XRP * c).toFixed(2) },
         takerPays: { asset: { kind: 'XRP' }, amount: ARB_ORDER_SIZE_XRP.toFixed(6) },
         memo: `arb_sell_${spreadBps.toFixed(0)}bps`,
       };
@@ -67,6 +69,6 @@ export class ArbitrageAgent implements Agent {
 
     ctx.writeState('strategy:arb:lastEmit', ctx.now());
     ctx.writeState('strategy:arb:lastSpreadBps', spreadBps);
-    ctx.writeState('strategy:arb:lastOpportunity', { clobMid, ammQuote, bps: spreadBps, ts: ctx.now() });
+    ctx.writeState('strategy:arb:lastOpportunity', { clobMid: c, ammQuote: a, bps: spreadBps, ts: ctx.now() });
   }
 }

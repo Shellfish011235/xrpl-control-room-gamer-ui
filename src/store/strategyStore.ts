@@ -94,7 +94,12 @@ export const useStrategyStore = create<StrategyState>()(
       addExposure: (delta) => set((s) => ({ exposureXRP: Math.max(0, s.exposureXRP + delta) })),
 
       marketSnapshot: null,
-      setMarketSnapshot: (s) => set({ marketSnapshot: s }),
+      setMarketSnapshot: (s) =>
+        set({
+          marketSnapshot: s
+            ? { mid: s.mid, spreadBps: s.spreadBps ?? 0, volatility: s.volatility ?? 0 }
+            : null,
+        }),
 
       dcaEntries: [],
       dcaAvgCost: null,
