@@ -4,7 +4,7 @@
  */
 
 export { Orchestra } from './orchestra';
-export { TipJarAgent, ValidatorAgent, NettingAgent, SettlementAgent } from './agents';
+export { TipJarAgent, MemeticSimAgent, ValidatorAgent, NettingAgent, SettlementAgent } from './agents';
 export { publishToControlRoom, subscribeToControlRoom } from './events';
 export { validateIntent } from './validate';
 export { netPayments } from './netting';

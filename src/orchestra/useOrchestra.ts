@@ -5,10 +5,11 @@
  */
 
 import { useEffect, useState, useRef } from 'react';
-import { Orchestra, TipJarAgent, subscribeToControlRoom } from './index';
+import { Orchestra, TipJarAgent, MemeticSimAgent, subscribeToControlRoom } from './index';
 import type { ControlRoomEvent } from './types';
 import { MarketMakerAgent, DCAgent, ArbitrageAgent } from '../strategyAgents';
 import { useStrategyStore } from '../store/strategyStore';
+import { useILPStore } from '../store/ilpStore';
 
 export function useOrchestra(options?: { startImmediately?: boolean; includeStrategyAgents?: boolean }) {
   const [orchestra, setOrchestra] = useState<Orchestra | null>(null);
@@ -20,6 +21,8 @@ export function useOrchestra(options?: { startImmediately?: boolean; includeStra
   useEffect(() => {
     const orch = new Orchestra();
     orch.agents.push(new TipJarAgent());
+    const setSimulationResults = useILPStore.getState().setSimulationResults;
+    orch.agents.push(new MemeticSimAgent({ onSimulationComplete: setSimulationResults }));
     if (options?.includeStrategyAgents) {
       orch.agents.push(new MarketMakerAgent(), new DCAgent(), new ArbitrageAgent());
       orch.setMarketGetter(() => {

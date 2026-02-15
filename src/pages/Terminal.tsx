@@ -17,6 +17,7 @@ import { AlertBuilder } from '../components/institutional/AlertBuilder';
 import { PositionLiquidationRisk } from '../components/institutional/PositionLiquidationRisk';
 import { PaperTradingPanel } from '../components/PaperTradingPanel';
 import { LedgerImpactTool } from '../components/LedgerImpactTool';
+import { LedgerImpactAnalyzer } from '../components/LedgerImpactAnalyzer';
 import { PathfindingTool } from '../components/PathfindingTool';
 import { StrategiesPanel } from '../components/strategies';
 import { useOrchestra } from '../orchestra/useOrchestra';
@@ -318,6 +319,17 @@ export default function Terminal() {
         >
           <ErrorBoundary>
             <LedgerImpactTool />
+          </ErrorBoundary>
+        </motion.div>
+
+        {/* Ledger Impact Analyzer — agent-powered neon impact score + high-impact warning */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.46 }}
+        >
+          <ErrorBoundary>
+            <LedgerImpactAnalyzer />
           </ErrorBoundary>
         </motion.div>
         

@@ -21,6 +21,7 @@ import type {
 import { DEFAULT_VISUAL_CONFIG } from '../services/ilp/types';
 import { getTopology, resetTopology } from '../services/ilp/topology';
 import type { TopologyService } from '../services/ilp/topology';
+import type { SimulationResult } from '../services/multiAgentSimulator';
 
 // ==================== TYPES ====================
 
@@ -76,6 +77,9 @@ interface ILPStoreState {
     ledgerTypes: string[];
     corridorStatus: CorridorStatus[];
   };
+
+  // Memetic Lab – multi-agent Prisoner's Dilemma simulation (ephemeral, not persisted)
+  simulationResults: SimulationResult | null;
 }
 
 interface ILPStoreActions {
@@ -114,7 +118,10 @@ interface ILPStoreActions {
   
   // Events
   clearEvents: () => void;
-  
+
+  // Memetic Lab simulation
+  setSimulationResults: (results: SimulationResult | null) => void;
+
   // Sync
   syncFromTopology: () => void;
 }
@@ -170,6 +177,7 @@ const initialState: ILPStoreState = {
     ledgerTypes: [],
     corridorStatus: [],
   },
+  simulationResults: null,
 };
 
 // ==================== STORE ====================
@@ -380,6 +388,12 @@ export const useILPStore = create<ILPStore>()(
           set({ events: [], invariantViolations: [] });
         },
 
+        // ==================== MEMETIC LAB SIMULATION ====================
+
+        setSimulationResults: (results) => {
+          set({ simulationResults: results });
+        },
+
         // ==================== SYNC ====================
 
         syncFromTopology: () => {
@@ -476,5 +490,8 @@ export const useFilteredCorridors = () => useILPStore(state => {
     return true;
   });
 });
+
+export const useSimulationResults = () => useILPStore(state => state.simulationResults);
+export const useSetSimulationResults = () => useILPStore(state => state.setSimulationResults);
 
 export default useILPStore;

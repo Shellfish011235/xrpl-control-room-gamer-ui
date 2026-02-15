@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:agents": "vite --mode development",
     "build": "tsc -b && vite build",
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
@@ -30,6 +31,8 @@
     "react-router-dom": "^7.12.0",
     "react-simple-maps": "^3.0.0",
     "recharts": "^3.6.0",
+    "three": "^0.169.0",
+    "xrpl": "^3.0.0",
     "xumm": "^1.8.0",
     "zustand": "^5.0.10"
   },
@@ -38,6 +41,7 @@
     "@tailwindcss/vite": "^4.0.0-alpha.31",
     "@types/cytoscape": "^3.31.0",
     "@types/node": "^24.10.1",
+    "@types/three": "^0.169.0",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",

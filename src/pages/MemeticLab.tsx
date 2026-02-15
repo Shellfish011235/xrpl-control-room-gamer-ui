@@ -35,6 +35,8 @@ import {
   type XRPLIncentiveModel
 } from '../services/aiQuantumAnalytics'
 import { getCombinedSentiment, fetchWhaleTransactions } from '../services/freeDataFeeds'
+import { runSimulation } from '../services/multiAgentSimulator'
+import { useSimulationResults, useSetSimulationResults } from '../store/ilpStore'
 import { PaperTradingPanel } from '../components/PaperTradingPanel'
 import { Link } from 'react-router-dom'
 import { LOOPJAM_SENTINEL_NAME, LOOPJAM_PHASES, LOOPJAM_JAMMING } from '../agents/loopjamSentinel'
@@ -818,6 +820,9 @@ export default function MemeticLab() {
     [3, 0],
     [5, 1]
   ])
+  const [simLoading, setSimLoading] = useState(false)
+  const simulationResults = useSimulationResults()
+  const setSimulationResults = useSetSimulationResults()
   
   // AI/Quantum Analytics Functions
   const runNashEquilibrium = useCallback(async () => {
@@ -835,6 +840,27 @@ export default function MemeticLab() {
       setNashLoading(false)
     }
   }, [payoffMatrix])
+
+  const runMultiAgentSimulation = useCallback(async () => {
+    setSimLoading(true)
+    setSimulationResults(null)
+    try {
+      const result = await runSimulation(payoffMatrix.map(row => [...row]))
+      setSimulationResults(result)
+    } catch (err) {
+      console.error('[MemeticLab] Multi-agent simulation error:', err)
+      setSimulationResults({
+        rounds: [],
+        totalPlayerPayoff: 0,
+        totalOpponentPayoff: 0,
+        finalNashSuggestion: '',
+        volatilityUsed: 0,
+        error: err instanceof Error ? err.message : 'Simulation failed',
+      })
+    } finally {
+      setSimLoading(false)
+    }
+  }, [payoffMatrix, setSimulationResults])
   
   const runMemeticSimulation = useCallback(() => {
     const result = AIQuantumAnalytics.modelMemeticPropagation(
@@ -1743,6 +1769,86 @@ export default function MemeticLab() {
                                 style={{ width: `${memeticModel.confidence}%` }}
                               />
                             </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                    
+                    {/* Multi-Agent Prisoner's Dilemma Simulator (CrewAI-style) */}
+                    <div className="col-span-full cyber-panel p-4 border-cyber-cyan/30">
+                      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
+                        <Bot size={14} className="text-cyber-cyan" />
+                        <span className="font-cyber text-xs text-cyber-cyan">MULTI-AGENT PRISONER&apos;S DILEMMA</span>
+                        <span className="ml-auto text-[9px] text-cyber-muted">Player · Opponent · Analyst · 10 rounds</span>
+                      </div>
+                      <p className="text-xs text-cyber-muted mb-3">
+                        Lightweight agents: PlayerAgent (volatility-driven), OpponentAgent (whale bias), AnalystAgent (Nash matrix). Uses live XRP volatility.
+                      </p>
+                      <button
+                        onClick={runMultiAgentSimulation}
+                        disabled={simLoading}
+                        className="mb-4 px-4 py-2 rounded bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan hover:bg-cyber-cyan/30 transition-all font-cyber text-xs disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {simLoading ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" />
+                            RUNNING 10 ROUNDS...
+                          </>
+                        ) : (
+                          <>
+                            <Play size={14} />
+                            RUN SIMULATION
+                          </>
+                        )}
+                      </button>
+                      {simulationResults?.error && (
+                        <div className="mb-3 p-3 rounded bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-xs">
+                          {simulationResults.error}
+                        </div>
+                      )}
+                      {simulationResults && !simulationResults.error && simulationResults.rounds.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="space-y-3"
+                        >
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
+                            <div className="p-2 rounded bg-cyber-cyan/10 border border-cyber-cyan/30 text-center">
+                              <p className="text-[10px] text-cyber-muted">Player total</p>
+                              <p className="text-lg font-cyber text-cyber-cyan">{simulationResults.totalPlayerPayoff}</p>
+                            </div>
+                            <div className="p-2 rounded bg-cyber-green/10 border border-cyber-green/30 text-center">
+                              <p className="text-[10px] text-cyber-muted">Opponent total</p>
+                              <p className="text-lg font-cyber text-cyber-green">{simulationResults.totalOpponentPayoff}</p>
+                            </div>
+                            <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
+                              <p className="text-[10px] text-cyber-muted">Volatility</p>
+                              <p className="text-sm font-cyber text-cyber-text">{(simulationResults.volatilityUsed * 100).toFixed(1)}%</p>
+                            </div>
+                            <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
+                              <p className="text-[10px] text-cyber-muted">Nash suggestion</p>
+                              <p className="text-[10px] font-cyber text-cyber-cyan truncate" title={simulationResults.finalNashSuggestion}>
+                                {simulationResults.finalNashSuggestion}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="h-64">
+                            <p className="text-[10px] text-cyber-muted mb-1">Payoff over rounds (cumulative)</p>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <LineChart
+                                data={simulationResults.rounds.map((r, i) => ({
+                                  round: r.round,
+                                  player: simulationResults.rounds.slice(0, i + 1).reduce((s, x) => s + x.playerPayoff, 0),
+                                  opponent: simulationResults.rounds.slice(0, i + 1).reduce((s, x) => s + x.opponentPayoff, 0),
+                                }))}
+                                margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+                              >
+                                <XAxis dataKey="round" stroke="#6ee7b7" tick={{ fill: '#6ee7b7', fontSize: 10 }} />
+                                <YAxis stroke="#22d3ee" tick={{ fill: '#22d3ee', fontSize: 10 }} />
+                                <Line type="monotone" dataKey="player" stroke="#22d3ee" strokeWidth={2} dot={{ fill: '#22d3ee' }} name="Player" />
+                                <Line type="monotone" dataKey="opponent" stroke="#6ee7b7" strokeWidth={2} dot={{ fill: '#6ee7b7' }} name="Opponent" />
+                              </LineChart>
+                            </ResponsiveContainer>
                           </div>
                         </motion.div>
                       )}

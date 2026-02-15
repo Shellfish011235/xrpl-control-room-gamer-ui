@@ -74,6 +74,97 @@ A cyberpunk-inspired **institutional-grade trading terminal** for monitoring the
 | **Data Fetching** | TanStack Query (React Query) |
 | **Real-Time Data** | WebSockets (Binance, XRPL) |
 | **Icons** | Lucide React |
+| **AI Agents** | XRPLAgentOrchestrator, skills (xrpl-expert, cyberpunk-ui, etc.) |
+| **3D** | Three.js (Portfolio Arena) |
+| **Blockchain** | xrpl.js (testnet) |
+
+## 🤖 AI Agents Guide
+
+The app includes a **Mega AI Agent** layer: a central `XRPLAgentOrchestrator` that loads 3–5 skills per invocation and routes tasks to specialized agents. Testnet only; no mainnet spends.
+
+### Architecture (Mermaid)
+
+```mermaid
+flowchart LR
+  subgraph Skills
+    S1[xrpl-expert]
+    S2[real-time-data]
+    S3[cyberpunk-ui]
+    S4[workflow-automation]
+    S5[error-handling-master]
+  end
+  subgraph Orchestrator
+    O[XRPLAgentOrchestrator]
+  end
+  subgraph Agents
+    A1[LedgerImpact]
+    A2[PortfolioGamer]
+    A3[UIEnhancer]
+  end
+  subgraph Outputs
+    L[LedgerImpactAnalyzer]
+    P[PortfolioArena]
+    U[useUIEnhancer]
+  end
+  O --> S1 & S2 & S3 & S4 & S5
+  O --> A1 & A2 & A3
+  A1 --> L
+  A2 --> P
+  A3 --> U
+  L -->|ledger-high-impact| EventBus
+  EventBus[Event Bus] --> A2 & A3
+```
+
+### Skill invocation examples
+
+| Skill | Use case |
+|-------|----------|
+| `@xrpl-expert` | Amendment analysis, ledger events, testnet client |
+| `@real-time-data` | Live amendments, WebSocket subscription |
+| `@cyberpunk-ui` | Neon impact score, glitch hologram warning |
+| `@workflow-automation` | High impact → Discord alert + UI popup |
+| `@error-handling-master` | Offline cache, retry on WebSocket fail |
+| `@three-js` | Portfolio Arena 3D (NFTs as neon fighters) |
+| `@performance-optimizer` | Debounce fetches (1s), virtualize lists |
+
+### Make the AI functional (real API)
+
+The orchestrator calls a **real AI API** when configured. Without it, a rule-based fallback uses amendment data (no mock).
+
+Create a `.env` in the project root (or set in your host):
+
+```env
+VITE_AI_API_URL=https://your-ai-proxy.com/v1/chat
+VITE_AI_API_KEY=your-api-key-if-required
+```
+
+- **Request:** POST with `{ "prompt": "..." }`. The prompt includes system + user message.
+- **Response:** Either your API returns `{ "analysis", "codeSuggestions", "uiUpdates", "neonImpactScore" }`, or OpenAI/Anthropic-style `choices[].message.content` / `content[].text` containing that JSON.
+- If the API is missing or fails, the app uses a **rule-based fallback** (impact score from amendment support %) so everything still works.
+
+### Run with agents (hot-reload)
+
+```bash
+npm run dev:agents
+```
+
+### Sample agent invocation (console)
+
+```ts
+import { getDefaultOrchestrator } from './agents/Orchestrator';
+
+const orch = getDefaultOrchestrator();
+const result = await orch.invokeAgent(
+  'Simulate amendment raid: Predict TPS fallout.',
+  { amendments: [{ name: 'AMM', percentSupport: 95 }] },
+  'ledger'
+);
+console.log(result.neonImpactScore, result.analysis);
+```
+
+### Next steps
+
+To expand, add a `@security-auditor` skill for XRPL vulnerability scans, or wire a real AI backend in `Orchestrator.callAI()` (e.g. `fetch('/api/ai', { body: prompt })`).
 
 ## 🚀 Getting Started
 
