@@ -55,9 +55,14 @@ interface AgentTransaction {
 // =============================================================================
 // ORCHESTRA AGENTS — based on data sources used across the dashboard
 // =============================================================================
-// Each agent maps to a real service/API the app uses: Network (XRPScan, RPC),
-// prices (CoinGecko, Binance), CARV (LLM), Micropayments (liveXRPLData), etc.
+// Each agent maps to a real service/API the app uses. pricePerCall is in DROPS (1 XRP = 1e6 drops).
+// All orchestra runs are FREE and optional — simulated only; no real XRP is charged.
+const DROPS_PER_XRP = 1_000_000;
+function dropsToXRP(drops: number): number {
+  return drops / DROPS_PER_XRP;
+}
 
+// Initial balances in DROPS. All start at 0 so displayed XRP is 0 until you run (simulated only; no real cost).
 const DASHBOARD_AGENTS: AIAgent[] = [
   {
     id: 'orchestrator',
@@ -67,9 +72,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['routing', 'load_balancing', 'failover'],
     pricePerCall: 5,
     status: 'online',
-    totalEarned: 5000000,
-    totalSpent: 8000000,
-    callsProcessed: 1000000,
+    totalEarned: 0,
+    totalSpent: 0,
+    callsProcessed: 0,
   },
   {
     id: 'price-feed',
@@ -79,9 +84,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['xrp_usd', 'ticker', '24h_change'],
     pricePerCall: 10,
     status: 'online',
-    totalEarned: 18000000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 1800000,
+    callsProcessed: 0,
   },
   {
     id: 'xrpl-ledger',
@@ -91,9 +96,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['server_info', 'fee', 'account_channels'],
     pricePerCall: 15,
     status: 'online',
-    totalEarned: 12000000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 800000,
+    callsProcessed: 0,
   },
   {
     id: 'xrpscan',
@@ -103,9 +108,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['validators', 'nodes', 'amendments', 'metrics'],
     pricePerCall: 20,
     status: 'online',
-    totalEarned: 9000000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 450000,
+    callsProcessed: 0,
   },
   {
     id: 'reasoning',
@@ -116,8 +121,8 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     pricePerCall: 100,
     status: 'online',
     totalEarned: 0,
-    totalSpent: 12000000,
-    callsProcessed: 120000,
+    totalSpent: 0,
+    callsProcessed: 0,
   },
   {
     id: 'pathfinder',
@@ -127,9 +132,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['path_find', 'quote', 'order_book'],
     pricePerCall: 50,
     status: 'online',
-    totalEarned: 4000000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 80000,
+    callsProcessed: 0,
   },
   {
     id: 'sentiment',
@@ -139,9 +144,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['crypto_sentiment', 'trend', 'score'],
     pricePerCall: 12,
     status: 'online',
-    totalEarned: 3000000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 250000,
+    callsProcessed: 0,
   },
   {
     id: 'tx-history',
@@ -151,9 +156,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['account_tx', 'ledger_tx', 'openclaw_feed'],
     pricePerCall: 25,
     status: 'online',
-    totalEarned: 5000000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 200000,
+    callsProcessed: 0,
   },
   {
     id: 'regulatory-watch',
@@ -163,9 +168,9 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['regulatory_watch', 'compliance_check', 'jurisdiction_alerts'],
     pricePerCall: 18,
     status: 'online',
-    totalEarned: 2200000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 120000,
+    callsProcessed: 0,
   },
   {
     id: 'prediction-markets',
@@ -175,9 +180,45 @@ const DASHBOARD_AGENTS: AIAgent[] = [
     capabilities: ['crypto_markets', 'probabilities', 'signals', 'XRP_relevance'],
     pricePerCall: 22,
     status: 'online',
-    totalEarned: 2800000,
+    totalEarned: 0,
     totalSpent: 0,
-    callsProcessed: 127000,
+    callsProcessed: 0,
+  },
+  {
+    id: 'loopjam-sentinel',
+    name: 'LoopJam Sentinel (Purple-Team)',
+    type: 'tool',
+    address: 'rLoopJamSentinelPT99',
+    capabilities: ['manipulation_detection', 'memetic_scan', 'game_theory', 'cognitive_warfare', 'purple_team', 'phase_classification', 'jam_suggestions'],
+    pricePerCall: 35,
+    status: 'online',
+    totalEarned: 0,
+    totalSpent: 0,
+    callsProcessed: 0,
+  },
+  {
+    id: 'wallstreet-elite',
+    name: 'Wall Street Elite (IB Analysis)',
+    type: 'llm',
+    address: 'rWallStreetEliteIB77',
+    capabilities: ['dcf', 'comps', 'precedents', 'lbo', 'ma_accretion', 'three_statement', 'ipo_pricing', 'credit_memo', 'sotp', 'unit_economics', 'sensitivity', 'ic_memo'],
+    pricePerCall: 80,
+    status: 'online',
+    totalEarned: 0,
+    totalSpent: 0,
+    callsProcessed: 0,
+  },
+  {
+    id: 'ventureeval',
+    name: 'VentureEval AI (VC Diligence)',
+    type: 'llm',
+    address: 'rVentureEvalVC88',
+    capabilities: ['market_tam', 'competition', 'founders', 'unit_economics', 'pmf', 'traction', 'financials', 'tech_ip', 'gtm', 'timing', 'exit_returns', 'investment_memo'],
+    pricePerCall: 60,
+    status: 'online',
+    totalEarned: 0,
+    totalSpent: 0,
+    callsProcessed: 0,
   },
 ];
 
@@ -195,7 +236,8 @@ export function AIAgentPayments({
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [orchestraResult, setOrchestraResult] = useState<string | null>(null);
   const [isOrchestraRunning, setIsOrchestraRunning] = useState(false);
-  const [orchestraTask, setOrchestraTask] = useState<'xrp_price' | 'ledger_fee' | 'sentiment' | 'xrpscan_metrics' | 'pathfinder_quote' | 'tx_history' | 'compliance_snapshot' | 'prediction_markets' | 'summary' | 'pipeline'>('xrp_price');
+  const [orchestraTask, setOrchestraTask] = useState<'xrp_price' | 'ledger_fee' | 'sentiment' | 'xrpscan_metrics' | 'pathfinder_quote' | 'tx_history' | 'compliance_snapshot' | 'prediction_markets' | 'loopjam_scan' | 'wallstreet_analysis' | 'ventureeval_diligence' | 'summary' | 'pipeline'>('pipeline');
+  const [showOrchestraOptions, setShowOrchestraOptions] = useState(false);
   const simPayments = useOrchestraSimStore((s) => s.payments);
   const platformLive = usePlatformModeStore((s) => s.mode === 'live');
 
@@ -285,6 +327,9 @@ export function AIAgentPayments({
     const txHistoryAgent = agents.find(a => a.id === 'tx-history')!;
     const regulatoryWatchAgent = agents.find(a => a.id === 'regulatory-watch')!;
     const predictionMarketsAgent = agents.find(a => a.id === 'prediction-markets')!;
+    const loopjamSentinelAgent = agents.find(a => a.id === 'loopjam-sentinel')!;
+    const wallStreetEliteAgent = agents.find(a => a.id === 'wallstreet-elite')!;
+    const ventureEvalAgent = agents.find(a => a.id === 'ventureeval')!;
     const reasoning = agents.find(a => a.id === 'reasoning')!;
 
     const steps: Array<{ fromId: string; toId: string; amount: number; reason: string; latencyMs: number }> =
@@ -335,6 +380,24 @@ export function AIAgentPayments({
                         { fromId: 'orchestrator', toId: 'prediction-markets', amount: predictionMarketsAgent.pricePerCall * 2, reason: 'Request crypto prediction markets (Polymarket)', latencyMs: 35 },
                         { fromId: 'prediction-markets', toId: 'orchestrator', amount: 5, reason: 'Return markets + probabilities to orchestrator', latencyMs: 10 },
                         { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Summarize prediction signals for user', latencyMs: 22 },
+                      ]
+                    : orchestraTask === 'loopjam_scan'
+                    ? [
+                        { fromId: 'orchestrator', toId: 'loopjam-sentinel', amount: loopjamSentinelAgent.pricePerCall, reason: 'Request manipulation/memetic scan (LoopJam Sentinel)', latencyMs: 40 },
+                        { fromId: 'loopjam-sentinel', toId: 'orchestrator', amount: 5, reason: 'Return phase hit + risk + jam suggestions to orchestrator', latencyMs: 12 },
+                        { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Format purple-team report for user', latencyMs: 25 },
+                      ]
+                    : orchestraTask === 'wallstreet_analysis'
+                    ? [
+                        { fromId: 'orchestrator', toId: 'wallstreet-elite', amount: wallStreetEliteAgent.pricePerCall, reason: 'Request IB-grade analysis (Wall Street Elite)', latencyMs: 55 },
+                        { fromId: 'wallstreet-elite', toId: 'orchestrator', amount: 5, reason: 'Return pitch-book style summary to orchestrator', latencyMs: 15 },
+                        { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Format memo and recommendation for user', latencyMs: 28 },
+                      ]
+                    : orchestraTask === 'ventureeval_diligence'
+                    ? [
+                        { fromId: 'orchestrator', toId: 'ventureeval', amount: ventureEvalAgent.pricePerCall, reason: 'Request VC diligence (VentureEval AI)', latencyMs: 50 },
+                        { fromId: 'ventureeval', toId: 'orchestrator', amount: 5, reason: 'Return diligence memo / section scores to orchestrator', latencyMs: 14 },
+                        { fromId: 'orchestrator', toId: 'reasoning', amount: reasoning.pricePerCall, reason: 'Format VC memo and recommendation for user', latencyMs: 26 },
                       ]
                     : orchestraTask === 'summary'
                     ? [
@@ -523,6 +586,21 @@ export function AIAgentPayments({
           msg += 'Prediction markets unavailable (mock). Orchestrator → Polymarket → Reasoning.';
         }
         setOrchestraResult(msg);
+      } else if (orchestraTask === 'loopjam_scan') {
+        const phaseHit = '2 (Controller) + 3A (Destabilization)';
+        const risk = 6;
+        const jam = 'Freeze on single contradictions; polarization probe to expose enforcement.';
+        setOrchestraResult(
+          `Orchestra result: LoopJam Sentinel scan complete. PHASE HIT: ${phaseHit}. RISK: ${risk}/10 – urgency language + contradiction flood possible. JAM: ${jam}. (Orchestrator → LoopJam Sentinel → Reasoning; purple-team framework from Trending/Memetic Lab.)`
+        );
+      } else if (orchestraTask === 'wallstreet_analysis') {
+        setOrchestraResult(
+          'Orchestra result: Wall Street Elite analysis complete. Sample output: Executive summary → DCF/Comps-style valuation range → bull/base/bear scenarios → key risks & mitigants → Invest/Pass/Hold. (Orchestrator → Wall Street Elite → Reasoning; 12 templates: DCF, three-statement, M&A, LBO, comps, precedents, IPO, credit, SOTP, unit economics, sensitivity, IC memo.) Add company/ticker and model type in a real run for full pitch-book output.'
+        );
+      } else if (orchestraTask === 'ventureeval_diligence') {
+        setOrchestraResult(
+          'Orchestra result: VentureEval AI diligence complete. Sample output: VentureEval AI Report header (company, section, date, confidence) → structured VC memo with Key diligence flags + Score (1–10) + rationale. (Orchestrator → VentureEval AI → Reasoning; 12 sections: market, competition, founders, unit economics, PMF, traction, financials, tech/IP, GTM, timing, exit, investment memo.) Provide startup context and say "full" or a section number (1–12) for full diligence.'
+        );
       } else if (orchestraTask === 'summary') {
         setOrchestraResult('Orchestra result: "XRPL enables fast, low-fee micropayments for AI agents." (Reasoning agent produced this; payment recorded.)');
       } else {
@@ -598,48 +676,63 @@ export function AIAgentPayments({
           )}
         </div>
 
-        {/* Functional AI Orchestra — simulated workflow; only e.g. XRP price may call a real API */}
+        {/* Run the Orchestra — one tap for grandma; "More options" for pros */}
         <div className="mb-3 p-3 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/30">
-          <p className="text-[10px] text-cyber-cyan font-cyber mb-2 flex items-center gap-1">
+          <p className="text-[10px] text-cyber-cyan font-cyber mb-1 flex items-center gap-1">
             <Music2 size={12} /> RUN THE ORCHESTRA
           </p>
-          <p className="text-[9px] text-cyber-muted mb-2">
-            Each agent = a <strong>dashboard data source</strong> (CoinGecko, XRPL RPC, XRPScan, SentiCrypt, CARV LLM, pathfinder, tx history). Payments are simulated; price, ledger, and sentiment tasks call the same APIs as the rest of the app. Each step is recorded as a micropayment below.
-          </p>
-          <p className="text-[9px] text-cyber-muted mb-2">
-            <strong>Paper Trading link:</strong> Get suggestions (Price + Sentiment) on the <Link to="/terminal" className="text-cyber-cyan hover:underline inline-flex items-center gap-0.5">Terminal page <ChevronRight size={10} /></Link> → scroll to Paper Trading → <strong>Auto</strong> tab → &quot;Get suggestion&quot; / &quot;Apply&quot;. Those payments show here under &quot;From paper trading&quot;.
+          <p className="text-[9px] text-cyber-muted mb-3">
+            One tap: get <strong>XRP price and market mood</strong>. <strong className="text-cyber-green">Free to use</strong> — no payment required; amounts below are simulated for demo.
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={orchestraTask}
-              onChange={(e) => setOrchestraTask(e.target.value as typeof orchestraTask)}
-              className="bg-cyber-darker border border-cyber-border rounded px-2 py-1.5 text-xs text-cyber-text"
-            >
-              <option value="xrp_price">XRP price (CoinGecko)</option>
-              <option value="ledger_fee">Ledger + fee (XRPL RPC)</option>
-              <option value="sentiment">Sentiment (SentiCrypt)</option>
-              <option value="xrpscan_metrics">Network metrics (XRPScan)</option>
-              <option value="pathfinder_quote">Path quote (DEX Pathfinder)</option>
-              <option value="tx_history">Tx history (xrplcluster)</option>
-              <option value="compliance_snapshot">Compliance snapshot (stay in law)</option>
-              <option value="prediction_markets">Prediction markets (Polymarket)</option>
-              <option value="summary">Summary (reasoning only)</option>
-              <option value="pipeline">Pipeline: Price → Sentiment → Reasoning</option>
-            </select>
             <button
               onClick={runOrchestra}
               disabled={isOrchestraRunning}
-              className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-medium bg-cyber-cyan/20 text-cyber-cyan hover:bg-cyber-cyan/30 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 rounded text-sm font-medium bg-cyber-cyan/25 text-cyber-cyan border border-cyber-cyan/50 hover:bg-cyber-cyan/35 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isOrchestraRunning ? (
                 <>Running…</>
               ) : (
                 <>
-                  <Play size={12} /> Run orchestra
+                  <Play size={14} /> Run
                 </>
               )}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowOrchestraOptions(!showOrchestraOptions)}
+              className="flex items-center gap-1 px-2 py-1.5 rounded text-[10px] text-cyber-muted hover:text-cyber-text hover:bg-cyber-darker border border-transparent hover:border-cyber-border transition-colors"
+            >
+              {showOrchestraOptions ? 'Hide options' : 'More options'}
+            </button>
           </div>
+          {showOrchestraOptions && (
+            <div className="mt-3 pt-3 border-t border-cyber-cyan/20">
+              <p className="text-[9px] text-cyber-muted mb-2">Choose what to run:</p>
+              <select
+                value={orchestraTask}
+                onChange={(e) => setOrchestraTask(e.target.value as typeof orchestraTask)}
+                className="w-full max-w-xs bg-cyber-darker border border-cyber-border rounded px-2 py-1.5 text-xs text-cyber-text"
+              >
+                <option value="pipeline">Price + Sentiment + Reasoning (recommended)</option>
+                <option value="xrp_price">XRP price only</option>
+                <option value="ledger_fee">Ledger + fee</option>
+                <option value="sentiment">Sentiment only</option>
+                <option value="xrpscan_metrics">Network metrics</option>
+                <option value="pathfinder_quote">Path quote</option>
+                <option value="tx_history">Tx history</option>
+                <option value="compliance_snapshot">Compliance snapshot</option>
+                <option value="prediction_markets">Prediction markets</option>
+                <option value="loopjam_scan">LoopJam Sentinel (purple-team)</option>
+                <option value="wallstreet_analysis">Wall Street Elite (IB)</option>
+                <option value="ventureeval_diligence">VentureEval AI (VC)</option>
+                <option value="summary">Summary only</option>
+              </select>
+              <p className="text-[8px] text-cyber-muted mt-2">
+                Paper Trading: <Link to="/terminal" className="text-cyber-cyan hover:underline">Terminal → Paper Trading → Auto</Link> for price + sentiment suggestions.
+              </p>
+            </div>
+          )}
           {orchestraResult && (
             <div className="mt-2 p-2 rounded bg-cyber-darker/80 border border-cyber-green/30">
               <p className="text-[10px] text-cyber-green font-cyber mb-1">Result</p>
@@ -668,9 +761,9 @@ export function AIAgentPayments({
           </div>
           <div className="p-2 rounded bg-cyber-border/30 text-center">
             <p className="text-lg font-cyber text-cyber-yellow">
-              {(stats.totalVolume / 1000000).toFixed(3)}
+              {dropsToXRP(stats.totalVolume) < 0.001 ? dropsToXRP(stats.totalVolume).toFixed(6) : dropsToXRP(stats.totalVolume).toFixed(3)}
             </p>
-            <p className="text-[8px] text-cyber-muted">XRP VOLUME</p>
+            <p className="text-[8px] text-cyber-muted">XRP VOL (sim)</p>
           </div>
           <div className="p-2 rounded bg-cyber-border/30 text-center">
             <p className="text-lg font-cyber text-cyber-purple">
@@ -750,7 +843,7 @@ export function AIAgentPayments({
                       <span className="text-[9px] text-cyber-muted capitalize">{agent.status}</span>
                     </div>
                     <p className={`text-xs font-mono ${netFlow >= 0 ? 'text-cyber-green' : 'text-cyber-red'}`}>
-                      {netFlow >= 0 ? '+' : ''}{(netFlow / 1000000).toFixed(3)} XRP
+                      {netFlow >= 0 ? '+' : ''}{dropsToXRP(netFlow).toFixed(4)} XRP
                     </p>
                   </div>
                 </div>
@@ -759,8 +852,8 @@ export function AIAgentPayments({
                   <div className="mt-2 pt-2 border-t border-cyber-border/50 space-y-2 text-[9px]">
                     <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <p className="text-cyber-muted">Price/Call</p>
-                        <p className="text-cyber-cyan">{agent.pricePerCall} drops</p>
+                        <p className="text-cyber-muted">Price/Call (sim)</p>
+                        <p className="text-cyber-cyan">{dropsToXRP(agent.pricePerCall).toFixed(6)} XRP</p>
                       </div>
                       <div>
                         <p className="text-cyber-muted">Calls Processed</p>
@@ -886,6 +979,9 @@ function getAgentDashboardSource(agentId: string): string {
     case 'tx-history': return 'OpenClawDashboard, account_tx (xrplcluster)';
     case 'regulatory-watch': return 'REGULATORY-WATCH.md, COMPLIANCE-GLOBAL-US-FLORIDA.md, regulatoryData';
     case 'prediction-markets': return 'MemeticLab, predictionMarkets, unifiedAnalyticsAggregator';
+    case 'loopjam-sentinel': return 'Trending (Memetic Lab), loopjamSentinel framework: memetics, game theory, cognitive warfare, purple-team defense';
+    case 'wallstreet-elite': return 'wallStreetElite: DCF, comps, precedents, LBO, M&A, three-statement, IPO, credit, SOTP, unit economics, sensitivity, IC memo';
+    case 'ventureeval': return 'ventureEval: 12-section VC diligence (market, competition, founders, unit econ, PMF, traction, financials, tech, GTM, timing, exit, memo)';
     default: return 'Dashboard';
   }
 }

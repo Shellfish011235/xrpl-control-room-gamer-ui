@@ -1,5 +1,24 @@
 // XRPL Control Room Type Definitions
 
+// Agent Economy intent & batching types
+export type {
+  IntentType,
+  Asset,
+  AgentId,
+  IntentId,
+  IntentBase,
+  PaymentIntent,
+  OfferMakeIntent,
+  OfferCancelIntent,
+  AMMSwapIntent,
+  Intent,
+  ValidationResult,
+  BatchWindow,
+  NettedObligation,
+  SettlementPlan,
+  PlannedTx,
+} from './agentIntents';
+
 // Re-export DNA Protocol types for convenience
 export type {
   GenomicProof,

@@ -12,8 +12,9 @@ import {
   ShoppingCart, HelpCircle, X, ChevronRight, ChevronLeft,
   GraduationCap, Lightbulb, Target, MousePointer,
   Bell, BellRing, Plus, Trash2, Volume2, VolumeX,
-  Activity, Radio, Eye, CircleDot, LineChart
+  Activity, Radio, Eye, CircleDot, LineChart, Timer, Layers
 } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip } from 'recharts';
 import { usePaperTradingStore } from '../store/paperTradingStore';
 import { useWalletStore } from '../store/walletStore';
 import { getAgentSuggestion, type AgentSuggestionResult } from '../services/paperTradingAgentSuggestion';
@@ -317,6 +318,11 @@ function PaperTradingPanelInner({
   const setEnabled = store?.setEnabled;
   const getStats = store?.getStats;
   const getTotalPortfolioValue = store?.getTotalPortfolioValue;
+  const pendingOrders = store?.pendingOrders ?? [];
+  const addTwapOrder = store?.addTwapOrder;
+  const addIcebergOrder = store?.addIcebergOrder;
+  const cancelPendingOrder = store?.cancelPendingOrder;
+  const executeIcebergOrder = store?.executeIcebergOrder;
 
   // Local state
   const [activeTab, setActiveTab] = useState<'trade' | 'positions' | 'history' | 'stats' | 'alerts' | 'auto' | 'backtest'>('trade');
@@ -363,6 +369,17 @@ function PaperTradingPanelInner({
   const [backtestMinutes, setBacktestMinutes] = useState(60);
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [backtestResult, setBacktestResult] = useState<ReturnType<typeof runBacktest> | null>(null);
+
+  // Advanced orders (TWAP / Iceberg)
+  const [twapAsset, setTwapAsset] = useState('XRP');
+  const [twapSide, setTwapSide] = useState<'buy' | 'sell'>('buy');
+  const [twapAmount, setTwapAmount] = useState('');
+  const [twapDurationMin, setTwapDurationMin] = useState(10);
+  const [twapSlices, setTwapSlices] = useState(5);
+  const [icebergAsset, setIcebergAsset] = useState('XRP');
+  const [icebergSide, setIcebergSide] = useState<'buy' | 'sell'>('buy');
+  const [icebergAmount, setIcebergAmount] = useState('');
+  const [icebergVisiblePct, setIcebergVisiblePct] = useState(10);
   
   // Simulation Boost - generates realistic trading activity to build history
   const runSimulationBoost = useCallback(async (numTrades: number = 20) => {
@@ -1461,6 +1478,122 @@ function PaperTradingPanelInner({
                   Insufficient funds ({(tradeCost - cashBalance).toFixed(2)} XRP short)
                 </p>
               )}
+
+              {/* Advanced orders: TWAP / Iceberg (Phase 1) */}
+              <div className="pt-4 mt-4 border-t border-cyber-border/50 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Timer size={12} className="text-cyber-cyan" />
+                  <span className="text-[10px] text-cyber-cyan font-cyber uppercase tracking-wider">Advanced orders</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* TWAP form */}
+                  <div className="p-2.5 rounded bg-cyber-darker/70 border border-cyber-border/50">
+                    <p className="text-[9px] text-cyber-muted mb-2">TWAP — split order over time</p>
+                    <div className="space-y-1.5">
+                      <select value={twapAsset} onChange={(e) => setTwapAsset(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text">
+                        {Object.keys(prices).slice(0, 12).map((a) => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setTwapSide('buy')} className={`flex-1 py-1 text-[9px] rounded ${twapSide === 'buy' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-darker text-cyber-muted'}`}>Buy</button>
+                        <button type="button" onClick={() => setTwapSide('sell')} className={`flex-1 py-1 text-[9px] rounded ${twapSide === 'sell' ? 'bg-cyber-red/20 text-cyber-red' : 'bg-cyber-darker text-cyber-muted'}`}>Sell</button>
+                      </div>
+                      <input type="number" placeholder="Amount" value={twapAmount} onChange={(e) => setTwapAmount(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text" />
+                      <div className="flex gap-1">
+                        <select value={twapDurationMin} onChange={(e) => setTwapDurationMin(Number(e.target.value))} className="flex-1 px-1 py-1 rounded bg-cyber-dark border border-cyber-border text-[9px] text-cyber-text">
+                          {[5, 10, 15, 30, 60].map((m) => <option key={m} value={m}>{m}m</option>)}
+                        </select>
+                        <select value={twapSlices} onChange={(e) => setTwapSlices(Number(e.target.value))} className="flex-1 px-1 py-1 rounded bg-cyber-dark border border-cyber-border text-[9px] text-cyber-text">
+                          {[3, 5, 10, 15, 20].map((n) => <option key={n} value={n}>{n} slices</option>)}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const amt = parseFloat(twapAmount);
+                          if (addTwapOrder && amt > 0) {
+                            addTwapOrder({ type: 'twap', asset: twapAsset, side: twapSide, totalAmount: amt, durationMs: twapDurationMin * 60 * 1000, numSlices: twapSlices });
+                            setTwapAmount('');
+                          }
+                        }}
+                        disabled={!addTwapOrder || !twapAmount || parseFloat(twapAmount) <= 0}
+                        className="w-full py-1.5 rounded bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/50 text-[10px] font-cyber hover:bg-cyber-cyan/30 disabled:opacity-50"
+                      >
+                        Add TWAP
+                      </button>
+                    </div>
+                  </div>
+                  {/* Iceberg form */}
+                  <div className="p-2.5 rounded bg-cyber-darker/70 border border-cyber-border/50">
+                    <p className="text-[9px] text-cyber-muted mb-2">Iceberg — execute at market when ready</p>
+                    <div className="space-y-1.5">
+                      <select value={icebergAsset} onChange={(e) => setIcebergAsset(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text">
+                        {Object.keys(prices).slice(0, 12).map((a) => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setIcebergSide('buy')} className={`flex-1 py-1 text-[9px] rounded ${icebergSide === 'buy' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-darker text-cyber-muted'}`}>Buy</button>
+                        <button type="button" onClick={() => setIcebergSide('sell')} className={`flex-1 py-1 text-[9px] rounded ${icebergSide === 'sell' ? 'bg-cyber-red/20 text-cyber-red' : 'bg-cyber-darker text-cyber-muted'}`}>Sell</button>
+                      </div>
+                      <input type="number" placeholder="Amount" value={icebergAmount} onChange={(e) => setIcebergAmount(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text" />
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] text-cyber-muted">Visible</span>
+                        <select value={icebergVisiblePct} onChange={(e) => setIcebergVisiblePct(Number(e.target.value))} className="flex-1 px-1 py-1 rounded bg-cyber-dark border border-cyber-border text-[9px] text-cyber-text">
+                          {[5, 10, 15, 20, 25].map((p) => <option key={p} value={p}>{p}%</option>)}
+                        </select>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const amt = parseFloat(icebergAmount);
+                          if (addIcebergOrder && amt > 0) {
+                            addIcebergOrder({ type: 'iceberg', asset: icebergAsset, side: icebergSide, totalAmount: amt, visiblePercent: icebergVisiblePct });
+                            setIcebergAmount('');
+                          }
+                        }}
+                        disabled={!addIcebergOrder || !icebergAmount || parseFloat(icebergAmount) <= 0}
+                        className="w-full py-1.5 rounded bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/50 text-[10px] font-cyber hover:bg-cyber-purple/30 disabled:opacity-50"
+                      >
+                        Add Iceberg
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {/* Pending orders list */}
+                {pendingOrders.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] text-cyber-muted">Pending</p>
+                    {pendingOrders.map((o) => (
+                      <div key={o.id} className="flex items-center justify-between p-2 rounded bg-cyber-darker/50 border border-cyber-border/30 text-[10px]">
+                        <div className="flex items-center gap-2">
+                          {o.type === 'twap' ? <Timer size={10} className="text-cyber-cyan" /> : <Layers size={10} className="text-cyber-purple" />}
+                          <span className="text-cyber-text font-cyber">{o.type.toUpperCase()}</span>
+                          <span className={o.side === 'buy' ? 'text-cyber-green' : 'text-cyber-red'}>{o.side}</span>
+                          <span>{o.totalAmount.toLocaleString()} {o.asset}</span>
+                          {o.type === 'twap' && o.status === 'active' && (
+                            <span className="text-cyber-muted">({o.filledSlices}/{o.numSlices})</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {o.type === 'iceberg' && o.status === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const price = prices[o.asset];
+                                if (price != null && executeIcebergOrder) executeIcebergOrder(o.id, price);
+                              }}
+                              className="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[9px] hover:bg-cyber-green/30"
+                            >
+                              Execute
+                            </button>
+                          )}
+                          <button type="button" onClick={() => cancelPendingOrder?.(o.id)} className="p-0.5 rounded text-cyber-muted hover:text-cyber-red hover:bg-cyber-red/10" title="Cancel">
+                            <XCircle size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -2869,6 +3002,40 @@ function PaperTradingPanelInner({
                     <p className="text-cyber-red font-cyber">{backtestResult.stats.maxDrawdownPercent.toFixed(1)}%</p>
                   </div>
                 </div>
+                {/* Equity curve */}
+                {backtestResult.equityCurve.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-cyber-border/30">
+                    <p className="text-[9px] text-cyber-muted mb-2">Equity curve</p>
+                    <div className="h-32 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart
+                          data={backtestResult.equityCurve.map((p, i) => ({
+                            index: i,
+                            value: p.value,
+                            time: new Date(p.timestamp).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+                          }))}
+                          margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="equityGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#00d4ff" stopOpacity={0.4} />
+                              <stop offset="100%" stopColor="#00d4ff" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <XAxis dataKey="index" hide />
+                          <YAxis domain={['auto', 'auto']} hide />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#0a0f1a', border: '1px solid rgba(0,212,255,0.3)', borderRadius: 6, fontSize: 10 }}
+                            labelStyle={{ color: '#00d4ff' }}
+                            formatter={(value: number) => [value.toFixed(2), 'Equity']}
+                            labelFormatter={(_, payload) => payload[0]?.payload?.time ?? ''}
+                          />
+                          <Area type="monotone" dataKey="value" stroke="#00d4ff" strokeWidth={1.5} fill="url(#equityGradient)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>

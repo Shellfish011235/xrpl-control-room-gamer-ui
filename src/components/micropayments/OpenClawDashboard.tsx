@@ -341,9 +341,12 @@ export function OpenClawDashboard() {
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-cyber-border text-center bg-green-500/10">
+      <div className="p-2 border-t border-cyber-border text-center space-y-1">
         <p className="text-[10px] text-green-400 font-bold">
           🟢 MAINNET LIVE - 1% Platform Fee on All OpenClaw Transactions
+        </p>
+        <p className="text-[9px] text-cyber-muted">
+          We do not transmit money or hold your funds. You sign all transactions in your own wallet. Not legal or financial advice.
         </p>
       </div>
     </div>

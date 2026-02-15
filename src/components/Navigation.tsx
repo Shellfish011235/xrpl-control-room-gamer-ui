@@ -12,11 +12,11 @@ function useXRPPrice() {
   const [change24h, setChange24h] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [source, setSource] = useState<string>('')
 
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        // Try CoinGecko first
         const cgResponse = await fetch(
           'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true',
           { mode: 'cors' }
@@ -27,10 +27,10 @@ function useXRPPrice() {
             setPrice(data.ripple.usd)
             setChange24h(data.ripple.usd_24h_change ?? null)
             setError(null)
+            setSource('CoinGecko')
             return
           }
         }
-        // Fallback: Binance XRP/USDT
         const binanceResponse = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' })
         if (binanceResponse.ok) {
           const binanceData = await binanceResponse.json()
@@ -39,6 +39,7 @@ function useXRPPrice() {
             setPrice(p)
             setChange24h(null)
             setError(null)
+            setSource('Binance')
             return
           }
         }
@@ -56,7 +57,7 @@ function useXRPPrice() {
     return () => clearInterval(interval)
   }, [])
 
-  return { price, change24h, loading, error }
+  return { price, change24h, loading, error, source }
 }
 
 // Live Ledger Index Hook - fetches from XRPL
@@ -213,7 +214,7 @@ const navItems = [
 export default function Navigation() {
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { price, change24h, loading } = useXRPPrice()
+  const { price, change24h, loading, source } = useXRPPrice()
   const { ledgerIndex, loading: ledgerLoading } = useLedgerIndex()
   const setAgentOpen = useAgentPanelStore((s) => s.setOpen)
 
@@ -286,7 +287,7 @@ export default function Navigation() {
                   <span className="font-cyber text-[10px] font-bold text-cyber-darker">X</span>
                 </div>
                 <div>
-                  <p className="text-[10px] text-cyber-muted leading-none">XRP/USD</p>
+                  <p className="text-[10px] text-cyber-muted leading-none">XRP/USD {source && <span className="text-cyber-muted/80">· {source}</span>}</p>
                   {loading ? (
                     <p className="font-cyber text-sm text-cyber-glow animate-pulse">...</p>
                   ) : price !== null ? (
@@ -368,7 +369,7 @@ export default function Navigation() {
                   <span className="font-cyber text-xs font-bold text-cyber-darker">XRP</span>
                 </div>
                 <div>
-                  <p className="text-[10px] text-cyber-muted">XRP/USD</p>
+                  <p className="text-[10px] text-cyber-muted">XRP/USD{source ? ` · ${source}` : ''}</p>
                   {loading ? (
                     <p className="font-cyber text-lg text-cyber-glow animate-pulse">...</p>
                   ) : price !== null ? (

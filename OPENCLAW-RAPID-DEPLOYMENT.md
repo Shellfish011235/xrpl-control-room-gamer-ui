@@ -119,9 +119,9 @@ npm install xrpl
 
 [0:10] "But AI agents need to PAY for things - APIs, compute, other agents."
 
-[0:20] "The problem? On Ethereum, a $0.001 payment costs $2.50 in fees."
+[0:20] "The problem? On Ethereum L1, a $0.001 payment costs ~$0.12 in fees."
 
-[0:30] "That's 250,000% overhead. The math doesn't work."
+[0:30] "That's 12,000% overhead. The math doesn't work."
 
 [0:40] "Enter XRPL. Same $0.001 payment? $0.00003 fee."
 

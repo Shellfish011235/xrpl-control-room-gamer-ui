@@ -1,0 +1,14 @@
+# XRPL Control Room – base stack (optional: frontend, API)
+# Use docker-compose.override.yml to add TrustGraph + ingest.
+
+version: "3.9"
+
+services:
+  # Optional: uncomment if you run Control Room API in Docker
+  # control-room-api:
+  #   build: ./server
+  #   ports: ["3001:3001"]
+  #   environment:
+  #     NODE_ENV: production
+  #     XRPL_WS_URL: wss://s1.ripple.com
+  #   restart: unless-stopped

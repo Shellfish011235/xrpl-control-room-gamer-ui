@@ -193,7 +193,7 @@ export default function Learn() {
                 </div>
                 <div className="cyber-panel p-4 border-cyber-green/30 bg-cyber-green/5">
                   <p className="text-xs text-cyber-green font-cyber mb-1">XRPL advantage</p>
-                  <p className="text-[10px] text-cyber-text">~$0.36/hr: XRPL fees ~$0.01/hr. Ethereum L1 ~$900/hr.</p>
+                  <p className="text-[10px] text-cyber-text">~$0.36/hr: XRPL fees ~$0.01/hr. Ethereum L1 ~$120/hr (1000 txs at ~$0.12 each).</p>
                 </div>
               </div>
             </div>
@@ -213,7 +213,7 @@ export default function Learn() {
                   </div>
                 </div>
                 <div className="cyber-panel p-4 border-cyber-yellow/30 bg-cyber-yellow/5">
-                  <p className="text-[10px] text-cyber-text">Ethereum L1: 1000 × $2.50 = $2,500/min. XRPL: $0.03/min.</p>
+                  <p className="text-[10px] text-cyber-text">Ethereum L1: 1000 × $0.12 ≈ $120/min. XRPL: $0.03/min.</p>
                 </div>
               </div>
             </div>

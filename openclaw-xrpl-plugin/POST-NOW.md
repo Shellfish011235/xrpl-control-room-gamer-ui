@@ -14,7 +14,7 @@
 It can think. Plan. Execute.
 But it can't PAY for anything.
 
-$0.001 API call = $2.50 Ethereum fee = 💀
+$0.001 API call = ~$0.12 Ethereum L1 fee = still 120× the payment
 
 I fixed it. XRPL micropayments. $0.00003 per tx.
 
@@ -48,7 +48,7 @@ Can pay ✗
 I fixed it.
 
 XRPL micropayments for @OpenClaw
-$0.00003 per tx (not $2.50)
+$0.00003 per tx (not ~$0.12 on ETH L1)
 
 github.com/Shellfish011235/xrpl-control-room-gamer-ui
 
@@ -64,9 +64,9 @@ github.com/Shellfish011235/xrpl-control-room-gamer-ui
 The math on AI agent payments:
 
 Ethereum:
-- 1000 API calls × $2.50 fee = $2,500 in fees
+- 1000 API calls × ~$0.12 fee = ~$120 in fees
 - For $1 worth of actual value
-- 🔴 250,000% overhead
+- 🔴 12,000% overhead
 
 XRPL:
 - 1000 API calls × $0.00003 fee = $0.03 in fees  
@@ -82,10 +82,10 @@ github.com/Shellfish011235/xrpl-control-room-gamer-ui
 ```
 AI agent payment math:
 
-ETH: 1000 calls = $2,500 in fees
+ETH L1: 1000 calls = ~$120 in fees
 XRPL: 1000 calls = $0.03 in fees
 
-Same result. 83,000x cheaper.
+Same result. ~4,000x cheaper.
 
 The AI agent economy runs on @Ripple XRPL. Not Ethereum.
 
@@ -296,7 +296,7 @@ Full code: github.com/Shellfish011235/xrpl-control-room-gamer-ui
 When someone asks "why XRPL?":
 ```
 Math:
-- Ethereum: $2.50 per tx
+- Ethereum L1: ~$0.12 per tx
 - Solana: $0.00025 per tx  
 - XRPL: $0.00003 per tx
 

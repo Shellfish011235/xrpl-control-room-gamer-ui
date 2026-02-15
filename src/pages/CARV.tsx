@@ -589,6 +589,9 @@ export default function CARVPage() {
         />
       )}
 
+      <p className="text-[10px] text-cyber-muted mt-6 border-t border-cyber-border/50 pt-3">
+        We do not transmit money or hold your funds. You sign all transactions in your own wallet. Not legal or financial advice. Use in compliance with applicable laws.
+      </p>
     </div>
   );
 }

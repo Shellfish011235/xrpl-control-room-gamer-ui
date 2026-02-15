@@ -7,14 +7,14 @@
 
 ## Description
 
-Enable your OpenClaw agent to make XRPL micropayments. Pay for APIs, compute, skills, and other agents with fees 83,000x cheaper than Ethereum.
+Enable your OpenClaw agent to make XRPL micropayments. Pay for APIs, compute, skills, and other agents with fees ~4,000x cheaper than Ethereum L1.
 
 ## Why Use This
 
 | Problem | Solution |
 |---------|----------|
 | Agent needs $0.001 API call | XRPL fee: $0.00003 |
-| Ethereum fee: $2.50 | 83,000x savings |
+| Ethereum L1 fee: ~$0.12 | ~4,000x savings |
 | Agent is economically disabled | Agent can transact |
 
 ## Installation

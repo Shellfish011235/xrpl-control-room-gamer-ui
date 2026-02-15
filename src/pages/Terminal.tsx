@@ -18,6 +18,8 @@ import { PositionLiquidationRisk } from '../components/institutional/PositionLiq
 import { PaperTradingPanel } from '../components/PaperTradingPanel';
 import { LedgerImpactTool } from '../components/LedgerImpactTool';
 import { PathfindingTool } from '../components/PathfindingTool';
+import { StrategiesPanel } from '../components/strategies';
+import { useOrchestra } from '../orchestra/useOrchestra';
 
 // Error Boundary to catch component crashes
 interface ErrorBoundaryState {
@@ -66,8 +68,11 @@ export default function Terminal() {
   const [priceLoading, setPriceLoading] = useState(true);
   const [priceSource, setPriceSource] = useState<string>('');
   
-  // Initialize alerts
   useAlertInitialization();
+  const { killSwitch, setKillSwitch } = useOrchestra({
+    includeStrategyAgents: true,
+    startImmediately: true,
+  });
   const unreadAlerts = useAlertStore(state => state.getUnreadCount());
   
   // Fetch live XRP price - try multiple sources
@@ -157,6 +162,12 @@ export default function Terminal() {
               </div>
             )}
             
+            {/* Price source badge */}
+            {!priceLoading && priceSource && (
+              <span className="text-[10px] text-cyber-muted px-2 py-0.5 rounded bg-cyber-darker/80" title="Price feed source">
+                Price: {priceSource === 'coingecko' ? 'CoinGecko' : priceSource === 'binance' ? 'Binance' : 'Fallback'}
+              </span>
+            )}
             {/* Time */}
             <div className="flex items-center gap-2 text-cyber-muted">
               <Clock className="w-4 h-4" />
@@ -263,6 +274,24 @@ export default function Terminal() {
             <PositionLiquidationRisk
               currentPrice={xrpPrice}
               priceSourceLabel={priceLoading ? 'Loading…' : priceSource === 'coingecko' ? 'CoinGecko (live)' : priceSource === 'binance' ? 'Binance (live)' : priceSource === 'fallback' ? 'Fallback (APIs unavailable)' : undefined}
+            />
+          </ErrorBoundary>
+        </motion.div>
+      )}
+
+      {/* Strategies: DCA / MM / Arb toggles, PnL gauge, DCA chart, arb heatmap, ladder */}
+      {!priceLoading && xrpPrice > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.38 }}
+          className="mt-4"
+        >
+          <ErrorBoundary>
+            <StrategiesPanel
+              currentPrice={xrpPrice}
+              killSwitch={killSwitch}
+              setKillSwitch={setKillSwitch}
             />
           </ErrorBoundary>
         </motion.div>

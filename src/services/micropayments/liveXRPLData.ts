@@ -168,25 +168,25 @@ export const MARKETING_POINTS = {
     {
       scenario: "$0.01 payment",
       xrpl: "$0.00003 fee (0.3%)",
-      ethereum: "$2.50 fee (25,000%)",
-      winner: "XRPL is 83,000x cheaper",
+      ethereum: "$0.12 fee (1,200%)",
+      winner: "XRPL is 4,000x cheaper",
     },
     {
       scenario: "$0.001 payment",
       xrpl: "$0.00003 fee (3%)",
-      ethereum: "$2.50 fee (250,000%)",
-      winner: "XRPL is 833,000x cheaper",
+      ethereum: "$0.12 fee (12,000%)",
+      winner: "XRPL is 4,000x cheaper",
     },
     {
       scenario: "1000 payments/minute",
       xrpl: "$0.03/min in fees",
-      ethereum: "$2,500/min in fees",
-      winner: "XRPL saves $2,497/minute",
+      ethereum: "$120/min in fees",
+      winner: "XRPL saves ~$120/minute",
     },
     {
       scenario: "AI agent making 1M API calls/day",
       xrpl: "$30/day in fees",
-      ethereum: "$2,500,000/day in fees",
+      ethereum: "$173,000/day in fees",
       winner: "XRPL makes AI micropayments viable",
     },
   ],
@@ -462,7 +462,7 @@ export function generatePitchData() {
     subtitle: "The only network where fees are smaller than payments",
     
     keyStats: [
-      { label: "Transaction Fee", value: "$0.00003", comparison: "83,000x cheaper than Ethereum" },
+      { label: "Transaction Fee", value: "$0.00003", comparison: "4,000x cheaper than Ethereum L1" },
       { label: "Finality", value: "3-5 seconds", comparison: "vs 10 min BTC, 12s ETH" },
       { label: "Payment Channel TPS", value: "100,000+", comparison: "Off-chain, instant" },
       { label: "Min Viable Payment", value: "$0.0001", comparison: "vs $1+ on most chains" },

@@ -52,7 +52,7 @@ This document states the **data source and status** of each element on the **Mic
 | Element | Source | Status / Accuracy |
 |--------|--------|-------------------|
 | **Payment amount selector** ($0.001–$10) | UI state in `CostComparator.tsx`. | **Interactive.** Only changes how fee % is computed from the same static fees. |
-| **"XRPL PAYMENT CHANNELS WIN"** + fee vs ETH L1 | Hardcoded: XRPL channel = `$0.000001`, ETH L1 = `$2.50` in `CostComparator.tsx` and `streamingPayments.ts`. | **Static benchmarks.** Not live fees. |
+| **"XRPL PAYMENT CHANNELS WIN"** + fee vs ETH L1 | Hardcoded: XRPL channel = `$0.000001`, ETH L1 = `$0.12` in `CostComparator.tsx` and `streamingPayments.ts`. | **Static benchmarks.** Not live fees. |
 | **Bar chart (Micropayment Score)** | Scores and fees from `NETWORK_COSTS` in `streamingPayments.ts`. | **Static.** Same source as table. |
 | **Comparison table** (Network, Fee/Tx, Fee %, Finality, TPS, Viable?) | Full data from `NETWORK_COSTS` in `src/services/micropayments/streamingPayments.ts`. No API or live feed. | **Reference benchmarks.** See below. |
 | **Viability legend** (Optimal / Viable / Not viable) | Derived from fee % &lt; 1%, &lt; 10%, &gt; 10% in component. | **Accurate** relative to the static fee data. |
@@ -64,7 +64,7 @@ This document states the **data source and status** of each element on the **Mic
 - **Accuracy of benchmarks:**
   - **XRPL:** ~0.00001 XRP (≈ $0.00003 at ~$3/XRP), 4s finality, ~1500 TPS — **generally accurate** as typical figures.
   - **XRPL Payment Channel:** Off-chain claims are effectively free; $0.000001 and 100K TPS are **illustrative** (design/theoretical), not measured.
-  - **Ethereum L1:** $2.50 is **illustrative**; L1 fees vary widely ($0.50–$50+).
+  - **Ethereum L1:** $0.12 is **illustrative** (current avg ~$0.04–$0.15); L1 fees vary with congestion.
   - **Bitcoin:** $1.00 and 600s finality are **ballpark**; fees and block times vary.
   - **Solana, Polygon, Arbitrum, Lightning:** **Benchmark-style** values, not live.
 

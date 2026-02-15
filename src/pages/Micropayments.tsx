@@ -59,6 +59,9 @@ export default function MicropaymentsPage() {
             <CostComparator targetAmount={0.001} showChart={false} />
           </div>
         </motion.div>
+        <p className="text-[10px] text-cyber-muted mt-6 border-t border-cyber-border/50 pt-3 max-w-2xl">
+          We do not transmit money or hold your funds. You sign all transactions in your own wallet. Not legal or financial advice. Use in compliance with applicable laws.
+        </p>
       </div>
     </div>
   );

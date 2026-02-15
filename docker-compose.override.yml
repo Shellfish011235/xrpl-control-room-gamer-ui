@@ -1,0 +1,59 @@
+# TrustGraph + XRPL ingest – XRPL Orchestra "Ledger Knowledge Agent" backend.
+# Run: docker-compose up -d trustgraph trustgraph-ingest
+# Optional: add neo4j for persistent graph: docker-compose up -d trustgraph trustgraph-ingest neo4j
+
+version: "3.9"
+
+services:
+  trustgraph:
+    build: ./trustgraph
+    container_name: xrpl-trustgraph
+    ports:
+      - "8000:8000"
+    environment:
+      - TRUSTGRAPH_HOST=0.0.0.0
+      - TRUSTGRAPH_PORT=8000
+      - XRPL_WS_URL=${XRPL_WS_URL:-wss://s1.ripple.com}
+      - NEO4J_URI=${NEO4J_URI:-}  # optional: bolt://neo4j:7687
+    volumes:
+      - trustgraph_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  trustgraph-ingest:
+    build: ./trustgraph-ingest
+    container_name: xrpl-trustgraph-ingest
+    environment:
+      - TRUSTGRAPH_URL=http://trustgraph:8000
+      - XRPL_WS_URL=${XRPL_WS_URL:-wss://s1.ripple.com}
+      - INGEST_LEDGER_SUBSCRIPTION=true
+      - INGEST_BATCH_SIZE=50
+    depends_on:
+      trustgraph:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Optional: persistent graph store (uncomment and set NEO4J_URI in trustgraph)
+  # neo4j:
+  #   image: neo4j:5-community
+  #   container_name: xrpl-trustgraph-neo4j
+  #   ports:
+  #     - "7474:7474"
+  #     - "7687:7687"
+  #   environment:
+  #     NEO4J_AUTH: neo4j/xrplgraph
+  #   volumes:
+  #     - neo4j_data:/data
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:7474"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+volumes:
+  trustgraph_data:
+  # neo4j_data:

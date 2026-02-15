@@ -164,8 +164,8 @@ export function CostComparator({
                 ${(0.000001).toFixed(6)}
               </span>{' '}
               ({((0.000001 / amount) * 100).toFixed(4)}% of payment).
-              Ethereum L1 would cost <span className="text-cyber-red">${(2.5).toFixed(2)}</span>{' '}
-              ({((2.5 / amount) * 100).toFixed(0)}% - {Math.round(2.5 / amount)}x the payment itself!)
+              Ethereum L1 would cost <span className="text-cyber-red">${(0.12).toFixed(2)}</span>{' '}
+              ({((0.12 / amount) * 100).toFixed(0)}% - {Math.round(0.12 / amount)}x the payment itself!)
             </p>
           </div>
         </div>

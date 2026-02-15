@@ -102,8 +102,19 @@ When in doubt, reassess with qualified counsel before enabling mainnet or real-u
 
 ---
 
+## Florida / Not a Money Transmitter
+
+We operate as a **software tool** only. We are **not a money transmitter** (no Florida Ch. 560 or FinCEN MT license). To stay within that posture:
+
+- **docs/FLORIDA-NOT-MONEY-TRANSMITTER.md** — Defines **capability boundaries**: what we DO (user signs, no custody, no transmission on behalf of others) and what we DO NOT do. Use it as the guardrail for new features. Any flow where the platform **receives** value from user payments (e.g. platform fee wallet) must be reviewed by Florida/US counsel before launch.
+- Do not add features that receive or transmit value on behalf of users. When in doubt, get legal advice.
+
+---
+
 ## Where This Is Documented in the Repo
 
+- **docs/FLORIDA-NOT-MONEY-TRANSMITTER.md** — Florida/US non–money-transmitter capability boundaries (DO / DO NOT); platform fee caution.
+- **docs/TASKS-FLORIDA-SAFE.md** — Task list that stays within those boundaries (no custody, no transmission, user signs only).
 - **OPENCLAW-COMPLIANCE-AND-USE.md** — Money transmission, custody, Xaman use, royalties, AI agent economy, liability, and “get a legal opinion” guidance.
 - **docs/AI-AGENT-ECONOMY-INTEGRATION.md** — How AI payments, OpenClaw, and Agent Economy fit together; regulatory scope (no custody, user-signs-only, applicable laws).
 - **This file** — High-level alignment with global, US, and Florida crypto and AI regulation; AI risk policy and explainability; **Phase 1 paper trading features (sim-only)**; not a substitute for legal advice.

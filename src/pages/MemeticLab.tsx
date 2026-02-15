@@ -36,6 +36,8 @@ import {
 } from '../services/aiQuantumAnalytics'
 import { getCombinedSentiment, fetchWhaleTransactions } from '../services/freeDataFeeds'
 import { PaperTradingPanel } from '../components/PaperTradingPanel'
+import { Link } from 'react-router-dom'
+import { LOOPJAM_SENTINEL_NAME, LOOPJAM_PHASES, LOOPJAM_JAMMING } from '../agents/loopjamSentinel'
 
 // ==================== GAME THEORY DATA ====================
 
@@ -2421,6 +2423,45 @@ export default function MemeticLab() {
                   exit={{ opacity: 0, y: -20 }}
                   className="space-y-4"
                 >
+                  {/* LoopJam Sentinel – Orchestra agent for purple-team / manipulation detection */}
+                  <div className="cyber-panel p-4 border-cyber-purple/40 bg-cyber-purple/5">
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-cyber-purple/30">
+                      <div className="flex items-center gap-2">
+                        <Bot size={18} className="text-cyber-purple" />
+                        <span className="font-cyber text-sm text-cyber-purple">{LOOPJAM_SENTINEL_NAME}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/30">PURPLE-TEAM</span>
+                      </div>
+                      <Link
+                        to="/pay/agents"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-cyber-purple/20 border border-cyber-purple/50 text-cyber-purple hover:bg-cyber-purple/30 text-xs font-cyber transition-all"
+                      >
+                        Run in Orchestra
+                        <ChevronRight size={12} />
+                      </Link>
+                    </div>
+                    <p className="text-xs text-cyber-muted mb-3">
+                      Cybernetic manipulation detection & purple-team defense. Detects and classifies phases: Sensor Grid → Controller → Effector (Destabilization / Isolation / Re-Encoding) → Golem State → Feedback. Suggests jams and detection logic.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[10px]">
+                      <div>
+                        <p className="text-cyber-purple font-medium mb-1">Phases</p>
+                        <ul className="space-y-0.5 text-cyber-muted">
+                          {LOOPJAM_PHASES.slice(0, 5).map((p) => (
+                            <li key={p.phase}>{p.phase}. {p.name}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-cyber-green font-medium mb-1">Jamming</p>
+                        <ul className="space-y-0.5 text-cyber-muted">
+                          {LOOPJAM_JAMMING.slice(0, 3).map((j, i) => (
+                            <li key={i}>{j}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="cyber-panel p-4 border-cyber-green/30">
                     <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
                       <Shield size={16} className="text-cyber-green" />

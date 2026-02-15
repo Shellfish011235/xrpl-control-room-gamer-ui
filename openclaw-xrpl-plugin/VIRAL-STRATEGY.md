@@ -27,7 +27,7 @@ Your agent is economically disabled.
 ### The Solution
 ```
 XRPL micropayments.
-- Fee: $0.00003 (not $2.50)
+- Fee: $0.00003 (not ~$0.12 on ETH L1)
 - Speed: 3 seconds (not 10 minutes)
 - Scale: 100,000+ tx/sec via payment channels
 
@@ -50,7 +50,7 @@ Your OpenClaw agent is broke.
 It can think. It can plan. It can execute.
 But it can't PAY for anything.
 
-Need an API? $2.50 Ethereum fee on a $0.001 call. Math doesn't work.
+Need an API? ~$0.12 Ethereum L1 fee on a $0.001 call. Math doesn't work.
 Need compute? Same problem.
 Need another agent's help? Impossible.
 
@@ -119,8 +119,8 @@ Here's why that's about to change 🧵
 The math doesn't work on any blockchain:
 
 Your agent needs a $0.001 API call.
-Ethereum fee: $2.50
-That's 250,000% overhead.
+Ethereum L1 fee: ~$0.12
+That's 12,000% overhead.
 
 Your agent is priced out of the economy it's supposed to participate in.
 ```
@@ -198,7 +198,7 @@ First mover advantage is NOW.
 Title: `I gave OpenClaw agents the ability to pay for things. Here's why it matters.`
 
 ```
-TL;DR: Built XRPL micropayments for OpenClaw. Agents can now pay $0.001 for an API call without spending $2.50 in fees.
+TL;DR: Built XRPL micropayments for OpenClaw. Agents can now pay $0.001 for an API call without spending ~$0.12 in fees on Ethereum L1.
 
 ---
 
@@ -215,7 +215,7 @@ If my agent needs a $0.001 API call, Ethereum charges $2.50 in fees. That's 250,
 The Fix:
 
 XRPL micropayments.
-- $0.00003 fee (not $2.50)
+- $0.00003 fee (not ~$0.12 on ETH L1)
 - 3-second finality
 - Payment channels for unlimited throughput
 
@@ -316,7 +316,7 @@ Looking for feedback on the approach and potential use cases.
 ## Key Messages to Repeat
 
 1. **"Your agent is broke"** - The hook
-2. **"$0.00003 vs $2.50"** - The math
+2. **"$0.00003 vs ~$0.12"** - The math
 3. **"One line of code"** - The ease
 4. **"Get paid per use"** - For skill devs
 5. **"First mover advantage"** - FOMO

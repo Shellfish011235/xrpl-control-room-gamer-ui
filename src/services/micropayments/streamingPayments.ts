@@ -415,11 +415,11 @@ export const NETWORK_COSTS: CostComparison[] = [
   },
   {
     network: 'Ethereum L1',
-    feePerTx: 2.5,
+    feePerTx: 0.12,
     finality: 12,
     tps: 15,
-    minViableTx: 250,
-    micropaymentScore: 5,
+    minViableTx: 5,
+    micropaymentScore: 15,
   },
   {
     network: 'Bitcoin',

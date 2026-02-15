@@ -11,7 +11,7 @@
 🚀 OpenClaw agents can now PAY for things via XRPL micropayments
 
 The problem: AI agents need to pay for APIs, compute, other agents
-The blocker: Ethereum fees ($2.50) > the payment itself ($0.001)
+The blocker: Ethereum L1 fees (~$0.12) > the payment itself ($0.001)
 The solution: XRPL fees = $0.00003
 
 Your agent can now afford to think.
@@ -132,7 +132,7 @@ AI agents need to pay for things:
 - Data access
 - Other agents
 
-On Ethereum, a $0.001 payment costs $2.50 in fees. That's 250,000% overhead. The math doesn't work.
+On Ethereum L1, a $0.001 payment costs ~$0.12 in fees. That's 12,000% overhead. The math doesn't work.
 
 On XRPL, the same payment costs $0.00003. That's 3% overhead. Agents can actually afford to transact.
 
@@ -189,7 +189,7 @@ The AI agent economy is coming. The payment rails are ready.
 ```
 I built a micropayment plugin for OpenClaw (open-source AI agent, 134k GH stars).
 
-Problem: AI agents need to pay for APIs, compute, other agents. On ETH, fees ($2.50) exceed payment value ($0.001).
+Problem: AI agents need to pay for APIs, compute, other agents. On ETH L1, fees (~$0.12) exceed payment value ($0.001).
 
 Solution: XRPL. $0.00003 per tx. Payment channels for unlimited off-chain micropayments.
 

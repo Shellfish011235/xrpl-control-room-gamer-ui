@@ -241,13 +241,14 @@ export function AgentsTab() {
       </p>
       <PowerModeUnlockCard />
       <div className="cyber-panel p-4 border border-cyber-border rounded-lg">
-        <p className="text-xs text-cyber-muted mb-2">More paid actions coming: Summary, Corridor Scan, Monitor Alerts. Each will show a fixed XRP price and require your Xaman signature.</p>
+        <p className="text-xs text-cyber-muted mb-3">More paid actions coming: Summary, Corridor Scan, Monitor Alerts. Each will show a fixed XRP price and require your Xaman signature.</p>
         <Link
-          to="/pay"
-          state={{ tab: 'agents' }}
-          className="inline-flex items-center gap-2 text-xs text-cyber-cyan hover:underline"
+          to="/learn"
+          state={{ section: 'agents' }}
+          className="inline-flex items-center justify-between w-full gap-2 px-3 py-2.5 rounded-lg bg-cyber-cyan/10 border border-cyber-cyan/40 text-cyber-cyan hover:bg-cyber-cyan/20 hover:border-cyber-cyan/60 transition-colors text-sm font-cyber"
         >
-          Run the Orchestra (AI Agents) <ChevronRight size={12} />
+          <span>Run the Orchestra (AI Agents)</span>
+          <ChevronRight size={14} />
         </Link>
       </div>
     </div>
@@ -415,7 +416,7 @@ export default function AgentEconomy() {
               </Link>
             </div>
             <p className="text-[10px] text-cyber-muted mt-2">This page = receipts, spend caps, and paid actions. OpenClaw = earn from plugin. CARV = AI payment agent with Xaman.</p>
-            <p className="text-[9px] text-cyber-muted mt-1.5 border-t border-cyber-border/50 pt-2">Use must comply with applicable laws. No custody; you sign in Xaman. See compliance docs in repo.</p>
+            <p className="text-[9px] text-cyber-muted mt-1.5 border-t border-cyber-border/50 pt-2">We do not transmit money or hold your funds. You sign all transactions in your own wallet. Use must comply with applicable laws (e.g. Florida, US). Not legal or financial advice. See compliance docs in repo.</p>
           </div>
         </motion.div>
 

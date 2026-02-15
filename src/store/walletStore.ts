@@ -2,6 +2,12 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getWalletData, isValidXRPLAddress, getAccountCreationYear } from '../services/xrplService';
 import { useProfileStore } from './profileStore';
+import { useStrategyStore } from './strategyStore';
+
+function syncActiveWalletToStrategyStore(wallets: ConnectedWallet[], activeWalletId: string | null): void {
+  const active = activeWalletId ? wallets.find((w) => w.id === activeWalletId) : null;
+  useStrategyStore.getState().setWalletAddress(active?.address ?? null);
+}
 
 export type WalletProvider = 
   | 'xaman' 
@@ -80,16 +86,15 @@ export const useWalletStore = create<WalletState>()(
         };
         
         set((state) => {
-          // If this is set as default, unset others
           const updatedWallets = wallet.isDefault
             ? state.wallets.map(w => ({ ...w, isDefault: false }))
             : state.wallets;
-          
           return {
             wallets: [...updatedWallets, newWallet],
             activeWalletId: state.activeWalletId || newWallet.id,
           };
         });
+        syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
       },
 
       removeWallet: (id) => {
@@ -97,21 +102,18 @@ export const useWalletStore = create<WalletState>()(
           const filtered = state.wallets.filter(w => w.id !== id);
           const wasActive = state.activeWalletId === id;
           const wasDefault = state.wallets.find(w => w.id === id)?.isDefault;
-          
-          // If removed wallet was default, make first remaining wallet default
-          if (wasDefault && filtered.length > 0) {
-            filtered[0].isDefault = true;
-          }
-          
+          if (wasDefault && filtered.length > 0) filtered[0].isDefault = true;
           return {
             wallets: filtered,
             activeWalletId: wasActive ? (filtered[0]?.id || null) : state.activeWalletId,
           };
         });
+        syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
       },
 
       setActiveWallet: (id) => {
         set({ activeWalletId: id });
+        syncActiveWalletToStrategyStore(get().wallets, id);
       },
 
       setDefaultWallet: (id) => {
@@ -168,6 +170,7 @@ export const useWalletStore = create<WalletState>()(
               w.id === id ? { ...w, isLoading: false, balance: 0 } : w
             ),
           }));
+          syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
           return;
         }
 
@@ -211,6 +214,7 @@ export const useWalletStore = create<WalletState>()(
                 useProfileStore.getState().setMemberSinceYear(creationYear);
               }
             }
+            syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
           } else {
             console.log(`[WalletStore] Invalid address format: ${wallet.address}`);
             set((state) => ({
@@ -218,6 +222,7 @@ export const useWalletStore = create<WalletState>()(
                 w.id === id ? { ...w, isLoading: false, error: 'Invalid XRPL address' } : w
               ),
             }));
+            syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
           }
         } catch (error) {
           console.error(`[WalletStore] Error fetching wallet data:`, error);
@@ -230,6 +235,7 @@ export const useWalletStore = create<WalletState>()(
               } : w
             ),
           }));
+          syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
         }
       },
 
@@ -291,6 +297,7 @@ export const useWalletStore = create<WalletState>()(
 
       clearAllWallets: () => {
         set({ wallets: [], activeWalletId: null });
+        useStrategyStore.getState().setWalletAddress(null);
       },
     }),
     {

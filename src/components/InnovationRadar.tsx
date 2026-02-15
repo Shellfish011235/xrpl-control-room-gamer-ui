@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useInnovationRadar } from "../innovationRadar/useInnovationRadar";
 
 type Repo = {
   id: number;
@@ -80,6 +81,12 @@ export default function InnovationRadar() {
   const [minStars, setMinStars] = useState(5);
   const [days, setDays] = useState(14);
   const [query, setQuery] = useState("xrpl OR xrp-ledger OR interledger");
+
+  const { headlines, signals, refresh } = useInnovationRadar({
+    autoStart: true,
+    maxHeadlines: 25,
+    maxSignals: 15,
+  });
 
   const ghQuery = useMemo(() => {
     const since = daysAgoISO(days);
@@ -204,15 +211,77 @@ export default function InnovationRadar() {
             </div>
           </Panel>
 
-          <Panel title="Upcoming Feeds (UI Stub)">
-            <div style={{ fontSize: 12, opacity: 0.75, lineHeight: 1.5 }}>
-              Next we'll wire these in (keeping sources clean, not noisy scraping):
-              <ul style={{ margin: "8px 0 0 18px" }}>
-                <li>XRPL Commons announcements</li>
-                <li>Ripple / RippleX dev posts</li>
-                <li>EasyA hackathon winners</li>
-                <li>Apex / community hack submissions</li>
-              </ul>
+          <Panel title="RSS & Radar (Live)">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 12, opacity: 0.75 }}>Headlines from configured feeds</span>
+              <button
+                type="button"
+                onClick={refresh}
+                style={{
+                  fontSize: 11,
+                  padding: "4px 8px",
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  borderRadius: 8,
+                  color: "inherit",
+                  cursor: "pointer",
+                }}
+              >
+                Refresh
+              </button>
+            </div>
+            <div style={{ display: "grid", gap: 8, maxHeight: 280, overflowY: "auto" }}>
+              {headlines.length === 0 && (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Polling RSS… new headlines will appear here.</div>
+              )}
+              {headlines.map((h) => (
+                <a
+                  key={h.id}
+                  href={h.link}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    ...watchItemStyle,
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    gap: 4,
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "flex-start" }}>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>{h.title || "(No title)"}</span>
+                    <span style={{ fontSize: 11, opacity: 0.6 }}>{Math.round(h.relevanceScore * 100)}%</span>
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.7 }}>
+                    {h.sourceLabel} · {new Date(h.publishedAt).toLocaleString()}
+                  </div>
+                  {h.description && (
+                    <div style={{ fontSize: 12, opacity: 0.8, lineHeight: 1.3 }}>{h.description.slice(0, 120)}{h.description.length > 120 ? "…" : ""}</div>
+                  )}
+                </a>
+              ))}
+            </div>
+          </Panel>
+
+          <Panel title="Trend Signals">
+            <div style={{ fontSize: 12, opacity: 0.75, marginBottom: 8 }}>
+              Keyword and activity signals from radar events
+            </div>
+            <div style={{ display: "grid", gap: 8, maxHeight: 220, overflowY: "auto" }}>
+              {signals.length === 0 && (
+                <div style={{ fontSize: 12, opacity: 0.7 }}>Signals will appear as headlines are processed.</div>
+              )}
+              {signals.map((s) => (
+                <div key={s.id} style={cardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>{s.title}</span>
+                    <span style={{ fontSize: 11, opacity: 0.7 }}>{Math.round(s.relevanceScore * 100)}%</span>
+                  </div>
+                  <div style={{ fontSize: 11, opacity: 0.8, marginTop: 4 }}>{s.description}</div>
+                  <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>
+                    {s.type} · {new Date(s.at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
             </div>
           </Panel>
         </div>
