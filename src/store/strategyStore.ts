@@ -75,6 +75,10 @@ interface StrategyState {
   // Wallet address for agents (from wallet store or user input)
   walletAddress: string | null;
   setWalletAddress: (addr: string | null) => void;
+
+  // Orchestra kill switch (persisted, visible in UI) – pause all strategy agent suggestions
+  orchestraKillSwitch: boolean;
+  setOrchestraKillSwitch: (on: boolean) => void;
 }
 
 const defaultPnL = (id: StrategyId): StrategyPnL => ({
@@ -145,7 +149,10 @@ export const useStrategyStore = create<StrategyState>()(
 
       walletAddress: null,
       setWalletAddress: (addr) => set({ walletAddress: addr }),
+
+      orchestraKillSwitch: false,
+      setOrchestraKillSwitch: (on) => set({ orchestraKillSwitch: on }),
     }),
-    { name: 'xrpl-control-room-strategies', partialize: (s) => ({ enabled: s.enabled, maxExposureXRP: s.maxExposureXRP }) }
+    { name: 'xrpl-control-room-strategies', partialize: (s) => ({ enabled: s.enabled, maxExposureXRP: s.maxExposureXRP, orchestraKillSwitch: s.orchestraKillSwitch }) }
   )
 );

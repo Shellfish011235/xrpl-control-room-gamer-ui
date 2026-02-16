@@ -13,6 +13,7 @@ import {
   useAlertStore,
   useAlertNotifications,
   requestNotificationPermission,
+  alertEngine,
   type Alert,
   type AlertChannel,
   type AlertCategory,
@@ -187,6 +188,14 @@ export function AlertBuilder({ compact = false }: AlertBuilderProps) {
               onToggle={() => updateChannelConfig({
                 telegram: { ...channelConfig.telegram, enabled: !channelConfig.telegram.enabled }
               })}
+              testButton={
+                channelConfig.telegram.botToken && channelConfig.telegram.chatId ? (
+                  <TelegramDiscordTestButton
+                    label="Test Telegram"
+                    onTest={async () => alertEngine.sendTestTelegram(channelConfig.telegram)}
+                  />
+                ) : null
+              }
             >
               <div className="space-y-2 mt-2">
                 <input
@@ -218,6 +227,14 @@ export function AlertBuilder({ compact = false }: AlertBuilderProps) {
               onToggle={() => updateChannelConfig({
                 discord: { ...channelConfig.discord, enabled: !channelConfig.discord.enabled }
               })}
+              testButton={
+                channelConfig.discord.webhookUrl?.trim() ? (
+                  <TelegramDiscordTestButton
+                    label="Test Discord"
+                    onTest={async () => alertEngine.sendTestDiscord(channelConfig.discord)}
+                  />
+                ) : null
+              }
             >
               <div className="mt-2">
                 <input
@@ -424,6 +441,39 @@ function TriggerCard({
   );
 }
 
+// Test button for Telegram/Discord
+function TelegramDiscordTestButton({ label, onTest }: { label: string; onTest: () => Promise<{ ok: boolean; error?: string }> }) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const run = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      const r = await onTest();
+      setResult(r);
+    } finally {
+      setTesting(false);
+    }
+  };
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <button
+        type="button"
+        onClick={run}
+        disabled={testing}
+        className="px-2 py-1 rounded text-[10px] border border-cyber-cyan/50 text-cyber-cyan hover:bg-cyber-cyan/10 disabled:opacity-50"
+      >
+        {testing ? 'Sending…' : label}
+      </button>
+      {result && (
+        <span className={`text-[10px] ${result.ok ? 'text-cyber-green' : 'text-cyber-red'}`}>
+          {result.ok ? 'Sent' : result.error || 'Failed'}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // Channel Settings Component
 function ChannelSettings({ 
   title, 
@@ -432,6 +482,7 @@ function ChannelSettings({
   onToggle, 
   status, 
   disabled,
+  testButton,
   children 
 }: { 
   title: string; 
@@ -440,6 +491,7 @@ function ChannelSettings({
   onToggle: () => void;
   status?: string;
   disabled?: boolean;
+  testButton?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -471,17 +523,20 @@ function ChannelSettings({
                        <ChevronRight size={14} className="text-cyber-muted" />
           )}
         </div>
-        <button
-          onClick={onToggle}
-          disabled={disabled}
-          className={`w-10 h-5 rounded-full transition-all ${
-            enabled ? 'bg-cyber-green' : 'bg-cyber-border'
-          }`}
-        >
-          <div className={`w-4 h-4 rounded-full bg-white transition-all ${
-            enabled ? 'translate-x-5' : 'translate-x-0.5'
-          }`} />
-        </button>
+        <div className="flex items-center gap-2">
+          {testButton}
+          <button
+            onClick={onToggle}
+            disabled={disabled}
+            className={`w-10 h-5 rounded-full transition-all ${
+              enabled ? 'bg-cyber-green' : 'bg-cyber-border'
+            }`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white transition-all ${
+              enabled ? 'translate-x-5' : 'translate-x-0.5'
+            }`} />
+          </button>
+        </div>
       </div>
       
       {expanded && children && (

@@ -599,6 +599,59 @@ class AlertEngine {
   }
   
   /**
+   * Send a test message to Telegram (for Settings "Test" button).
+   * Returns { ok: true } or { ok: false, error: string }.
+   */
+  async sendTestTelegram(config: { botToken: string; chatId: string }): Promise<{ ok: boolean; error?: string }> {
+    if (!config.botToken || !config.chatId) return { ok: false, error: 'Bot token and Chat ID required' };
+    const url = `https://api.telegram.org/bot${config.botToken}/sendMessage`;
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: config.chatId,
+          text: '🔔 *Test alert* – If you see this, Telegram delivery is working.',
+          parse_mode: 'Markdown',
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) return { ok: false, error: data.description || `HTTP ${res.status}` };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : 'Request failed' };
+    }
+  }
+
+  /**
+   * Send a test message to Discord webhook (for Settings "Test" button).
+   */
+  async sendTestDiscord(config: { webhookUrl: string }): Promise<{ ok: boolean; error?: string }> {
+    if (!config.webhookUrl?.trim()) return { ok: false, error: 'Webhook URL required' };
+    try {
+      const res = await fetch(config.webhookUrl.trim(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          embeds: [{
+            title: 'Test alert',
+            description: 'If you see this, Discord delivery is working.',
+            color: 0x00ff00,
+            timestamp: new Date().toISOString(),
+          }],
+        }),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        return { ok: false, error: text || `HTTP ${res.status}` };
+      }
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : 'Request failed' };
+    }
+  }
+
+  /**
    * Request browser notification permission
    */
   async requestBrowserPermission(): Promise<boolean> {

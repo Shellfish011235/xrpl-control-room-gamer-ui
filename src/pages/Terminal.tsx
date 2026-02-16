@@ -5,7 +5,7 @@ import React, { useState, useEffect, Component, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Activity, Maximize2, Minimize2,
-  Bell, Clock, AlertTriangle
+  Bell, Clock, AlertTriangle, Pause, Play, Shield
 } from 'lucide-react';
 
 import { useAlertStore, useAlertInitialization } from '../services/alertNotifications';
@@ -20,7 +20,10 @@ import { LedgerImpactTool } from '../components/LedgerImpactTool';
 import { LedgerImpactAnalyzer } from '../components/LedgerImpactAnalyzer';
 import { PathfindingTool } from '../components/PathfindingTool';
 import { StrategiesPanel } from '../components/strategies';
-import { useOrchestra } from '../orchestra/useOrchestra';
+import { useOrchestra, publishToControlRoom } from '../orchestra';
+import { xamanService } from '../services/xaman';
+import { useStrategyStore } from '../store/strategyStore';
+import { useXRPPrice } from '../services/websocketPriceFeeds';
 
 // Error Boundary to catch component crashes
 interface ErrorBoundaryState {
@@ -65,69 +68,30 @@ class ErrorBoundary extends Component<{ children: ReactNode; fallback?: ReactNod
 export default function Terminal() {
   const [expandedPanel, setExpandedPanel] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [xrpPrice, setXrpPrice] = useState<number>(0);
-  const [priceLoading, setPriceLoading] = useState(true);
-  const [priceSource, setPriceSource] = useState<string>('');
-  
+  const { price: xrpPrice, source: priceSource, loading: priceLoading, error: priceError } = useXRPPrice();
+
   useAlertInitialization();
-  const { killSwitch, setKillSwitch } = useOrchestra({
+  const { killSwitch, setKillSwitch, mode, lastPlanReadyForSign, dismissPlanReady } = useOrchestra({
     includeStrategyAgents: true,
     startImmediately: true,
   });
+  const walletAddress = useStrategyStore((s) => s.walletAddress);
+  const [planSigning, setPlanSigning] = useState(false);
+  const [planSignError, setPlanSignError] = useState<string | null>(null);
   const unreadAlerts = useAlertStore(state => state.getUnreadCount());
-  
-  // Fetch live XRP price - try multiple sources
-  useEffect(() => {
-    async function fetchPrice() {
-      // Try CoinGecko first (same as Navigation header)
-      try {
-        const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true'
-        );
-        if (response.ok) {
-          const data = await response.json();
-          if (data.ripple?.usd) {
-            console.log(`[Terminal] XRP price from CoinGecko: $${data.ripple.usd}`);
-            setXrpPrice(data.ripple.usd);
-            setPriceSource('coingecko');
-            setPriceLoading(false);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn('[Terminal] CoinGecko failed:', e);
-      }
-      
-      // Try Binance as backup
-      try {
-        const binanceResp = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT');
-        if (binanceResp.ok) {
-          const data = await binanceResp.json();
-          const price = parseFloat(data.price);
-          if (price > 0) {
-            console.log(`[Terminal] XRP price from Binance: $${price}`);
-            setXrpPrice(price);
-            setPriceSource('binance');
-            setPriceLoading(false);
-            return;
-          }
-        }
-      } catch (e) {
-        console.warn('[Terminal] Binance failed:', e);
-      }
-      
-      // Last resort - use a fixed fallback
-      console.warn('[Terminal] All APIs failed, using fallback price');
-      setXrpPrice(1.92); // Fallback - should update periodically
-      setPriceSource('fallback');
-      setPriceLoading(false);
-    }
-    
-    fetchPrice();
-    // Refresh price every 30 seconds
-    const priceInterval = setInterval(fetchPrice, 30000);
-    return () => clearInterval(priceInterval);
-  }, []);
+
+  const priceSourceLabel =
+    priceLoading
+      ? 'Loading…'
+      : priceSource === 'binance-ws'
+        ? 'Binance (WebSocket)'
+        : priceSource === 'coingecko'
+          ? 'CoinGecko (live)'
+          : priceSource === 'binance'
+            ? 'Binance (live)'
+            : priceSource === 'fallback'
+              ? 'Fallback (APIs unavailable)'
+              : '—';
   
   // Update clock every second
   useEffect(() => {
@@ -166,7 +130,12 @@ export default function Terminal() {
             {/* Price source badge */}
             {!priceLoading && priceSource && (
               <span className="text-[10px] text-cyber-muted px-2 py-0.5 rounded bg-cyber-darker/80" title="Price feed source">
-                Price: {priceSource === 'coingecko' ? 'CoinGecko' : priceSource === 'binance' ? 'Binance' : 'Fallback'}
+                Price: {priceSource === 'binance-ws' ? 'Binance (WS)' : priceSource === 'coingecko' ? 'CoinGecko' : priceSource === 'binance' ? 'Binance' : 'Fallback'}
+              </span>
+            )}
+            {priceError && (
+              <span className="text-[10px] text-cyber-yellow px-2 py-0.5 rounded bg-cyber-darker/80" title="Price feed error">
+                {priceError}
               </span>
             )}
             {/* Time */}
@@ -179,7 +148,125 @@ export default function Terminal() {
           </div>
         </div>
       </motion.div>
-      
+
+      {/* Orchestra kill switch – visible control to pause all strategy agents */}
+      <motion.div
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`mb-4 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border shadow-sm ${
+          killSwitch ? 'bg-cyber-darker border-cyber-yellow/50' : 'bg-cyber-darker border-cyber-green/40'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Shield className={`w-4 h-4 ${killSwitch ? 'text-cyber-yellow' : 'text-cyber-green'}`} />
+          <span className="text-xs font-cyber text-cyber-text">
+            Orchestra agents: {killSwitch ? 'Paused' : 'Running'}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setKillSwitch(!killSwitch)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-cyber transition-colors ${
+            killSwitch
+              ? 'border-cyber-green/50 text-cyber-green bg-cyber-green/10 hover:bg-cyber-green/20'
+              : 'border-cyber-yellow/50 text-cyber-yellow bg-cyber-yellow/10 hover:bg-cyber-yellow/20'
+          }`}
+          title={killSwitch ? 'Resume strategy agent suggestions' : 'Pause all strategy agent suggestions'}
+        >
+          {killSwitch ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+          {killSwitch ? 'Resume' : 'Pause'}
+        </button>
+      </motion.div>
+
+      {/* LIVE: Plan ready for sign – show Sign in Xaman and publish EXECUTION_RESULT on success */}
+      {mode === 'LIVE' && lastPlanReadyForSign && (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-cyber-cyan/40 bg-cyber-darker"
+        >
+          <span className="text-xs font-cyber text-cyber-text">
+            Plan ready ({lastPlanReadyForSign.xrplTxs.length} tx) – sign in Xaman to submit
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={planSigning || !walletAddress || !lastPlanReadyForSign.xrplTxs.length}
+              onClick={async () => {
+                const plan = lastPlanReadyForSign;
+                if (!plan?.xrplTxs.length || !walletAddress) return;
+                setPlanSigning(true);
+                setPlanSignError(null);
+                const onSigned = (req: { txHash?: string }) => {
+                  publishToControlRoom({
+                    type: 'EXECUTION_RESULT',
+                    planId: plan.id,
+                    ok: true,
+                    txHashes: req.txHash ? [req.txHash] : undefined,
+                  });
+                  dismissPlanReady(plan.id);
+                  setPlanSigning(false);
+                  setPlanSignError(null);
+                  xamanService.off('signingSigned', onSigned);
+                  xamanService.off('signingRejected', onRejected);
+                  xamanService.off('signingExpired', onExpired);
+                };
+                const onRejected = () => {
+                  setPlanSigning(false);
+                  setPlanSignError('Signing rejected or expired.');
+                  xamanService.off('signingSigned', onSigned);
+                  xamanService.off('signingRejected', onRejected);
+                  xamanService.off('signingExpired', onExpired);
+                };
+                const onExpired = () => {
+                  setPlanSigning(false);
+                  setPlanSignError('Signing request expired.');
+                  xamanService.off('signingSigned', onSigned);
+                  xamanService.off('signingRejected', onRejected);
+                  xamanService.off('signingExpired', onExpired);
+                };
+                xamanService.on('signingSigned', onSigned);
+                xamanService.on('signingRejected', onRejected);
+                xamanService.on('signingExpired', onExpired);
+                try {
+                  await xamanService.requestCustomTransactionSignature(
+                    plan.xrplTxs[0].payload as any,
+                    walletAddress
+                  );
+                } catch (e) {
+                  console.error('[Terminal] Plan sign request failed:', e);
+                  setPlanSigning(false);
+                  setPlanSignError(e instanceof Error ? e.message : 'Failed to start signing');
+                  xamanService.off('signingSigned', onSigned);
+                  xamanService.off('signingRejected', onRejected);
+                  xamanService.off('signingExpired', onExpired);
+                }
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-cyber-cyan/50 text-cyber-cyan bg-cyber-cyan/10 hover:bg-cyber-cyan/20 disabled:opacity-50 text-xs font-cyber"
+            >
+              {planSigning ? 'Opening Xaman…' : 'Sign in Xaman'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (lastPlanReadyForSign) {
+                  dismissPlanReady(lastPlanReadyForSign.id);
+                  setPlanSignError(null);
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg border border-cyber-muted/50 text-cyber-muted hover:bg-cyber-muted/10 text-xs font-cyber"
+            >
+              Dismiss
+            </button>
+          </div>
+          {planSignError && (
+            <p className="mt-2 text-xs text-cyber-yellow" role="alert">
+              {planSignError}
+            </p>
+          )}
+        </motion.div>
+      )}
+
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left Column - Liquidation Heatmap */}
@@ -210,7 +297,7 @@ export default function Terminal() {
                     compact={expandedPanel !== 'heatmap'}
                   />
                   <div className="text-[9px] text-cyber-muted text-right mt-1 pr-2" aria-label="Liquidation heatmap price source">
-                    Price: {priceLoading ? 'Loading…' : priceSource === 'coingecko' ? 'CoinGecko (live)' : priceSource === 'binance' ? 'Binance (live)' : priceSource === 'fallback' ? 'Fallback (APIs unavailable)' : '—'}
+                    Price: {priceSourceLabel}
                   </div>
                 </div>
               </ErrorBoundary>
@@ -274,7 +361,7 @@ export default function Terminal() {
           <ErrorBoundary>
             <PositionLiquidationRisk
               currentPrice={xrpPrice}
-              priceSourceLabel={priceLoading ? 'Loading…' : priceSource === 'coingecko' ? 'CoinGecko (live)' : priceSource === 'binance' ? 'Binance (live)' : priceSource === 'fallback' ? 'Fallback (APIs unavailable)' : undefined}
+              priceSourceLabel={priceSourceLabel}
             />
           </ErrorBoundary>
         </motion.div>

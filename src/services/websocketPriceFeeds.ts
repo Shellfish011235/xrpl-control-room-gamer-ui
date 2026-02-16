@@ -615,4 +615,76 @@ export function useOrderBook(symbol: string): OrderBook | null {
   return orderBook;
 }
 
+/** Single XRP price with WebSocket-first, REST fallback. Use in Terminal/Navigation for sub-100ms updates. */
+export function useXRPPrice(): {
+  price: number;
+  source: 'binance-ws' | 'coingecko' | 'binance' | 'fallback' | '';
+  loading: boolean;
+  error: string | null;
+} {
+  const { prices: wsPrices, isConnected: wsConnected } = useRealtimePrices();
+  const [restPrice, setRestPrice] = useState<number>(0);
+  const [restSource, setRestSource] = useState<'coingecko' | 'binance' | 'fallback' | ''>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchRest = useCallback(async () => {
+    try {
+      const cg = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true',
+        { mode: 'cors' }
+      );
+      if (cg.ok) {
+        const data = await cg.json();
+        if (data.ripple?.usd) {
+          setRestPrice(data.ripple.usd);
+          setRestSource('coingecko');
+          setError(null);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[useXRPPrice] CoinGecko failed:', e);
+    }
+    try {
+      const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+      if (res.ok) {
+        const data = await res.json();
+        const p = parseFloat(data?.price);
+        if (p > 0) {
+          setRestPrice(p);
+          setRestSource('binance');
+          setError(null);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[useXRPPrice] Binance failed:', e);
+    }
+    setRestPrice(1.92);
+    setRestSource('fallback');
+    setError(null);
+  }, []);
+
+  useEffect(() => {
+    fetchRest();
+    const interval = setInterval(fetchRest, 30000);
+    return () => clearInterval(interval);
+  }, [fetchRest]);
+
+  const xrpAgg = wsPrices.get('XRP');
+  const hasWs = wsConnected && xrpAgg != null && xrpAgg.price > 0;
+
+  useEffect(() => {
+    if (hasWs) setLoading(false);
+    else if (restSource) setLoading(false);
+  }, [hasWs, restSource]);
+
+  const price = hasWs ? xrpAgg!.price : restPrice;
+  const source: 'binance-ws' | 'coingecko' | 'binance' | 'fallback' | '' =
+    hasWs ? 'binance-ws' : restSource;
+
+  return { price, source, loading, error };
+}
+
 export default wsFeeds;

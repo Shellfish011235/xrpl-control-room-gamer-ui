@@ -43,11 +43,27 @@ export function StrategiesPanel({ currentPrice, compact, killSwitch, setKillSwit
 
   // Real AMM quote from ledger for CLOB vs AMM arb (P1)
   const setAmmQuoteFromLedger = useStrategyStore((s) => s.setAmmQuoteFromLedger);
+  const ammQuoteFromLedger = useStrategyStore((s) => s.ammQuoteFromLedger);
+  const [ammQuoteLoading, setAmmQuoteLoading] = React.useState(true);
+  const [ammQuoteError, setAmmQuoteError] = React.useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
     const poll = async () => {
-      const price = await getAmmPriceXRPUSD();
-      if (!cancelled && price != null) setAmmQuoteFromLedger(price);
+      try {
+        const price = await getAmmPriceXRPUSD();
+        if (!cancelled) {
+          if (price != null) {
+            setAmmQuoteFromLedger(price);
+            setAmmQuoteError(null);
+          } else setAmmQuoteError('Unavailable');
+          setAmmQuoteLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setAmmQuoteError('Failed to load');
+          setAmmQuoteLoading(false);
+        }
+      }
     };
     poll();
     const interval = setInterval(poll, 25_000);
@@ -157,6 +173,13 @@ export function StrategiesPanel({ currentPrice, compact, killSwitch, setKillSwit
           </div>
         )}
       </div>
+
+      {(ammQuoteLoading || ammQuoteError || ammQuoteFromLedger != null) && (
+        <p className="text-[10px] text-cyber-muted">
+          AMM quote (arb):{' '}
+          {ammQuoteLoading ? 'Loading…' : ammQuoteError ? ammQuoteError : ammQuoteFromLedger != null ? `$${ammQuoteFromLedger.toFixed(4)}` : '—'}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <SharedPnLGauge />
