@@ -1,10 +1,11 @@
-import { useEffect, lazy, Suspense } from 'react'
+import { useEffect, lazy, Suspense, useRef } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
 import Navigation from './components/Navigation'
 import { GlobalAgentPanel } from './components/GlobalAgentPanel'
 import { PlatformModeBar } from './components/PlatformModeBar'
+import { DisclaimerBanner } from './components/DisclaimerBanner'
 import { ProfileBackground } from './components/ProfileBackground'
 import { RootErrorBoundary } from './components/RootErrorBoundary'
 
@@ -35,6 +36,10 @@ const PayPage = lazy(() => import('./pages/PayPage'))
 const PayAgentsPage = lazy(() => import('./pages/PayPage').then((m) => ({ default: m.PayAgentsPage })))
 const PayAgentsRedirect = lazy(() => import('./pages/PayPage').then((m) => ({ default: m.PayAgentsRedirect })))
 const PayCARVRedirect = lazy(() => import('./pages/PayPage').then((m) => ({ default: m.PayCARVRedirect })))
+const NFTs = lazy(() => import('./pages/NFTs'))
+const Bridges = lazy(() => import('./pages/Bridges'))
+const Agents = lazy(() => import('./pages/Agents'))
+const Optimizer = lazy(() => import('./pages/Optimizer'))
 
 function PageLoader() {
   return (
@@ -54,7 +59,8 @@ const queryClient = new QueryClient({
 })
 
 function App() {
-  // Lazy-init Xaman so its import never blocks or breaks first paint (local or Vercel)
+  // Lazy-init Xaman and wire connect/disconnect → strategy store (Orchestra/strategy agents use correct owner)
+  const xamanSyncCleanupRef = useRef<(() => void) | null>(null)
   useEffect(() => {
     import('./config/xaman').then(({ initializeXaman }) => {
       try {
@@ -65,6 +71,34 @@ function App() {
         console.warn('[Xaman] Init failed (demo mode):', e)
       }
     }).catch((e) => console.warn('[Xaman] Load failed:', e))
+
+    Promise.all([
+      import('./services/xaman'),
+      import('./store/strategyStore'),
+      import('./store/walletStore'),
+    ]).then(([{ xamanService }, { useStrategyStore }, { useWalletStore }]) => {
+      const onConnected = (session: { address: string } | null) => {
+        if (session?.address) useStrategyStore.getState().setWalletAddress(session.address)
+      }
+      const onDisconnected = () => {
+        const { activeWalletId, wallets } = useWalletStore.getState()
+        const active = activeWalletId ? wallets.find((w) => w.id === activeWalletId) : null
+        useStrategyStore.getState().setWalletAddress(active?.address ?? null)
+      }
+      xamanService.on('connected', onConnected)
+      xamanService.on('disconnected', onDisconnected)
+      xamanSyncCleanupRef.current = () => {
+        xamanService.off('connected', onConnected)
+        xamanService.off('disconnected', onDisconnected)
+      }
+      const addr = xamanService.getAddress()
+      if (addr) useStrategyStore.getState().setWalletAddress(addr)
+    }).catch(() => {})
+
+    return () => {
+      xamanSyncCleanupRef.current?.()
+      xamanSyncCleanupRef.current = null
+    }
   }, [])
 
   useEffect(() => {
@@ -90,6 +124,7 @@ function App() {
           <div className="min-h-screen bg-cyber-darker relative">
           <ProfileBackground />
           <Navigation />
+          <DisclaimerBanner />
 
           <main className="relative z-10 pt-16">
             <PlatformModeBar />
@@ -115,6 +150,10 @@ function App() {
                   <Route path="/carv" element={<Navigate to="/pay/carv" replace />} />
                   <Route path="/radar" element={<Navigate to="/network" replace />} />
                   <Route path="/learn" element={<Learn />} />
+                  <Route path="/nfts" element={<NFTs />} />
+                  <Route path="/bridges" element={<Bridges />} />
+                  <Route path="/agents" element={<Agents />} />
+                  <Route path="/optimizer" element={<Optimizer />} />
                   <Route path="/innovation" element={<Navigate to="/network" replace />} />
                 </Routes>
               </AnimatePresence>

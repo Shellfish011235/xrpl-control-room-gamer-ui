@@ -8,6 +8,7 @@ import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Layers, TrendingUp, Zap, ArrowLeftRight, Shield, ChevronDown, ChevronUp, Pause, Play } from 'lucide-react';
 import { useStrategyStore, type StrategyId } from '../../store/strategyStore';
+import { getAmmPriceXRPUSD } from '../../services/xrplDex';
 import { SharedPnLGauge } from './SharedPnLGauge';
 import { DCAChart } from './DCAChart';
 import { ArbitrageHeatmap } from './ArbitrageHeatmap';
@@ -39,6 +40,22 @@ export function StrategiesPanel({ currentPrice, compact, killSwitch, setKillSwit
     setMarketSnapshot({ mid: currentPrice, spreadBps: 25, volatility: 0.01 });
     return () => setMarketSnapshot(null);
   }, [currentPrice, setMarketSnapshot]);
+
+  // Real AMM quote from ledger for CLOB vs AMM arb (P1)
+  const setAmmQuoteFromLedger = useStrategyStore((s) => s.setAmmQuoteFromLedger);
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      const price = await getAmmPriceXRPUSD();
+      if (!cancelled && price != null) setAmmQuoteFromLedger(price);
+    };
+    poll();
+    const interval = setInterval(poll, 25_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [setAmmQuoteFromLedger]);
 
   const [showAdvanced, setShowAdvanced] = React.useState(false);
 

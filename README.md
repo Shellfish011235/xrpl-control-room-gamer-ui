@@ -2,6 +2,8 @@
 
 A cyberpunk-inspired **institutional-grade trading terminal** for monitoring the XRP Ledger ecosystem. Built with React 19, TypeScript, and Tailwind CSS.
 
+**Florida-based, non-custodial XRPL dashboard – experimental. Educational/sim only. All execution via Xaman (user signs). No custody.**
+
 ![XRPL Control Room](https://img.shields.io/badge/XRPL-Control%20Room-00d4ff?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiMwMGQ0ZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIvPjwvc3ZnPg==)
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)
@@ -331,6 +333,11 @@ The workflow **`.github/workflows/cline-review.yml`** runs on pull requests and 
 **Phased strategy:** Prototypes and community feedback first; see **[ROADMAP.md](./ROADMAP.md)** for the full plan (simulations → testnet → compliant APIs → funding → document & audit). **Regulatory watch:** [REGULATORY-WATCH.md](./REGULATORY-WATCH.md).
 
 ### Shipped
+- [x] **NFT Arena (Phase 1)** – `/nfts`: XLS-20 gallery, mint (Xaman), portfolio, trade (BETA)
+- [x] **Cross-Chain Nexus** – `/bridges`: Bridge flows XRPL ↔ EVM/Solana (BETA)
+- [x] **Agent Hub (Phase 8)** – `/agents`: OpenClaw-style dashboard, Wake/heartbeat (30s), persistent memory, 3 skills (path, NFT, bridge)
+- [x] **Phase 0** – Global disclaimer banner, Testnet/Mainnet toggle (red mainnet warning), Premium placeholder, README compliance line
+- [x] **Liquidity Path Optimizer (Phase 1)** – `/optimizer`: Liquidity Nexus, ranked paths (XRPL + AMM + bridge), cost/speed/risk, Recharts, favorites
 - [x] Real-time WebSocket price feeds (Terminal)
 - [x] Liquidation heatmap visualization (Terminal)
 - [x] Advanced risk metrics (VaR, Sharpe, etc.)
@@ -367,7 +374,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-MIT License - feel free to use this project for your own purposes.
+**Software:** [MIT License](LICENSE) – feel free to use this project for your own purposes.
+
+**Operating / monetizing:** You are responsible for having any required **regulatory or business licenses** (e.g. money transmission, securities, subscriptions) in place before offering paid tiers or fee flows. See **[docs/LICENSES-AND-COMPLIANCE.md](docs/LICENSES-AND-COMPLIANCE.md)** and [docs/FLORIDA-NOT-MONEY-TRANSMITTER.md](docs/FLORIDA-NOT-MONEY-TRANSMITTER.md). Not legal advice.
 
 ## 🔗 Links
 

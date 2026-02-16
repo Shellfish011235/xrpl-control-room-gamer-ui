@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Wallet, Bot, BookOpen } from 'lucide-react'
+import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Wallet, Bot, BookOpen, LayoutGrid, ArrowRightLeft, Sparkles, Zap } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { usePlatformModeStore } from '../store/platformModeStore'
@@ -206,6 +206,10 @@ const navItems = [
   { path: '/', label: 'Home', icon: User },
   { path: '/network', label: 'Network', icon: Globe },
   { path: '/terminal', label: 'Terminal', icon: Activity },
+  { path: '/optimizer', label: 'Optimizer', icon: Zap },
+  { path: '/nfts', label: 'NFT Arena', icon: LayoutGrid },
+  { path: '/bridges', label: 'Bridges', icon: ArrowRightLeft },
+  { path: '/agents', label: 'Agents', icon: Sparkles },
   { path: '/learn', label: 'Learn', icon: BookOpen },
   { path: '/underworld', label: 'Regulations', icon: Skull },
   { path: '/memetic-lab', label: 'Trending', icon: Brain },

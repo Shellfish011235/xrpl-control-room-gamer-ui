@@ -53,6 +53,10 @@ interface StrategyState {
   marketSnapshot: { mid: number; spreadBps: number; volatility: number } | null;
   setMarketSnapshot: (s: { mid: number; spreadBps?: number; volatility?: number } | null) => void;
 
+  // Real AMM quote from ledger (XRP/USD pool) for CLOB vs AMM arb; takes precedence over synthetic
+  ammQuoteFromLedger: number | null;
+  setAmmQuoteFromLedger: (price: number | null) => void;
+
   // DCA: entry levels and avg cost for chart
   dcaEntries: DCAEntry[];
   dcaAvgCost: number | null;
@@ -100,6 +104,9 @@ export const useStrategyStore = create<StrategyState>()(
             ? { mid: s.mid, spreadBps: s.spreadBps ?? 0, volatility: s.volatility ?? 0 }
             : null,
         }),
+
+      ammQuoteFromLedger: null,
+      setAmmQuoteFromLedger: (price) => set({ ammQuoteFromLedger: price }),
 
       dcaEntries: [],
       dcaAvgCost: null,

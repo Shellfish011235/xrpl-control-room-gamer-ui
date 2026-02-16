@@ -82,16 +82,27 @@ const buildRegulatoryTimeline = () => {
   }))
 }
 
-// Build alerts from recent high-impact items
+// Build alerts from recent high-impact items; use real dates from data (no fake "2 hours ago")
 const buildAlerts = () => {
   const highImpact = regulatoryItems
     .filter(i => i.status === 'pending' || i.status === 'proposed')
     .filter(i => i.xrplImpact === 'positive' || i.xrplImpact === 'negative')
     .slice(0, 5)
-  
-  return highImpact.map((item, idx) => ({
+
+  const formatDate = (item: RegulatoryItem) => {
+    const raw = item.effectiveDate || item.lastUpdated
+    if (!raw) return item.status === 'pending' ? 'Pending' : 'Proposed'
+    try {
+      const d = new Date(raw)
+      return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric', ...(d.getDate() !== 1 ? { day: 'numeric' } : {}) })
+    } catch {
+      return raw
+    }
+  }
+
+  return highImpact.map(item => ({
     title: `${item.type} - ${item.jurisdiction}`,
-    time: idx === 0 ? '2 hours ago' : idx === 1 ? '5 hours ago' : idx === 2 ? '1 day ago' : `${idx + 1} days ago`,
+    time: item.effectiveDate ? `Effective ${formatDate(item)}` : item.lastUpdated ? `Updated ${formatDate(item)}` : formatDate(item),
     severity: item.xrplImpact === 'negative' ? 'high' : item.status === 'pending' ? 'medium' : 'low',
     summary: item.title,
     url: item.url,
@@ -134,7 +145,13 @@ export function RegulationsContent() {
               </div>
             </div>
           </div>
-          <p className="text-cyber-muted">Regulatory Intelligence & Compliance Monitoring • {stats.total} tracked items across {stats.countriesWithProfiles} jurisdictions</p>
+          <p className="text-cyber-muted">
+            Regulatory Intelligence & Compliance Monitoring · {stats.total} tracked items across {stats.countriesWithProfiles} jurisdictions
+          </p>
+          <p className="text-[10px] text-cyber-muted mt-1 flex items-center gap-2">
+            <Clock size={10} />
+            Data as of {stats.dataAsOf ?? 'N/A'} · Curated dataset, not live. Verify with official sources for latest.
+          </p>
         </motion.div>
         
         {/* Stats Bar */}
@@ -187,6 +204,9 @@ export function RegulationsContent() {
             </div>
           </div>
         </motion.div>
+        <p className="text-[10px] text-cyber-muted -mt-2 mb-4">
+          Corridor & bridge metrics as of {corridorStats.dataAsOf ?? 'N/A'} · Curated.
+        </p>
         
         {/* Alert Ticker */}
         <motion.div 
@@ -197,8 +217,9 @@ export function RegulationsContent() {
         >
           <div className="flex items-center gap-4 overflow-hidden">
             <div className="flex items-center gap-2 shrink-0">
-              <Bell size={14} className="text-cyber-purple animate-pulse" />
-              <span className="font-cyber text-xs text-cyber-purple">LIVE ALERTS</span>
+              <Bell size={14} className="text-cyber-purple" />
+              <span className="font-cyber text-xs text-cyber-purple">TRACKED ALERTS</span>
+              <span className="text-[9px] text-cyber-muted">(curated)</span>
             </div>
             <div className="flex-1 overflow-hidden">
               <motion.div 

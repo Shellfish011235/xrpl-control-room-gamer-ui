@@ -418,6 +418,60 @@ export async function getCrossPaymentQuote(
   }
 }
 
+// ==================== AMM INFO (real quote for CLOB vs AMM arb) ====================
+
+const USD_BITSTAMP_ISSUER = 'rvYAfWj5gh67oV6fW32ZzP3Aw4Eubs59B';
+
+/**
+ * Fetch AMM pool info for an asset pair (e.g. XRP/USD).
+ * Uses amm_info; returns raw result or null if pool not found / error.
+ */
+export async function getAmmInfo(
+  asset: Currency,
+  asset2: Currency
+): Promise<{ amount: string | { currency: string; issuer?: string; value: string }; amount2: string | { currency: string; issuer?: string; value: string } } | null> {
+  try {
+    const a1 = asset.currency === 'XRP' ? { currency: 'XRP' } : { currency: asset.currency, issuer: asset.issuer! };
+    const a2 = asset2.currency === 'XRP' ? { currency: 'XRP' } : { currency: asset2.currency, issuer: asset2.issuer! };
+    const result = await xrplRequest('amm_info', { asset: a1, asset2: a2 });
+    if (!result?.amm) return null;
+    return { amount: result.amm.amount, amount2: result.amm.amount2 };
+  } catch (e) {
+    console.warn('[DEX] amm_info failed:', e);
+    return null;
+  }
+}
+
+/**
+ * Get spot price of XRP in USD from the XRPL AMM pool (XRP/USD Bitstamp).
+ * Returns USD per 1 XRP, or null if pool missing / error.
+ * Used by ArbitrageAgent for real CLOB vs AMM spread.
+ */
+export async function getAmmPriceXRPUSD(): Promise<number | null> {
+  const info = await getAmmInfo(
+    { currency: 'XRP' },
+    { currency: 'USD', issuer: USD_BITSTAMP_ISSUER }
+  );
+  if (!info) return null;
+
+  const parseXrp = (v: string | { value: string }): number => {
+    if (typeof v === 'string') return parseInt(v, 10) / 1_000_000; // drops -> XRP
+    return 0;
+  };
+  const parseIou = (v: string | { value: string }): number => {
+    if (typeof v === 'object' && v && 'value' in v) return parseFloat((v as { value: string }).value);
+    return 0;
+  };
+
+  const amt1 = info.amount;
+  const amt2 = info.amount2;
+  const isFirstXrp = typeof amt1 === 'string';
+  const xrpAmount = isFirstXrp ? parseXrp(amt1) : parseXrp(amt2);
+  const usdAmount = isFirstXrp ? parseIou(amt2) : parseIou(amt1);
+  if (xrpAmount <= 0 || usdAmount <= 0) return null;
+  return usdAmount / xrpAmount; // USD per 1 XRP
+}
+
 // ==================== LIQUIDITY ANALYSIS ====================
 
 /**
@@ -549,6 +603,8 @@ export const XRPLDex = {
   getOrderBook,
   getTradeQuote,
   getCrossPaymentQuote,
+  getAmmInfo,
+  getAmmPriceXRPUSD,
   analyzeLiquidity,
   buildTradeTransaction,
   buildCrossPaymentTransaction,

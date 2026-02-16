@@ -39,7 +39,7 @@ export function useOrchestra(options?: { startImmediately?: boolean; includeStra
           'strategy:shared:exposureXRP': s.exposureXRP,
           'wallet:address': s.walletAddress,
           'strategy:arb:clobMid': s.marketSnapshot?.mid,
-          'strategy:arb:ammQuote': s.marketSnapshot ? s.marketSnapshot.mid * (1 + (s.marketSnapshot.spreadBps ?? 0) / 10000) : undefined,
+          'strategy:arb:ammQuote': s.ammQuoteFromLedger ?? (s.marketSnapshot ? s.marketSnapshot.mid * (1 + (s.marketSnapshot.spreadBps ?? 0) / 10000) : undefined),
         };
       });
     }

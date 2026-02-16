@@ -14,10 +14,16 @@
 // =============================================================================
 
 // Platform fee wallet - XRPL Control Room earns 1% on ALL transactions
+// Set VITE_OPENCLAW_PLATFORM_FEE_DISABLED=true to disable until legal sign-off (see docs/COMPLIANCE-CHECKLIST.md)
 export const PLATFORM_FEE_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
 export const PLATFORM_FEE_PERCENT = 0.01; // 1% to platform
 export const CREATOR_FEE_PERCENT = 0.02;  // 2% to skill creator
 export const TOTAL_FEE_PERCENT = 0.03;    // 3% total fees
+
+// Default TRUE = compliant (no platform fee). Set VITE_OPENCLAW_PLATFORM_FEE_DISABLED=false only after legal sign-off.
+export const PLATFORM_FEE_DISABLED =
+  typeof import.meta === 'undefined' ||
+  String((import.meta as { env?: Record<string, string> }).env?.VITE_OPENCLAW_PLATFORM_FEE_DISABLED).toLowerCase() !== 'false';
 
 // Network configuration
 export const XRPL_MAINNET = 'wss://xrplcluster.com';
@@ -135,17 +141,18 @@ export class OpenClawXRPLPayments {
   ): Promise<{ success: boolean; txHash: string; platformFee: number; creatorFee: number }> {
     if (!this.agentWallet) throw new Error('Initialize wallet first');
 
-    // Calculate fee split
-    const platformFee = amountXRP * PLATFORM_FEE_PERCENT;
+    // Calculate fee split (platform fee can be disabled until legal sign-off)
+    const platformFee = PLATFORM_FEE_DISABLED ? 0 : amountXRP * PLATFORM_FEE_PERCENT;
     const creatorFee = amountXRP * CREATOR_FEE_PERCENT;
     const recipientAmount = amountXRP - platformFee - creatorFee;
     const creatorAddress = creatorWallet || PLATFORM_FEE_WALLET;
 
     console.log(`[OpenClaw XRPL] Payment for skill "${skillName}":`);
     console.log(`  Total: ${amountXRP} XRP`);
-    console.log(`  To recipient: ${recipientAmount.toFixed(6)} XRP (97%)`);
-    console.log(`  To skill creator (${creatorAddress}): ${creatorFee.toFixed(6)} XRP (2%)`);
-    console.log(`  Platform fee (${PLATFORM_FEE_WALLET}): ${platformFee.toFixed(6)} XRP (1%)`);
+    console.log(`  To recipient: ${recipientAmount.toFixed(6)} XRP`);
+    if (creatorFee > 0) console.log(`  To skill creator (${creatorAddress}): ${creatorFee.toFixed(6)} XRP (2%)`);
+    if (platformFee > 0) console.log(`  Platform fee (${PLATFORM_FEE_WALLET}): ${platformFee.toFixed(6)} XRP (1%)`);
+    if (PLATFORM_FEE_DISABLED) console.log(`  Platform fee disabled (VITE_OPENCLAW_PLATFORM_FEE_DISABLED)`);
 
     // In real implementation, submit 3 transactions:
     // 1. Pay recipient (97%)

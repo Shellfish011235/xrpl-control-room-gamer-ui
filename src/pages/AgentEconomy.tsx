@@ -373,60 +373,42 @@ export default function AgentEconomy() {
   const [tab, setTab] = useState<AgentEconomyTabId>('agents');
 
   return (
-    <div className="min-h-screen p-4 md:p-8 pt-24 md:pt-28">
-      <div className="max-w-3xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-cyber-glow/20">
+    <div className="min-h-screen px-4 md:px-8 pt-24 md:pt-28 pb-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="p-2.5 rounded-xl bg-cyber-glow/20 shrink-0">
               <Cpu size={24} className="text-cyber-glow" />
             </div>
-            <div>
-              <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">AGENT ECONOMY</h1>
+            <div className="min-w-0">
+              <h1 className="font-cyber text-xl md:text-2xl text-cyber-text tracking-wider">AGENT ECONOMY</h1>
               <p className="text-sm text-cyber-muted">Paid actions · Sign in Xaman · Receipts</p>
             </div>
           </div>
-          <p className="text-cyber-muted text-sm max-w-2xl">
+          <p className="text-cyber-muted text-sm max-w-2xl mb-5">
             Structured actions with clear price and destination. You sign; funds go wallet-to-wallet. No custody.
           </p>
 
-          {/* How AI payments, OpenClaw, and Agent Economy fit together */}
-          <div className="mt-4 p-4 rounded-xl border border-cyber-border/80 bg-cyber-darker/40">
-            <p className="text-[11px] text-cyber-muted uppercase tracking-wider font-medium mb-3">AI agent economy in this app</p>
+          <div className="p-5 rounded-xl border border-cyber-border bg-cyber-darker/40 space-y-4">
+            <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-medium">In this app</p>
             <div className="flex flex-wrap gap-2">
-              <Link
-                to="/pay"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-glow/10 border border-cyber-glow/30 text-cyber-glow hover:bg-cyber-glow/20 text-xs font-cyber transition-colors"
-              >
-                <Zap size={14} />
-                Micropayments · OpenClaw &amp; AI streams
+              <Link to="/pay" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-glow/10 border border-cyber-glow/30 text-cyber-glow hover:bg-cyber-glow/20 text-xs font-cyber transition-colors">
+                <Zap size={14} /> Micropayments · Streams
               </Link>
-              <Link
-                to="/pay"
-                state={{ tab: 'openclaw' }}
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-green/10 border border-cyber-green/30 text-cyber-green hover:bg-cyber-green/20 text-xs font-cyber transition-colors"
-              >
-                <DollarSign size={14} />
-                OpenClaw revenue
+              <Link to="/pay" state={{ tab: 'openclaw' }} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-green/10 border border-cyber-green/30 text-cyber-green hover:bg-cyber-green/20 text-xs font-cyber transition-colors">
+                <DollarSign size={14} /> OpenClaw (fee wallet)
               </Link>
-              <Link
-                to="/pay/carv"
-                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/20 text-xs font-cyber transition-colors"
-              >
-                <Bot size={14} />
-                Secure Payment Agent (pay in chat)
+              <Link to="/pay/carv" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/20 text-xs font-cyber transition-colors">
+                <Bot size={14} /> Chat pay (CARV)
               </Link>
             </div>
-            <p className="text-[10px] text-cyber-muted mt-2">This page = receipts, spend caps, and paid actions. OpenClaw = earn from plugin. CARV = AI payment agent with Xaman.</p>
-            <p className="text-[9px] text-cyber-muted mt-1.5 border-t border-cyber-border/50 pt-2">We do not transmit money or hold your funds. You sign all transactions in your own wallet. Use must comply with applicable laws (e.g. Florida, US). Not legal or financial advice. See compliance docs in repo.</p>
+            <p className="text-[10px] text-cyber-muted">Receipts, caps, paid actions here. OpenClaw = fee wallet (off by default). CARV = pay in chat.</p>
+            <p className="text-[9px] text-cyber-muted border-t border-cyber-border/50 pt-3">We do not transmit money or hold your funds. You sign in your own wallet. Comply with applicable laws. Not legal or financial advice.</p>
           </div>
         </motion.div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-cyber-border pb-2">
+        <div className="flex flex-wrap gap-2 border-b border-cyber-border pb-3">
           {agentEconomyTabs.map((t) => {
             const Icon = t.icon;
             const isActive = tab === t.id;
@@ -434,8 +416,8 @@ export default function AgentEconomy() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-cyber transition-colors ${
-                  isActive ? 'bg-cyber-glow/20 text-cyber-glow border border-cyber-glow/50' : 'text-cyber-muted hover:text-cyber-text border border-transparent'
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-cyber transition-colors ${
+                  isActive ? 'bg-cyber-glow/20 text-cyber-glow border border-cyber-glow/50' : 'text-cyber-muted hover:text-cyber-text border border-transparent hover:bg-cyber-border/30'
                 }`}
               >
                 <Icon size={16} />

@@ -2,7 +2,7 @@
 
 **Purpose:** Keep the XRPL Control Room app clearly within Florida and US regulations. **You are not a money transmitter.** This doc defines capability boundaries so the product does not stray into activities that could require a money transmitter license (Florida Ch. 560, F.S., or FinCEN/state equivalents).
 
-**This is not legal advice.** Have a Florida-licensed attorney (and US crypto/fintech counsel) confirm these boundaries for your exact product and any fee flows.
+**This is not legal advice.** Have a Florida-licensed attorney (and US crypto/fintech counsel) confirm these boundaries for your exact product and any fee flows. See also **[LICENSES-AND-COMPLIANCE.md](./LICENSES-AND-COMPLIANCE.md)** for what licenses you need in place before monetizing.
 
 ---
 

@@ -913,6 +913,9 @@ export function getPassLikelihoodColor(likelihood: number | null): string {
   return 'bg-cyber-red';
 }
 
+/** Data currency: when the curated regulatory dataset was last updated. Shown on Regulations dashboard. */
+export const REGULATORY_DATA_AS_OF = 'Feb 2026';
+
 // Stats calculation
 export function getRegulatoryStats() {
   return {
@@ -923,5 +926,6 @@ export function getRegulatoryStats() {
     total: regulatoryItems.length,
     xrplPositive: regulatoryItems.filter(i => i.xrplImpact === 'positive').length,
     countriesWithProfiles: countryRegulatoryProfiles.length,
+    dataAsOf: REGULATORY_DATA_AS_OF,
   };
 }

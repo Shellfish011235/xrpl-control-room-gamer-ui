@@ -43,3 +43,6 @@ coverage
 *.pem
 .vercel
 .netlify
+
+# Cursor
+.cursor/

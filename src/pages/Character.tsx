@@ -7,18 +7,74 @@ import {
   Calendar, MessageSquare, Heart, ExternalLink,
   Image as ImageIcon, Loader2, X as XIcon, RefreshCw, Coins, Copy, Check, Edit2,
   Palette, Sparkles, UserCircle, PieChart as PieChartIcon,
-  Skull, BookOpen, Activity, Brain, Database, TrendingUp
+  Skull, BookOpen, Activity, Brain, Database, TrendingUp,
+  Layers, ArrowLeftRight
 } from 'lucide-react'
 import { PortfolioContent } from './Clinic'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { WalletConnect } from '../components/WalletConnect'
 import { useProfileStore, type BackgroundStyle } from '../store/profileStore'
 import { useWalletStore } from '../store/walletStore'
+import { useStrategyStore } from '../store/strategyStore'
 import { useAssetsStore } from '../store/assetsStore'
 import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/themeStore'
 import type { NFTAsset, MemeToken } from '../store/assetsStore'
 import { BackgroundPreview } from '../modules/theme/BackgroundPreview'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
+
+// Strategy status card for Home: which strategies are on, exposure, PnL (sim), link to Terminal
+function StrategyStatusCard() {
+  const enabled = useStrategyStore((s) => s.enabled)
+  const exposureXRP = useStrategyStore((s) => s.exposureXRP)
+  const maxExposureXRP = useStrategyStore((s) => s.maxExposureXRP)
+  const pnlByStrategy = useStrategyStore((s) => s.pnlByStrategy)
+  const totalRealized = Object.values(pnlByStrategy).reduce((sum, p) => sum + p.realizedPnL, 0)
+  const totalTrades = Object.values(pnlByStrategy).reduce((sum, p) => sum + p.tradesCount, 0)
+  const activeCount = Object.values(enabled).filter(Boolean).length
+  return (
+    <Link
+      to="/terminal"
+      className="cyber-panel p-4 block rounded-lg border border-cyber-border hover:border-cyber-cyan/50 transition-colors text-left"
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-cyber text-xs text-cyber-muted uppercase tracking-wider">Strategy status</span>
+        <ChevronRight size={14} className="text-cyber-muted" />
+      </div>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {[
+          { id: 'grid' as const, label: 'Grid', icon: Layers },
+          { id: 'dca' as const, label: 'DCA', icon: TrendingUp },
+          { id: 'mm' as const, label: 'MM', icon: Zap },
+          { id: 'arbitrage' as const, label: 'Arb', icon: ArrowLeftRight },
+        ].map(({ id, label, icon: Icon }) => (
+          <span
+            key={id}
+            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] border ${
+              enabled[id] ? 'border-cyber-cyan/50 text-cyber-cyan bg-cyber-cyan/10' : 'border-cyber-muted/50 text-cyber-muted'
+            }`}
+          >
+            <Icon size={10} />
+            {label}
+          </span>
+        ))}
+      </div>
+      {activeCount === 0 && totalTrades === 0 ? (
+        <p className="text-[10px] text-cyber-muted">No strategies enabled — open Terminal to unlock</p>
+      ) : (
+        <>
+          <div className="flex items-center gap-4 text-[10px] text-cyber-muted">
+            <span>Exposure: {exposureXRP.toFixed(0)} / {maxExposureXRP} XRP</span>
+            {(totalRealized !== 0 || totalTrades > 0) && (
+              <span>PnL (sim): {totalRealized >= 0 ? '+' : ''}{totalRealized.toFixed(2)} · {totalTrades} trades</span>
+            )}
+          </div>
+          <p className="text-[10px] text-cyber-cyan mt-1">Terminal → Strategies</p>
+        </>
+      )}
+    </Link>
+  )
+}
+
 // Upcoming events: XRP/XRPL/Ripple + major crypto. endDate = last day (YYYY-MM-DD); events drop off after that.
 const communityEventsAll: { date: string; title: string; type: string; url: string; endDate: string }[] = [
   { date: 'Feb 10–12, 2026', title: 'Consensus Hong Kong — policy, DeFi, institutions (XRP/crypto)', type: 'conference', url: 'https://www.coindesk.com/events/consensus-hong-kong-2026/', endDate: '2026-02-12' },
@@ -799,6 +855,9 @@ export default function Character() {
                 )
               })}
             </div>
+
+            {/* Strategy status: which strategies on, exposure, PnL (sim) — link to Terminal */}
+            <StrategyStatusCard />
 
             {/* 3) Profile & Portfolio section boxes (switch to that tab) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

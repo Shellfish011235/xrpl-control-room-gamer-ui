@@ -1249,6 +1249,11 @@ export function getCorridorStats() {
       ? `$${(totalVolume / 1000).toFixed(1)}B+`
       : '—';
 
+  const dataAsOf =
+    paymentCorridors.find(c => c.dataAsOf)?.dataAsOf ||
+    crossChainBridges.find(b => b.dataAsOf)?.dataAsOf ||
+    'Feb 2026';
+
   return {
     totalCorridors: paymentCorridors.length,
     highVolumeCorridors: paymentCorridors.filter(c => c.volume === 'high').length,
@@ -1259,6 +1264,7 @@ export function getCorridorStats() {
     connectedChains: xrplConnectedChains.filter(c => c.status === 'mainnet').length,
     activeBridges: crossChainBridges.filter(b => b.status === 'mainnet').length,
     estimatedMonthlyVolume,
+    dataAsOf,
   };
 }
 

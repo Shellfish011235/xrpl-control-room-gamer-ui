@@ -21,4 +21,7 @@ export type SkillName =
   | 'cyberpunk-ui'
   | 'real-time-data'
   | 'error-handling-master'
-  | 'performance-optimizer';
+  | 'performance-optimizer'
+  | 'xrpl-path-optimizer'
+  | 'nft-raider'
+  | 'bridge-query';

@@ -41,7 +41,7 @@ export function AgentEconomyHub({ compact = false }: { compact?: boolean }) {
 
   if (compact) {
     return (
-      <div className="rounded-lg border border-cyber-border bg-cyber-darker/80 p-3 space-y-2">
+      <div className="rounded-xl border border-cyber-border bg-cyber-darker/80 p-4 space-y-3">
         <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber">Use on XRPL now</p>
         <div className="flex flex-wrap gap-2">
           <button

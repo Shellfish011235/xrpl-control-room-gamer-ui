@@ -1,6 +1,5 @@
-// OpenClaw Revenue Dashboard
-// Track REAL earnings from OpenClaw agent economy integration
-// Live XRPL Mainnet transactions - no simulation
+// OpenClaw Dashboard
+// Shows transaction history for the fee wallet. Platform fee is OFF by default (compliant); enable only after legal sign-off.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -8,6 +7,7 @@ import {
   ExternalLink, Copy, Check,
   Layers, Code, RefreshCw
 } from 'lucide-react';
+import { PLATFORM_FEE_DISABLED } from '../../integrations/openclaw/OpenClawXRPL';
 
 // =============================================================================
 // TYPES
@@ -44,7 +44,6 @@ export function OpenClawDashboard() {
   const [loading, setLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  // Platform fee wallet - XRPL Control Room earns 1% on all transactions
   const PLATFORM_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
 
   // Fetch REAL transaction data from XRPL Mainnet (no balance - privacy)
@@ -137,216 +136,199 @@ export function OpenClawDashboard() {
   // ==========================================================================
 
   return (
-    <div className="bg-cyber-darker rounded-lg border border-cyber-border overflow-hidden">
+    <div className="bg-cyber-darker rounded-xl border border-cyber-border overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-cyber-border bg-gradient-to-r from-green-500/20 to-cyber-cyan/20">
-        <div className="flex items-center justify-between mb-3">
+      <div className="p-5 border-b border-cyber-border bg-gradient-to-r from-green-500/15 to-cyber-cyan/15">
+        <div className="flex items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500 animate-pulse">
+            <div className="p-2.5 rounded-xl bg-green-500/90 shrink-0">
               <Bot size={20} className="text-white" />
             </div>
-            <div>
-              <h2 className="font-cyber text-cyber-text">XRPL CONTROL ROOM</h2>
-              <p className="text-[10px] text-green-400 font-bold">🟢 MAINNET LIVE - Real XRP Transactions</p>
+            <div className="min-w-0">
+              <h2 className="font-cyber text-cyber-text text-sm tracking-wide">XRPL CONTROL ROOM</h2>
+              <p className="text-[10px] font-medium mt-0.5 truncate">
+                {PLATFORM_FEE_DISABLED ? 'Platform fee off (compliant default)' : 'Mainnet · Real XRP'}
+              </p>
             </div>
           </div>
-          
           <button
             onClick={fetchRealData}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-darker/80 border border-cyber-border text-cyber-muted hover:text-cyber-cyan hover:border-cyber-cyan/50 transition-colors shrink-0"
           >
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            {loading ? 'Fetching...' : 'Refresh'}
+            <span className="text-xs">{loading ? 'Refreshing' : 'Refresh'}</span>
           </button>
         </div>
-
-        {/* Platform Wallet */}
-        <div className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50">
-          <span className="text-[10px] text-cyber-muted">PLATFORM FEE WALLET:</span>
-          <code className="text-xs text-cyber-cyan flex-1">{PLATFORM_WALLET}</code>
-          <button onClick={copyWallet} className="p-1 hover:bg-cyber-cyan/20 rounded">
-            {copiedWallet ? <Check size={12} className="text-cyber-green" /> : <Copy size={12} className="text-cyber-muted" />}
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-cyber-darker/60 border border-cyber-border/80">
+          <span className="text-[10px] text-cyber-muted uppercase tracking-wider shrink-0">
+            {PLATFORM_FEE_DISABLED ? 'Fee wallet (disabled)' : 'Platform fee wallet'}
+          </span>
+          <code className="text-xs text-cyber-cyan flex-1 truncate font-mono">{PLATFORM_WALLET}</code>
+          <button onClick={copyWallet} className="p-1.5 rounded-md hover:bg-cyber-cyan/20 text-cyber-muted hover:text-cyber-cyan transition-colors shrink-0">
+            {copiedWallet ? <Check size={12} /> : <Copy size={12} />}
           </button>
         </div>
-        
         {lastUpdate && (
-          <p className="text-[9px] text-cyber-muted mt-2">
-            Last updated: {lastUpdate.toLocaleTimeString()} (auto-refresh every 15s)
+          <p className="text-[9px] text-cyber-muted mt-3">
+            Updated {lastUpdate.toLocaleTimeString()} · auto-refresh 15s
           </p>
         )}
       </div>
 
-      {/* PLATFORM STATUS */}
-      <div className="mx-4 mt-4 p-4 rounded bg-gradient-to-r from-green-500/20 to-cyan-500/20 border-2 border-green-500">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs text-green-400 font-cyber">🟢 PLATFORM ACTIVE</span>
-          <a 
-            href={`https://livenet.xrpl.org/accounts/${PLATFORM_WALLET}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-cyan-400 hover:underline"
-          >
-            Verify on XRPL Explorer <ExternalLink size={10} />
-          </a>
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xl font-cyber text-green-400">XRPL Mainnet</p>
-            <p className="text-[10px] text-cyber-muted">Live production network</p>
+      {/* Body: consistent padding and spacing */}
+      <div className="p-5 space-y-5">
+        {/* Status card */}
+        <div className={`p-4 rounded-xl border ${PLATFORM_FEE_DISABLED ? 'bg-cyber-darker/50 border-cyber-border' : 'bg-gradient-to-r from-green-500/10 to-cyan-500/10 border-green-500/40'}`}>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <span className={`text-xs font-cyber uppercase tracking-wider ${PLATFORM_FEE_DISABLED ? 'text-cyber-muted' : 'text-green-400'}`}>
+              {PLATFORM_FEE_DISABLED ? 'Platform fee off' : 'Platform fee active'}
+            </span>
+            <a
+              href={`https://livenet.xrpl.org/accounts/${PLATFORM_WALLET}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-cyber-cyan hover:underline inline-flex items-center gap-1"
+            >
+              Explorer <ExternalLink size={10} />
+            </a>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-cyber text-cyan-400">{stats.totalTransactions}</p>
-            <p className="text-[10px] text-cyber-muted">Total transactions</p>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-lg font-cyber text-cyber-text">XRPL Mainnet</p>
+              <p className="text-[10px] text-cyber-muted">Live network</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-cyber text-cyber-cyan">{stats.totalTransactions}</p>
+              <p className="text-[10px] text-cyber-muted">Transactions</p>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* Stats Grid - PUBLIC METRICS ONLY (no amounts) */}
-      <div className="grid grid-cols-3 gap-3 p-4">
-        <div className="p-3 rounded bg-cyber-cyan/10 border border-cyber-cyan/30">
-          <div className="flex items-center justify-between mb-1">
-            <Activity size={14} className="text-cyber-cyan" />
-            <span className="text-[9px] text-cyber-cyan">TODAY</span>
-          </div>
-          <p className="text-xl font-cyber text-cyber-cyan">
-            {transactions.filter(tx => tx.timestamp >= new Date().setHours(0,0,0,0)).length}
-          </p>
-          <p className="text-[9px] text-cyber-muted">TRANSACTIONS TODAY</p>
         </div>
 
-        <div className="p-3 rounded bg-cyber-purple/10 border border-cyber-purple/30">
-          <div className="flex items-center justify-between mb-1">
-            <Users size={14} className="text-cyber-purple" />
+        {/* Stats grid – equal height cards */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="p-4 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/20 min-h-[72px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <Activity size={14} className="text-cyber-cyan" />
+              <span className="text-[9px] text-cyber-cyan uppercase tracking-wider">Today</span>
+            </div>
+            <p className="text-xl font-cyber text-cyber-cyan mt-1">
+              {transactions.filter(tx => tx.timestamp >= new Date().setHours(0,0,0,0)).length}
+            </p>
+            <p className="text-[9px] text-cyber-muted">Transactions</p>
           </div>
-          <p className="text-xl font-cyber text-cyber-purple">
-            {stats.uniqueSenders}
-          </p>
-          <p className="text-[9px] text-cyber-muted">UNIQUE USERS</p>
+          <div className="p-4 rounded-xl bg-cyber-purple/10 border border-cyber-purple/20 min-h-[72px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <Users size={14} className="text-cyber-purple" />
+              <span className="text-[9px] text-cyber-purple uppercase tracking-wider">Users</span>
+            </div>
+            <p className="text-xl font-cyber text-cyber-purple mt-1">{stats.uniqueSenders}</p>
+            <p className="text-[9px] text-cyber-muted">Unique senders</p>
+          </div>
+          <div className="p-4 rounded-xl bg-cyber-yellow/10 border border-cyber-yellow/20 min-h-[72px] flex flex-col justify-between">
+            <div className="flex items-center justify-between">
+              <Zap size={14} className="text-cyber-yellow" />
+              <span className="text-[9px] text-cyber-yellow uppercase tracking-wider">Total</span>
+            </div>
+            <p className="text-xl font-cyber text-cyber-yellow mt-1">{stats.totalTransactions}</p>
+            <p className="text-[9px] text-cyber-muted">All time</p>
+          </div>
         </div>
 
-        <div className="p-3 rounded bg-cyber-yellow/10 border border-cyber-yellow/30">
-          <div className="flex items-center justify-between mb-1">
-            <Zap size={14} className="text-cyber-yellow" />
+        {/* Transaction feed */}
+        <div className="rounded-xl border border-cyber-border overflow-hidden">
+          <div className={`px-4 py-2.5 border-b flex items-center justify-between ${PLATFORM_FEE_DISABLED ? 'bg-cyber-darker/50 border-cyber-border' : 'bg-green-500/10 border-green-500/30'}`}>
+            <span className={`text-xs font-cyber ${PLATFORM_FEE_DISABLED ? 'text-cyber-muted' : 'text-green-400'}`}>
+              {PLATFORM_FEE_DISABLED ? 'View-only · this address' : 'Real transactions'}
+            </span>
+            <span className={`text-[9px] ${PLATFORM_FEE_DISABLED ? 'text-cyber-muted' : 'text-green-500/80'}`}>
+              {PLATFORM_FEE_DISABLED ? 'Fee off' : 'Mainnet'}
+            </span>
           </div>
-          <p className="text-xl font-cyber text-cyber-yellow">
-            {stats.totalTransactions}
-          </p>
-          <p className="text-[9px] text-cyber-muted">TOTAL TRANSACTIONS</p>
-        </div>
-      </div>
-
-      {/* REAL Transaction Feed */}
-      <div className="mx-4 mb-4">
-        <div className="rounded border border-green-500/50">
-          <div className="p-2 border-b border-green-500/50 bg-green-500/10 flex items-center justify-between">
-            <span className="text-xs text-green-400 font-cyber">🟢 REAL TRANSACTIONS</span>
-            <span className="text-[9px] text-green-500">LIVE FROM XRPL MAINNET</span>
-          </div>
-          <div className="max-h-64 overflow-y-auto">
+          <div className="max-h-56 overflow-y-auto bg-cyber-darker/30">
             {transactions.length === 0 ? (
-              <div className="p-6 text-center text-xs">
-                <p className="text-cyber-cyan mb-2">No incoming payments yet</p>
-                <p className="text-cyber-muted text-[10px]">
-                  When someone uses the OpenClaw plugin, platform fees appear here.
-                  <br/>Share your plugin → Get adoption → Earn real XRP
+              <div className="p-6 text-center">
+                <p className="text-cyber-text text-xs font-medium mb-1.5">{PLATFORM_FEE_DISABLED ? 'No transactions' : 'No payments yet'}</p>
+                <p className="text-cyber-muted text-[10px] max-w-xs mx-auto leading-relaxed">
+                  {PLATFORM_FEE_DISABLED
+                    ? 'Platform fee is disabled (compliant default). See docs/COMPLIANCE-CHECKLIST.md to enable after legal sign-off.'
+                    : 'When the OpenClaw plugin is used, platform fees appear here.'}
                 </p>
               </div>
             ) : (
               transactions.map(tx => (
-                <div key={tx.hash} className="p-2 border-b border-cyber-border/30 hover:bg-green-500/5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bot size={12} className="text-green-400" />
-                      <span className="text-[10px] text-cyber-text">{shortenAddress(tx.from)}</span>
+                <div key={tx.hash} className="px-4 py-2.5 border-b border-cyber-border/50 last:border-0 hover:bg-cyber-border/20 transition-colors">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Bot size={12} className="text-cyber-cyan shrink-0" />
+                      <span className="text-xs text-cyber-text truncate">{shortenAddress(tx.from)}</span>
                     </div>
-                    <span className="text-[10px] text-green-400 font-bold">✓ Received</span>
+                    <span className="text-[10px] text-cyber-green font-medium shrink-0">Received</span>
                   </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <a 
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <a
                       href={`https://livenet.xrpl.org/transactions/${tx.hash}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[9px] text-cyber-cyan hover:underline flex items-center gap-1"
+                      className="text-[10px] text-cyber-cyan hover:underline truncate"
                     >
-                      {tx.hash.slice(0, 12)}... <ExternalLink size={8} />
+                      {tx.hash.slice(0, 10)}…
                     </a>
-                    <span className="text-[9px] text-cyber-muted">
-                      {new Date(tx.timestamp).toLocaleString()}
-                    </span>
+                    <span className="text-[9px] text-cyber-muted shrink-0">{new Date(tx.timestamp).toLocaleString()}</span>
                   </div>
-                  {tx.memo && (
-                    <p className="text-[9px] text-cyber-purple mt-1">Memo: {tx.memo}</p>
-                  )}
+                  {tx.memo && <p className="text-[9px] text-cyber-purple mt-1 truncate">Memo: {tx.memo}</p>}
                 </div>
               ))
             )}
           </div>
         </div>
-      </div>
 
-      {/* Platform Info */}
-      <div className="p-4 border-t border-cyber-border">
-        <p className="text-[10px] text-cyber-muted mb-2">How it works</p>
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 rounded bg-gradient-to-br from-cyber-green/20 to-transparent">
-            <p className="text-[9px] text-cyber-muted mb-1">RECIPIENT</p>
-            <p className="text-lg font-cyber text-cyber-green">97%</p>
-            <p className="text-[9px] text-cyber-muted">To service provider</p>
-          </div>
-          <div className="p-3 rounded bg-gradient-to-br from-cyber-cyan/20 to-transparent">
-            <p className="text-[9px] text-cyber-muted mb-1">CREATOR</p>
-            <p className="text-lg font-cyber text-cyber-cyan">2%</p>
-            <p className="text-[9px] text-cyber-muted">To skill developer</p>
-          </div>
-          <div className="p-3 rounded bg-gradient-to-br from-cyber-purple/20 to-transparent">
-            <p className="text-[9px] text-cyber-muted mb-1">PLATFORM</p>
-            <p className="text-lg font-cyber text-cyber-purple">1%</p>
-            <p className="text-[9px] text-cyber-muted">Infrastructure fee</p>
+        {/* How it works – same card rhythm */}
+        <div>
+          <p className="text-[10px] text-cyber-muted uppercase tracking-wider mb-3">Split</p>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="p-4 rounded-xl bg-cyber-green/10 border border-cyber-green/20 text-center">
+              <p className="text-[9px] text-cyber-muted uppercase mb-0.5">Recipient</p>
+              <p className="text-lg font-cyber text-cyber-green">97%</p>
+              <p className="text-[9px] text-cyber-muted">Service</p>
+            </div>
+            <div className="p-4 rounded-xl bg-cyber-cyan/10 border border-cyber-cyan/20 text-center">
+              <p className="text-[9px] text-cyber-muted uppercase mb-0.5">Creator</p>
+              <p className="text-lg font-cyber text-cyber-cyan">2%</p>
+              <p className="text-[9px] text-cyber-muted">Developer</p>
+            </div>
+            <div className="p-4 rounded-xl bg-cyber-purple/10 border border-cyber-purple/20 text-center">
+              <p className="text-[9px] text-cyber-muted uppercase mb-0.5">Platform</p>
+              <p className="text-lg font-cyber text-cyber-purple">{PLATFORM_FEE_DISABLED ? '0%' : '1%'}</p>
+              <p className="text-[9px] text-cyber-muted">{PLATFORM_FEE_DISABLED ? 'Off' : 'Fee'}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Action Buttons */}
-      <div className="p-4 border-t border-cyber-border">
+        {/* Actions */}
         <div className="grid grid-cols-3 gap-2">
-          <a
-            href="https://github.com/Shellfish011235/xrpl-control-room-gamer-ui"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 p-2 rounded bg-cyber-border hover:bg-cyber-cyan/20 transition-colors text-xs text-cyber-text"
-          >
-            <Code size={12} />
-            GitHub Repo
+          <a href="https://github.com/Shellfish011235/xrpl-control-room-gamer-ui" target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-cyber-border bg-cyber-darker/50 text-xs text-cyber-text hover:bg-cyber-cyan/10 hover:border-cyber-cyan/30 transition-colors">
+            <Code size={12} /> GitHub
           </a>
-          <a
-            href="https://www.npmjs.com/package/openclaw-xrpl-plugin"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 p-2 rounded bg-cyber-border hover:bg-cyber-cyan/20 transition-colors text-xs text-cyber-text"
-          >
-            <Layers size={12} />
-            npm Package
+          <a href="https://www.npmjs.com/package/openclaw-xrpl-plugin" target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-cyber-border bg-cyber-darker/50 text-xs text-cyber-text hover:bg-cyber-cyan/10 hover:border-cyber-cyan/30 transition-colors">
+            <Layers size={12} /> npm
           </a>
-          <a
-            href="https://xrpl.org/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 p-2 rounded bg-cyber-border hover:bg-cyber-cyan/20 transition-colors text-xs text-cyber-text"
-          >
-            <ExternalLink size={12} />
-            XRPL Docs
+          <a href="https://xrpl.org/docs" target="_blank" rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-cyber-border bg-cyber-darker/50 text-xs text-cyber-text hover:bg-cyber-cyan/10 hover:border-cyber-cyan/30 transition-colors">
+            <ExternalLink size={12} /> Docs
           </a>
         </div>
       </div>
 
       {/* Footer */}
-      <div className="p-2 border-t border-cyber-border text-center space-y-1">
-        <p className="text-[10px] text-green-400 font-bold">
-          🟢 MAINNET LIVE - 1% Platform Fee on All OpenClaw Transactions
+      <div className="px-5 py-3 border-t border-cyber-border bg-cyber-darker/50 text-center space-y-1">
+        <p className="text-[10px] font-medium text-cyber-muted">
+          {PLATFORM_FEE_DISABLED ? 'Platform fee disabled · see COMPLIANCE-CHECKLIST.md' : '1% platform fee on OpenClaw transactions'}
         </p>
         <p className="text-[9px] text-cyber-muted">
-          We do not transmit money or hold your funds. You sign all transactions in your own wallet. Not legal or financial advice.
+          We do not transmit money or hold your funds. You sign in your own wallet. Not legal or financial advice.
         </p>
       </div>
     </div>

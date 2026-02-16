@@ -82,9 +82,9 @@ export function PaymentChannelManager({
   // ==========================================================================
 
   return (
-    <div className="bg-cyber-darker rounded-lg border border-cyber-border overflow-hidden">
+    <div className="bg-cyber-darker/80 rounded-xl border border-cyber-border overflow-hidden">
       {/* Header */}
-      <div className="p-3 border-b border-cyber-border">
+      <div className="p-4 border-b border-cyber-border">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Layers size={16} className="text-cyber-purple" />

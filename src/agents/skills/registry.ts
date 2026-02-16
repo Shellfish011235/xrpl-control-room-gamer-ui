@@ -56,6 +56,21 @@ const SKILLS: Record<SkillName, Skill> = {
     keywords: ['perf', 'performance', 'debounce', 'virtual', 'lazy'],
     description: 'Performance, debounce, virtualization, bundle size',
   },
+  'xrpl-path-optimizer': {
+    name: 'xrpl-path-optimizer',
+    keywords: ['path', 'route', 'ripple_path_find', 'amm_info', 'bridge', 'cost', 'risk', 'xrp', 'usd', 'ilp'],
+    description: 'Find best XRPL route for amount from source to dest, score risk/cost/speed',
+  },
+  'nft-raider': {
+    name: 'nft-raider',
+    keywords: ['nft', 'xls-20', 'mint', 'offer', 'collection', 'taxon', 'floor', 'nftoken'],
+    description: 'XRPL NFT discovery, floor prices, mint/offer suggestions',
+  },
+  'bridge-query': {
+    name: 'bridge-query',
+    keywords: ['bridge', 'axelar', 'evm', 'solana', 'cross-chain', 'mxrp', 'bridge_query'],
+    description: 'Cross-chain bridge flows, XRPL ↔ EVM/Solana, volume and route queries',
+  },
 };
 
 /** Return skills that match task (by keyword). Cap at maxSkills. */
