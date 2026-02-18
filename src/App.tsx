@@ -40,6 +40,8 @@ const NFTs = lazy(() => import('./pages/NFTs'))
 const Bridges = lazy(() => import('./pages/Bridges'))
 const Agents = lazy(() => import('./pages/Agents'))
 const Optimizer = lazy(() => import('./pages/Optimizer'))
+const LiquidityCrush = lazy(() => import('./pages/LiquidityCrush'))
+const AmendmentDetail = lazy(() => import('./pages/AmendmentDetail'))
 
 function PageLoader() {
   return (
@@ -154,6 +156,8 @@ function App() {
                   <Route path="/bridges" element={<Bridges />} />
                   <Route path="/agents" element={<Agents />} />
                   <Route path="/optimizer" element={<Optimizer />} />
+                  <Route path="/liquidity-crush" element={<LiquidityCrush />} />
+                  <Route path="/amendment/:amendmentId" element={<AmendmentDetail />} />
                   <Route path="/innovation" element={<Navigate to="/network" replace />} />
                 </Routes>
               </AnimatePresence>

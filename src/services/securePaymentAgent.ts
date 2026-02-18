@@ -5,8 +5,10 @@
 // - Audit logging
 // - Xaman wallet integration
 // - DEX pathfinding for currency conversion
+// - Ensemble verification (FEYNMAN dual-model coherence check)
 
 import { xamanService, SigningRequest, PaymentDetails, TradeDetails } from './xaman';
+import { verifyExplanation } from '../c2v/feynman/verifier';
 import { XRPLDex, TradeQuote, Currency, CurrencyAmount, KNOWN_STABLECOINS } from './xrplDex';
 import { getAccountInfo, getAccountLines, dropsToXRP } from './xrplService';
 
@@ -72,6 +74,14 @@ export interface PaymentPlan {
   
   createdAt: Date;
   expiresAt: Date;
+
+  /** Ensemble verification: dual-model coherence check. When passed=false, show "REVIEW REQUIRED" in UI. */
+  verification?: {
+    passed: boolean;
+    reason: string;
+    primaryScore?: number;
+    secondaryScore?: number;
+  };
 }
 
 export interface PaymentStep {
@@ -221,11 +231,26 @@ class SecurePaymentAgent {
 
     // Build the payment plan
     const plan = await this.buildPaymentPlan(parsed);
-    
+
+    // Ensemble verification: secondary model re-scores explanation; reject or flag if incoherent
+    const explanation = [
+      plan.intent.description,
+      plan.plan.steps.map((s) => s.description).join('. '),
+      `Total: ${plan.plan.totalCost} XRP, fees ${plan.plan.fees.total} XRP.`,
+    ].join(' ');
+    const primaryScore = 1.0; // Plan built successfully; guardrails/LLM could supply a lower score if used
+    const verification = await verifyExplanation(explanation, primaryScore);
+    plan.verification = {
+      passed: verification.passed,
+      reason: verification.reason,
+      primaryScore: verification.primaryScore,
+      secondaryScore: verification.secondaryScore,
+    };
+
     // Store and return
     this.pendingPlans.set(plan.id, plan);
-    this.log('payment_requested', { planId: plan.id, intent }, 'pending');
-    
+    this.log('payment_requested', { planId: plan.id, intent, verification: plan.verification }, 'pending');
+
     return plan;
   }
 

@@ -1,10 +1,11 @@
 /**
  * Pay — single entry for payments.
  * One main view (Micropayments). Agents = receipts/caps page. Chat pay opens global agent.
+ * Query params from Liquidity Crush: ?source=XRP&dest=USD&amount=10 → open agent with pre-filled prompt.
  */
 
 import { lazy, Suspense, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useAgentPanelStore } from '../store/agentPanelStore'
 
@@ -35,6 +36,22 @@ function PayBackLink() {
 }
 
 export default function PayPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const setAgentOpen = useAgentPanelStore((s) => s.setOpen)
+  const setPendingPrompt = useAgentPanelStore((s) => s.setPendingSecureAgentPrompt)
+
+  useEffect(() => {
+    const source = searchParams.get('source')
+    const dest = searchParams.get('dest')
+    const amount = searchParams.get('amount')
+    if (source && amount) {
+      const prompt = `Send ${amount} ${source} to `
+      setPendingPrompt(prompt)
+      setAgentOpen(true, 'chat')
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams, setAgentOpen, setPendingPrompt])
+
   return (
     <Suspense fallback={<PageLoader />}>
       <Micropayments />

@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Clock, Users, ExternalLink, ChevronRight,
@@ -6,6 +8,7 @@ import {
   X, FileText, AlertTriangle, Loader2, Timer, Github, User
 } from 'lucide-react';
 import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFeeds';
+import { useIsInAppBrowser } from '../hooks/useIsInAppBrowser';
 
 // ==================== RESPONSIVE LAYOUT HOOK ====================
 // Detects window size for responsive component behavior
@@ -376,38 +379,90 @@ const tierColors: Record<Tier, string> = {
   'C': 'cyber-purple'
 };
 
+// Inline style maps for the portaled modal — iOS WebView often ignores Tailwind/theme when content is under document.body
+const tierStyles: Record<Tier, { bg: string; border: string; text: string }> = {
+  A: { bg: 'rgba(34,197,94,0.2)', border: 'rgba(34,197,94,0.5)', text: '#22c55e' },
+  B: { bg: 'rgba(234,179,8,0.2)', border: 'rgba(234,179,8,0.5)', text: '#eab308' },
+  C: { bg: 'rgba(168,85,247,0.2)', border: 'rgba(168,85,247,0.5)', text: '#a855f7' },
+};
+const impactStyles: Record<PerformanceImpact, string> = {
+  Low: '#22c55e',
+  Medium: '#eab308',
+  High: '#ef4444',
+  Unknown: '#94a3b8',
+};
+
+/** Fetch a single amendment by name (for AmendmentDetail when location.state is lost, e.g. X in-app browser). */
+export async function fetchAmendmentByName(name: string): Promise<Amendment | null> {
+  try {
+    const list = await fetchXRPLAmendments();
+    const found = list.find((a) => a.name === name);
+    return found ? convertToAmendment(found) : null;
+  } catch (e) {
+    console.warn('[LedgerImpact] fetchAmendmentByName failed:', e);
+    return null;
+  }
+}
+
+/** Static amendment list from metadata — used when live fetch fails (e.g. X in-app browser) so the box always has data. */
+function getStaticAmendments(): Amendment[] {
+  return Object.entries(amendmentMetadata).map(([name, meta]) => {
+    const evidenceLinks: { label: string; url: string }[] = [
+      { label: 'View on XRPScan', url: `https://xrpscan.com/amendment/${name}` }
+    ];
+    if (meta.github) evidenceLinks.push({ label: 'GitHub Spec/PR', url: meta.github });
+    return {
+      id: name,
+      name,
+      summary: meta.summary,
+      tier: meta.tier,
+      performanceImpact: meta.impact,
+      waitingDays: 0,
+      ledgerImpact: {
+        estimatedImpact: meta.impact,
+        confidence: 'High',
+        affectedAreas: meta.areas,
+        rationale: meta.rationale,
+        evidenceLinks,
+      },
+      validatorSupport: { current: 0, required: 34 },
+      enabled: false,
+      percentSupport: 0,
+      status: 'pending',
+      author: meta.author,
+      github: meta.github,
+    };
+  });
+}
+
 export function LedgerImpactTool() {
-  const [amendments, setAmendments] = useState<Amendment[]>([]);
+  const [amendments, setAmendments] = useState<Amendment[]>(() => getStaticAmendments());
   const [selectedAmendment, setSelectedAmendment] = useState<Amendment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'enabled'>('pending');
   const [dataSource, setDataSource] = useState<'live' | 'fallback'>('fallback');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const isInAppBrowser = useIsInAppBrowser();
   
   // Responsive layout detection
   const { isSmallHeight, isTinyHeight, isMinimized } = useResponsiveLayout();
 
-  // Fetch live amendments from XRPScan
+  // Fetch live amendments from XRPScan; on failure keep showing static list so the box always has info
   const fetchAmendments = useCallback(async () => {
     setIsLoading(true);
     try {
       const liveAmendments = await fetchXRPLAmendments();
       
       if (liveAmendments.length > 0) {
-        // Sort: majority/pending first, then by support percentage
         const sorted = liveAmendments
           .map(convertToAmendment)
           .sort((a, b) => {
-            // Enabled amendments last
             if (a.enabled && !b.enabled) return 1;
             if (!a.enabled && b.enabled) return -1;
-            // Then by status (majority first)
             if (a.status === 'majority' && b.status !== 'majority') return -1;
             if (a.status !== 'majority' && b.status === 'majority') return 1;
-            // Then by support percentage
             return (b.percentSupport || 0) - (a.percentSupport || 0);
           });
-        
         setAmendments(sorted);
         setDataSource('live');
         setLastUpdate(new Date());
@@ -415,6 +470,7 @@ export function LedgerImpactTool() {
       }
     } catch (error) {
       console.error('[LedgerImpact] Failed to fetch amendments:', error);
+      setAmendments(getStaticAmendments());
       setDataSource('fallback');
     } finally {
       setIsLoading(false);
@@ -470,6 +526,21 @@ export function LedgerImpactTool() {
         </button>
       </div>
 
+      {/* When live fetch failed we show cached list; small note to refresh for live data */}
+      {dataSource === 'fallback' && (
+        <div className="mb-3 p-2 rounded bg-cyber-glow/10 border border-cyber-glow/30 flex items-center justify-between gap-2">
+          <p className="text-[10px] text-cyber-muted">Showing cached amendments. Tap refresh for live vote counts.</p>
+          <button
+            type="button"
+            onClick={() => fetchAmendments()}
+            disabled={isLoading}
+            className="shrink-0 px-2 py-1 rounded bg-cyber-glow/20 text-cyber-glow border border-cyber-glow/50 text-[10px] font-cyber hover:bg-cyber-glow/30 disabled:opacity-50"
+          >
+            Refresh
+          </button>
+        </div>
+      )}
+
       {/* Majority Alert Banner */}
       {atMajority > 0 && (
         <div className="mb-4 p-2 rounded bg-cyber-yellow/10 border border-cyber-yellow/30 flex items-center gap-2">
@@ -481,45 +552,47 @@ export function LedgerImpactTool() {
         </div>
       )}
 
-      {/* Impact Summary Bars */}
-      <div className="mb-4">
-        <p className="text-xs text-cyber-muted mb-2">Impact Distribution</p>
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-cyber-green w-14">Low ({impactSummary.low})</span>
-            <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
-              <motion.div 
-                className="h-full bg-cyber-green"
-                initial={{ width: 0 }}
-                animate={{ width: `${(impactSummary.low / filteredAmendments.length) * 100}%` }}
-                transition={{ duration: 0.5 }}
-              />
+      {/* Impact Summary Bars - only when we have amendments (avoid NaN in WebView) */}
+      {filteredAmendments.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs text-cyber-muted mb-2">Impact Distribution</p>
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-cyber-green w-14">Low ({impactSummary.low})</span>
+              <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-cyber-green"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(impactSummary.low / filteredAmendments.length) * 100}%` }}
+                  transition={{ duration: 0.5 }}
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-cyber-yellow w-14">Med ({impactSummary.medium})</span>
-            <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
-              <motion.div 
-                className="h-full bg-cyber-yellow"
-                initial={{ width: 0 }}
-                animate={{ width: `${(impactSummary.medium / filteredAmendments.length) * 100}%` }}
-                transition={{ duration: 0.5, delay: 0.1 }}
-              />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-cyber-yellow w-14">Med ({impactSummary.medium})</span>
+              <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-cyber-yellow"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(impactSummary.medium / filteredAmendments.length) * 100}%` }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                />
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-cyber-red w-14">High ({impactSummary.high})</span>
-            <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
-              <motion.div 
-                className="h-full bg-cyber-red"
-                initial={{ width: 0 }}
-                animate={{ width: `${(impactSummary.high / filteredAmendments.length) * 100}%` }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-cyber-red w-14">High ({impactSummary.high})</span>
+              <div className="flex-1 h-2 bg-cyber-darker rounded-full overflow-hidden">
+                <motion.div 
+                  className="h-full bg-cyber-red"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(impactSummary.high / filteredAmendments.length) * 100}%` }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 mb-3">
@@ -538,9 +611,15 @@ export function LedgerImpactTool() {
         ))}
       </div>
 
-      {/* Amendments List */}
-      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-        {isLoading ? (
+      {isInAppBrowser && (
+        <p className="text-[10px] text-cyber-yellow/90 bg-cyber-yellow/10 border border-cyber-yellow/30 rounded px-2 py-1.5 mb-2">
+          Opening from X? Tap a row — amendment details open as a full page (no popup).
+        </p>
+      )}
+
+      {/* Amendments List - minHeight so panel is never invisible in WebView */}
+      <div className="space-y-2 max-h-64 min-h-[120px] overflow-y-auto pr-1 bg-cyber-darker/30 rounded-lg border border-cyber-border/50">
+        {isLoading && amendments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8">
             <Loader2 size={24} className="text-cyber-cyan animate-spin mb-2" />
             <p className="text-xs text-cyber-muted">Loading from XRPScan...</p>
@@ -548,67 +627,81 @@ export function LedgerImpactTool() {
         ) : filteredAmendments.length === 0 ? (
           <div className="text-center py-8 text-cyber-muted text-xs">
             No amendments found for this filter
+            {isInAppBrowser && (
+              <p className="mt-3 text-cyber-yellow/90">
+                If data never loaded, open this page in Safari or Chrome for the best experience.
+              </p>
+            )}
           </div>
         ) : (
-          filteredAmendments.slice(0, 15).map((amendment) => (
-            <motion.button
-              key={amendment.id}
-              onClick={() => setSelectedAmendment(amendment)}
-              className={`w-full p-2 rounded-lg border bg-cyber-darker/50 hover:border-cyber-glow/30 transition-all text-left group ${
-                amendment.status === 'majority' 
-                  ? 'border-cyber-yellow/50' 
-                  : amendment.status === 'enabled'
-                  ? 'border-cyber-green/30'
-                  : 'border-cyber-border/50'
-              }`}
-              whileHover={{ scale: 1.01 }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2">
-                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-cyber bg-${tierColors[amendment.tier]}/20 text-${tierColors[amendment.tier]} border border-${tierColors[amendment.tier]}/30`}>
-                    {amendment.tier}
-                  </span>
-                  <span className="text-xs text-cyber-text font-medium truncate">{amendment.name}</span>
-                  
-                  {/* Live countdown timer badge for amendments at majority */}
-                  {amendment.status === 'majority' && (
-                    <CountdownTimer 
-                      majorityDate={amendment.majorityDate} 
-                      daysUntilEnabled={amendment.daysUntilEnabled}
-                      hoursUntilEnabled={amendment.hoursUntilEnabled}
-                      minutesUntilEnabled={amendment.minutesUntilEnabled}
-                      secondsUntilEnabled={amendment.secondsUntilEnabled}
-                      activationDate={amendment.activationDate}
-                      compact 
-                    />
-                  )}
-                  
-                  {/* Enabled date badge for enabled amendments */}
-                  {amendment.status === 'enabled' && amendment.enabledOn && (
-                    <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
-                      ✓ {new Date(amendment.enabledOn).toLocaleDateString()}
+          filteredAmendments.slice(0, 15).map((amendment) => {
+            const rowClass = `w-full min-h-[44px] p-3 rounded-lg border bg-cyber-darker/50 hover:border-cyber-glow/30 active:bg-cyber-glow/10 transition-all text-left group touch-manipulation ${
+              amendment.status === 'majority' ? 'border-cyber-yellow/50' : amendment.status === 'enabled' ? 'border-cyber-green/30' : 'border-cyber-border/50'
+            }`;
+            const rowContent = (
+              <>
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-cyber bg-${tierColors[amendment.tier]}/20 text-${tierColors[amendment.tier]} border border-${tierColors[amendment.tier]}/30`}>
+                      {amendment.tier}
                     </span>
-                  )}
-                </div>
-                <span className={`text-[10px] text-${impactColors[amendment.ledgerImpact.estimatedImpact]}`}>
-                  {amendment.ledgerImpact.estimatedImpact}
-                </span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[10px]">
-                  <span className={
-                    (amendment.percentSupport || 0) >= 80 ? 'text-cyber-green' :
-                    (amendment.percentSupport || 0) >= 50 ? 'text-cyber-yellow' :
-                    'text-cyber-muted'
-                  }>
-                    {amendment.validatorSupport.current}/{amendment.validatorSupport.required}
+                    <span className="text-xs text-cyber-text font-medium truncate">{amendment.name}</span>
+                    {amendment.status === 'majority' && (
+                      <CountdownTimer
+                        majorityDate={amendment.majorityDate}
+                        daysUntilEnabled={amendment.daysUntilEnabled}
+                        hoursUntilEnabled={amendment.hoursUntilEnabled}
+                        minutesUntilEnabled={amendment.minutesUntilEnabled}
+                        secondsUntilEnabled={amendment.secondsUntilEnabled}
+                        activationDate={amendment.activationDate}
+                        compact
+                      />
+                    )}
+                    {amendment.status === 'enabled' && amendment.enabledOn && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
+                        ✓ {new Date(amendment.enabledOn).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-[10px] text-${impactColors[amendment.ledgerImpact.estimatedImpact]}`}>
+                    {amendment.ledgerImpact.estimatedImpact}
                   </span>
-                  <Users size={10} className="text-cyber-muted" />
                 </div>
-              </div>
-            </motion.button>
-          ))
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-[10px]">
+                    <span className={(amendment.percentSupport || 0) >= 80 ? 'text-cyber-green' : (amendment.percentSupport || 0) >= 50 ? 'text-cyber-yellow' : 'text-cyber-muted'}>
+                      {amendment.validatorSupport.current}/{amendment.validatorSupport.required}
+                    </span>
+                    <Users size={10} className="text-cyber-muted" />
+                  </div>
+                </div>
+              </>
+            );
+            if (isInAppBrowser) {
+              return (
+                <Link
+                  key={amendment.id}
+                  to={`/amendment/${encodeURIComponent(amendment.name)}`}
+                  state={{ amendment }}
+                  className={rowClass}
+                >
+                  {rowContent}
+                </Link>
+              );
+            }
+            return (
+              <motion.button
+                key={amendment.id}
+                type="button"
+                onClick={() => setSelectedAmendment(amendment)}
+                onTouchEnd={() => setSelectedAmendment(amendment)}
+                className={rowClass}
+                whileHover={{ scale: 1.01 }}
+              >
+                {rowContent}
+              </motion.button>
+            );
+          })
         )}
       </div>
 
@@ -636,197 +729,235 @@ export function LedgerImpactTool() {
         </a>
       </div>
 
-      {/* Amendment Detail Modal - Simple CSS version for iOS/mobile compatibility */}
-      {selectedAmendment && (
+      {/* Amendment Detail Modal - Portaled to body for X in-app browser / iOS WebView */}
+      {selectedAmendment && createPortal(
         <div
-          className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-2"
-          style={{ 
+          style={{
             position: 'fixed',
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
+            zIndex: 2147483647,
+            backgroundColor: '#000000',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 8,
+            WebkitOverflowScrolling: 'touch',
+            transform: 'translateZ(0)',
+            WebkitBackfaceVisibility: 'hidden' as const,
+            isolation: 'isolate',
           }}
           onClick={() => setSelectedAmendment(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="amendment-modal-title"
         >
           <div
-            className="cyber-panel cyber-glow w-full max-w-lg flex flex-col overflow-hidden bg-cyber-dark border border-cyber-border"
-            style={{ 
+            style={{
+              width: '100%',
+              maxWidth: 512,
               maxHeight: '90vh',
+              minHeight: 280,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
               position: 'relative',
+              backgroundColor: '#0f172a',
+              border: '2px solid #334155',
+              borderRadius: 8,
+              color: '#e2e8f0',
+              transform: 'translateZ(0)',
+              WebkitBackfaceVisibility: 'hidden' as const,
+              backfaceVisibility: 'hidden',
+              isolation: 'isolate',
+              filter: 'none',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-              {/* COMPACT HEADER - Name, Author, X button */}
-              <div className="flex items-center justify-between gap-2 border-b border-cyber-border/50 px-3 py-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-cyber bg-${tierColors[selectedAmendment.tier]}/20 text-${tierColors[selectedAmendment.tier]} border border-${tierColors[selectedAmendment.tier]}/30`}>
+              {/* HEADER - inline styles only for iOS WebView */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderBottom: '1px solid #334155', padding: '8px 12px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span
+                      style={{
+                        padding: '2px 6px',
+                        borderRadius: 4,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        backgroundColor: (tierStyles[selectedAmendment.tier] ?? tierStyles.C).bg,
+                        color: (tierStyles[selectedAmendment.tier] ?? tierStyles.C).text,
+                        border: `1px solid ${(tierStyles[selectedAmendment.tier] ?? tierStyles.C).border}`,
+                      }}
+                    >
                       {selectedAmendment.tier}
                     </span>
-                    <h3 className="font-cyber text-cyber-glow text-sm truncate">
+                    <h3 id="amendment-modal-title" style={{ margin: 0, fontSize: 14, color: '#00d4ff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {selectedAmendment.name}
                     </h3>
                     {selectedAmendment.enabled && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-cyber bg-cyber-green/20 text-cyber-green">
+                      <span style={{ padding: '2px 6px', borderRadius: 4, fontSize: 10, backgroundColor: 'rgba(34,197,94,0.2)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.5)' }}>
                         ✓
                       </span>
                     )}
                   </div>
-                  {/* Author + GitHub Link */}
                   {selectedAmendment.author && (
-                    <div className="flex items-center gap-2 mt-1">
-                      <User size={12} className="text-cyber-purple" />
-                      <span className="text-xs text-cyber-purple">{selectedAmendment.author}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                      <User size={12} style={{ color: '#a855f7' }} />
+                      <span style={{ fontSize: 12, color: '#a855f7' }}>{selectedAmendment.author}</span>
                       {selectedAmendment.github && (
-                        <a 
-                          href={selectedAmendment.github} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/20 hover:bg-purple-500/40 border border-purple-500/50 text-[10px] text-purple-300 hover:text-white transition-all"
+                        <a
+                          href={selectedAmendment.github}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: 10, color: '#c4b5fd', padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.5)' }}
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <Github size={12} />
-                          <span>View Spec</span>
+                          View Spec
                         </a>
                       )}
                     </div>
                   )}
                 </div>
-                {/* X BUTTON */}
                 <button
+                  type="button"
                   onClick={() => setSelectedAmendment(null)}
-                  className="p-1.5 bg-red-500/30 hover:bg-red-500/50 border border-red-500/50 rounded transition-colors shrink-0"
+                  style={{ padding: 6, backgroundColor: 'rgba(239,68,68,0.3)', border: '1px solid rgba(239,68,68,0.5)', borderRadius: 4, color: '#f87171', flexShrink: 0 }}
                   title="Close"
                 >
-                  <X size={16} className="text-red-400" />
+                  <X size={16} />
                 </button>
               </div>
 
-              {/* SCROLLABLE CONTENT - Simple overflow for mobile */}
-              <div className="flex-1 overflow-y-auto px-3 py-2 space-y-3">
-                {/* Summary */}
-                <p className="text-cyber-text text-xs">
+              {/* SCROLLABLE CONTENT - explicit minHeight + no filter so iOS renders text, not blur bars */}
+              <div
+                style={{
+                  flex: '1 1 0',
+                  minHeight: 180,
+                  overflowY: 'auto',
+                  overflowX: 'hidden',
+                  padding: '8px 12px',
+                  WebkitOverflowScrolling: 'touch',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 12,
+                  filter: 'none',
+                  WebkitFontSmoothing: 'antialiased' as const,
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.4, opacity: 1 }}>
                   {selectedAmendment.summary}
                 </p>
 
-              {/* Countdown Timer for Majority Amendments */}
-              {selectedAmendment.status === 'majority' && (
-                <div className="p-2 rounded-lg bg-purple-900/30 border border-purple-500/40">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Clock size={12} className="text-purple-400" />
-                    <span className="text-xs font-cyber text-purple-300">TIME UNTIL ACTIVATION</span>
+                {selectedAmendment.status === 'majority' && (
+                  <div style={{ padding: 8, borderRadius: 8, backgroundColor: 'rgba(88,28,135,0.3)', border: '1px solid rgba(168,85,247,0.4)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+                      <Clock size={12} style={{ color: '#c4b5fd' }} />
+                      <span style={{ fontSize: 11, color: '#c4b5fd', fontWeight: 600 }}>TIME UNTIL ACTIVATION</span>
+                    </div>
+                    <CountdownTimer
+                      majorityDate={selectedAmendment.majorityDate}
+                      daysUntilEnabled={selectedAmendment.daysUntilEnabled}
+                      hoursUntilEnabled={selectedAmendment.hoursUntilEnabled}
+                      minutesUntilEnabled={selectedAmendment.minutesUntilEnabled}
+                      secondsUntilEnabled={selectedAmendment.secondsUntilEnabled}
+                      activationDate={selectedAmendment.activationDate}
+                    />
+                    {selectedAmendment.activationDate && (
+                      <p style={{ margin: '8px 0 0', fontSize: 10, color: 'rgba(196,181,253,0.8)', textAlign: 'center' }}>
+                        Activates: {new Date(selectedAmendment.activationDate).toLocaleDateString()}
+                      </p>
+                    )}
                   </div>
-                  <CountdownTimer 
-                    majorityDate={selectedAmendment.majorityDate} 
-                    daysUntilEnabled={selectedAmendment.daysUntilEnabled}
-                    hoursUntilEnabled={selectedAmendment.hoursUntilEnabled}
-                    minutesUntilEnabled={selectedAmendment.minutesUntilEnabled}
-                    secondsUntilEnabled={selectedAmendment.secondsUntilEnabled}
-                    activationDate={selectedAmendment.activationDate}
-                  />
-                  {selectedAmendment.activationDate && (
-                    <p className="text-[10px] text-purple-300/70 mt-2 text-center">
-                      Activates: {new Date(selectedAmendment.activationDate).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              )}
+                )}
 
-              {/* Enabled Date for Already Activated Amendments */}
-              {selectedAmendment.status === 'enabled' && selectedAmendment.enabledOn && (
-                <div className="p-2 rounded bg-cyber-green/10 border border-cyber-green/30 flex items-center gap-2">
-                  <Clock size={12} className="text-cyber-green" />
-                  <span className="text-[10px] font-cyber text-cyber-green">ACTIVATED</span>
-                  <span className="text-cyber-green font-mono text-xs">
-                    {new Date(selectedAmendment.enabledOn).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-
-              {/* Quick Stats - Compact row */}
-              <div className="grid grid-cols-3 gap-1">
-                <div className="p-1.5 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                  <p className="text-[9px] text-cyber-muted">Waiting</p>
-                  <p className="font-cyber text-cyber-text text-xs">{selectedAmendment.waitingDays}d</p>
-                </div>
-                <div className="p-1.5 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                  <p className="text-[9px] text-cyber-muted">Support</p>
-                  <p className="font-cyber text-cyber-text text-xs">
-                    {selectedAmendment.validatorSupport.current}/{selectedAmendment.validatorSupport.required}
-                  </p>
-                </div>
-                <div className="p-1.5 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                  <p className="text-[9px] text-cyber-muted">Impact</p>
-                  <p className={`font-cyber text-${impactColors[selectedAmendment.ledgerImpact.estimatedImpact]} text-xs`}>
-                    {selectedAmendment.ledgerImpact.estimatedImpact}
-                  </p>
-                </div>
-              </div>
-
-              {/* Ledger Impact Details - Compact */}
-              <div>
-                <h4 className="font-cyber text-cyber-cyan flex items-center gap-1.5 text-xs mb-1.5">
-                  <Zap size={12} />
-                  IMPACT ANALYSIS
-                </h4>
-                
-                {/* Affected Areas - Inline */}
-                <div className="flex flex-wrap gap-1 mb-2">
-                  {selectedAmendment.ledgerImpact.affectedAreas.map(area => (
-                    <span 
-                      key={area}
-                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-cyber-purple/20 text-cyber-purple border border-cyber-purple/30 text-[10px]"
-                    >
-                      {areaIcons[area]}
-                      {area}
+                {selectedAmendment.status === 'enabled' && selectedAmendment.enabledOn && (
+                  <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Clock size={12} style={{ color: '#22c55e' }} />
+                    <span style={{ fontSize: 10, fontWeight: 600, color: '#22c55e' }}>ACTIVATED</span>
+                    <span style={{ color: '#22c55e', fontSize: 12 }}>
+                      {new Date(selectedAmendment.enabledOn).toLocaleDateString()}
                     </span>
-                  ))}
-                  <span className="px-1.5 py-0.5 rounded bg-cyber-darker/50 text-cyber-text border border-cyber-border/30 text-[10px]">
-                    {selectedAmendment.ledgerImpact.confidence} confidence
-                  </span>
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
+                  <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Waiting</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>{selectedAmendment.waitingDays}d</p>
+                  </div>
+                  <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Support</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>
+                      {selectedAmendment.validatorSupport.current}/{selectedAmendment.validatorSupport.required}
+                    </p>
+                  </div>
+                  <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
+                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Impact</p>
+                    <p style={{ margin: 0, fontSize: 12, color: impactStyles[selectedAmendment.ledgerImpact.estimatedImpact] ?? impactStyles.Unknown, fontWeight: 600 }}>
+                      {selectedAmendment.ledgerImpact.estimatedImpact}
+                    </p>
+                  </div>
                 </div>
 
-                {/* Rationale - Compact */}
-                <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/30">
-                  <p className="text-[10px] text-cyber-text">{selectedAmendment.ledgerImpact.rationale}</p>
+                <div>
+                  <h4 style={{ margin: '0 0 6px', fontSize: 12, color: '#00ffff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Zap size={12} /> IMPACT ANALYSIS
+                  </h4>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
+                    {selectedAmendment.ledgerImpact.affectedAreas.map((area) => (
+                      <span
+                        key={area}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '2px 6px', borderRadius: 4, fontSize: 10, backgroundColor: 'rgba(168,85,247,0.2)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}
+                      >
+                        {areaIcons[area]}
+                        {area}
+                      </span>
+                    ))}
+                    <span style={{ padding: '2px 6px', borderRadius: 4, fontSize: 10, color: '#e2e8f0', backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155' }}>
+                      {selectedAmendment.ledgerImpact.confidence} confidence
+                    </span>
+                  </div>
+                  <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155' }}>
+                    <p style={{ margin: 0, fontSize: 10, color: '#e2e8f0', lineHeight: 1.4 }}>{selectedAmendment.ledgerImpact.rationale}</p>
+                  </div>
                 </div>
-              </div>
 
-                {/* Evidence Links */}
                 {selectedAmendment.ledgerImpact.evidenceLinks && selectedAmendment.ledgerImpact.evidenceLinks.length > 0 && (
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] text-cyber-muted mb-1">Evidence & References</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Evidence &amp; References</p>
                     {selectedAmendment.ledgerImpact.evidenceLinks.map((link, i) => (
                       <a
                         key={i}
                         href={link.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/50 transition-all text-xs text-cyber-text group"
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', fontSize: 12, color: '#e2e8f0' }}
                       >
-                        <ExternalLink size={12} className="text-cyber-glow" />
+                        <ExternalLink size={12} style={{ color: '#00d4ff' }} />
                         <span>{link.label}</span>
-                        <ChevronRight size={12} className="ml-auto text-cyber-muted group-hover:text-cyber-glow" />
+                        <ChevronRight size={12} style={{ marginLeft: 'auto', color: '#94a3b8' }} />
                       </a>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* COMPACT FOOTER - Back Button */}
-              <div className="border-t border-cyber-border/50 px-3 py-2">
+              <div style={{ borderTop: '1px solid #334155', padding: '8px 12px' }}>
                 <button
+                  type="button"
                   onClick={() => setSelectedAmendment(null)}
-                  className="w-full py-2 px-3 bg-cyber-darker hover:bg-cyber-glow/10 border border-cyber-border hover:border-cyber-glow/50 rounded text-xs font-cyber text-cyber-text flex items-center justify-center gap-2"
+                  style={{ width: '100%', padding: '8px 12px', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: 4, fontSize: 12, color: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                 >
-                  <ChevronRight size={14} className="rotate-180" />
-                  Back
+                  <ChevronRight size={14} style={{ transform: 'rotate(180deg)' }} /> Back
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          </div>,
+        document.body
+      )}
     </div>
   );
 }

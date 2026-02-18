@@ -618,12 +618,14 @@ export function useOrderBook(symbol: string): OrderBook | null {
 /** Single XRP price with WebSocket-first, REST fallback. Use in Terminal/Navigation for sub-100ms updates. */
 export function useXRPPrice(): {
   price: number;
+  change24h: number | null;
   source: 'binance-ws' | 'coingecko' | 'binance' | 'fallback' | '';
   loading: boolean;
   error: string | null;
 } {
   const { prices: wsPrices, isConnected: wsConnected } = useRealtimePrices();
   const [restPrice, setRestPrice] = useState<number>(0);
+  const [restChange24h, setRestChange24h] = useState<number | null>(null);
   const [restSource, setRestSource] = useState<'coingecko' | 'binance' | 'fallback' | ''>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -638,6 +640,7 @@ export function useXRPPrice(): {
         const data = await cg.json();
         if (data.ripple?.usd) {
           setRestPrice(data.ripple.usd);
+          setRestChange24h(data.ripple.usd_24h_change ?? null);
           setRestSource('coingecko');
           setError(null);
           return;
@@ -653,6 +656,7 @@ export function useXRPPrice(): {
         const p = parseFloat(data?.price);
         if (p > 0) {
           setRestPrice(p);
+          setRestChange24h(null);
           setRestSource('binance');
           setError(null);
           return;
@@ -662,6 +666,7 @@ export function useXRPPrice(): {
       console.warn('[useXRPPrice] Binance failed:', e);
     }
     setRestPrice(1.92);
+    setRestChange24h(null);
     setRestSource('fallback');
     setError(null);
   }, []);
@@ -683,8 +688,9 @@ export function useXRPPrice(): {
   const price = hasWs ? xrpAgg!.price : restPrice;
   const source: 'binance-ws' | 'coingecko' | 'binance' | 'fallback' | '' =
     hasWs ? 'binance-ws' : restSource;
+  const change24h = hasWs && xrpAgg?.priceChangePercent24h != null ? xrpAgg.priceChangePercent24h : restChange24h;
 
-  return { price, source, loading, error };
+  return { price, change24h, source, loading, error };
 }
 
 export default wsFeeds;

@@ -6,7 +6,7 @@ import {
   Image as ImageIcon, ChevronRight, Github, Twitter, Edit2, Check, X,
   Users, FileText
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { WalletConnect } from '../components/WalletConnect'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
@@ -15,6 +15,7 @@ import { PaperTradingPanel } from '../components/PaperTradingPanel'
 import { useProfileStore } from '../store/profileStore'
 import { useWalletStore } from '../store/walletStore'
 import { useAssetsStore } from '../store/assetsStore'
+import { useIsInAppBrowser } from '../hooks/useIsInAppBrowser'
 
 const pageCards = [
   {
@@ -73,6 +74,7 @@ export default function Home() {
   
   // Regulatory filter state
   const [regFilter, setRegFilter] = useState<string>('all')
+  const isInAppBrowser = useIsInAppBrowser()
 
   // Sync edit fields when store changes
   useEffect(() => {
@@ -351,16 +353,16 @@ export default function Home() {
               <span className="text-cyber-muted">·</span>
               <Link to="/learn" className="text-cyber-muted hover:text-cyber-text">Learn</Link>
             </div>
-            {/* Tab Content */}
-            <AnimatePresence mode="wait">
+            {/* Tab Content - no AnimatePresence in X in-app browser so content always paints */}
+            {(() => {
+              const TabWrap = ({ k, children }: { k: string; children: ReactNode }) =>
+                isInAppBrowser
+                  ? <div key={k}>{children}</div>
+                  : <motion.div key={k} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>{children}</motion.div>;
+              const tabsContent = (
+                <>
               {activeTab === 'regulations' && (
-                <motion.div
-                  key="regulations"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <TabWrap k="regulations">
                   {/* Regulations Header */}
                   <div className="cyber-panel p-4 mb-4">
                     <div className="flex items-center justify-between mb-4">
@@ -677,17 +679,11 @@ export default function Home() {
                       </a>
                     </div>
                   </div>
-                </motion.div>
-              )}
+                </TabWrap>
+                  )}
 
               {activeTab === 'governance' && (
-                <motion.div
-                  key="governance"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <TabWrap k="governance">
                   {/* Governance Header */}
                   <div className="cyber-panel p-4 mb-4">
                     <div className="flex items-center justify-between mb-4">
@@ -770,17 +766,11 @@ export default function Home() {
                       </a>
                     </div>
                   </div>
-                </motion.div>
+                </TabWrap>
               )}
 
               {activeTab === 'impact' && (
-                <motion.div
-                  key="impact"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
+                <TabWrap k="impact">
                   {/* Impact Tool Header */}
                   <div className="cyber-panel p-4 mb-4">
                     <div className="flex items-center justify-between mb-4">
@@ -842,9 +832,12 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
-                </motion.div>
+                </TabWrap>
               )}
-            </AnimatePresence>
+                </>
+              );
+              return isInAppBrowser ? tabsContent : <AnimatePresence mode="wait">{tabsContent}</AnimatePresence>;
+            })()}
           </motion.div>
           
           {/* Right Panel - Tools & Wallet */}

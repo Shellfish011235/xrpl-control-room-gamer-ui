@@ -17,6 +17,7 @@ import { xamanService } from '../../services/xaman';
 import { getXamanMode, initializeXaman } from '../../config/xaman';
 import { useWalletStore } from '../../store/walletStore';
 import { usePlatformModeStore } from '../../store/platformModeStore';
+import { useAgentPanelStore } from '../../store/agentPanelStore';
 import { getTransaction, waitForTransaction, TransactionResult } from '../../services/xrplService';
 
 // ==================== TYPES ====================
@@ -53,6 +54,9 @@ export function SecureAgentPanel() {
 
   const platformLive = usePlatformModeStore((s) => s.mode === 'live');
   const setPlatformMode = usePlatformModeStore((s) => s.setMode);
+  const agentOpen = useAgentPanelStore((s) => s.open);
+  const panelTab = useAgentPanelStore((s) => s.panelTab);
+  const consumePendingPrompt = useAgentPanelStore((s) => s.consumePendingSecureAgentPrompt);
   const { wallets, activeWalletId } = useWalletStore();
   const activeWallet = wallets.find(w => w.id === activeWalletId);
 
@@ -98,6 +102,14 @@ export function SecureAgentPanel() {
     if (securePaymentAgent.getWalletState() != null) return;
     ensureWalletSynced();
   }, [walletConnected, activeWallet?.id]);
+
+  // Pre-fill input when opened from Liquidity Crush (or other deep link)
+  useEffect(() => {
+    if (agentOpen && panelTab === 'chat') {
+      const pending = consumePendingPrompt();
+      if (pending) setInput(pending);
+    }
+  }, [agentOpen, panelTab, consumePendingPrompt]);
 
   // Auto-scroll
   useEffect(() => {
@@ -1016,6 +1028,8 @@ function PaymentPlanCard({
     }
   }, [plan.status, signingRequest, fallbackSignOnly]);
 
+  const verificationFailed = plan.verification && plan.verification.passed === false;
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -1025,7 +1039,31 @@ function PaymentPlanCard({
       <div className="flex items-center gap-2 mb-2">
         <Shield size={14} className="text-cyber-green" />
         <span className="text-[10px] text-cyber-muted">Payment Plan</span>
+        {plan.verification?.passed === true && (
+          <span className="text-[10px] text-cyber-green flex items-center gap-1">
+            <CheckCircle size={12} />
+            Verified by ensemble
+          </span>
+        )}
       </div>
+
+      {verificationFailed && (
+        <div className="mb-3 p-4 rounded-lg border-2 border-cyber-red/60 bg-cyber-red/15 flex flex-col gap-2">
+          <div className="flex items-center gap-2 font-cyber text-cyber-red font-medium">
+            <AlertTriangle size={18} />
+            VERIFICATION FAILED — REVIEW REQUIRED
+          </div>
+          <p className="text-xs text-cyber-muted">{plan.verification.reason}</p>
+          {typeof plan.verification.secondaryScore === 'number' && (
+            <p className="text-[10px] text-cyber-muted">
+              Secondary coherence score: {(plan.verification.secondaryScore * 100).toFixed(0)}%
+            </p>
+          )}
+          <p className="text-[10px] text-cyber-muted">
+            Review the plan below. You can still Confirm to proceed after manual review.
+          </p>
+        </div>
+      )}
 
       <div className={`rounded-lg border-2 overflow-hidden ${
         plan.status === 'draft' ? 'border-cyber-cyan/50 bg-cyber-cyan/5' :
@@ -1122,16 +1160,20 @@ function PaymentPlanCard({
 
           {/* Actions — hide when showing fallback-only (user already tapped Confirm, API failed) */}
           {plan.status === 'draft' && !fallbackSignOnly && (
-            <div className="flex gap-2">
-              <button
-                onClick={() => onCancel(plan.id)}
-                disabled={isProcessing}
-                className="flex-1 py-2 rounded border border-cyber-red/50 text-cyber-red text-sm hover:bg-cyber-red/10 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => onConfirm(plan.id)}
+            <div className="flex flex-col gap-2">
+              {verificationFailed && (
+                <p className="text-[10px] text-cyber-yellow">Proceeding will count as manual review.</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onCancel(plan.id)}
+                  disabled={isProcessing}
+                  className="flex-1 py-2 rounded border border-cyber-red/50 text-cyber-red text-sm hover:bg-cyber-red/10 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => onConfirm(plan.id)}
                 disabled={!canConfirm}
                 className="flex-1 py-2 rounded bg-cyber-green/20 border border-cyber-green/50 text-cyber-green text-sm hover:bg-cyber-green/30 disabled:opacity-50 flex items-center justify-center gap-2"
               >
@@ -1143,10 +1185,11 @@ function PaymentPlanCard({
                 ) : (
                   <>
                     <Smartphone size={14} />
-                    Confirm & Sign in Xaman
+                    {verificationFailed ? 'Manual Review — Proceed to Xaman' : 'Confirm & Sign in Xaman'}
                   </>
                 )}
               </button>
+              </div>
             </div>
           )}
 
