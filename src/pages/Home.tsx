@@ -679,7 +679,7 @@ export default function Home() {
                       </a>
                     </div>
                   </div>
-                </motion.div>
+                </TabWrap>
               )}
 
               {activeTab === 'governance' && (
@@ -846,7 +846,10 @@ export default function Home() {
                   </div>
                 </motion.div>
               )}
-            </AnimatePresence>
+                </>
+              );
+              return isInAppBrowser ? tabsContent : <AnimatePresence>{tabsContent}</AnimatePresence>;
+            })()}
           </motion.div>
           
           {/* Right Panel - Tools & Wallet */}

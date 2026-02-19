@@ -55,7 +55,7 @@ interface BountyState {
 
   setBounties: (b: Bounty[]) => void;
   upsertBounty: (b: Bounty) => void;
-  updateBountyStatus: (id: string, status: BountyStatus, opts?: { claimedBy?: string; txHash?: string; completedAt?: number }) => void;
+  updateBountyStatus: (id: string, status: BountyStatus, opts?: { claimedBy?: string; claimedAt?: number; txHash?: string; completedAt?: number }) => void;
   addBounty: (b: Omit<Bounty, 'id' | 'createdAt' | 'updatedAt'>) => void;
 
   appendDiscordActivity: (items: DiscordActivityItem[]) => void;
