@@ -3,15 +3,16 @@ import {
   HeartPulse, TrendingUp, DollarSign, 
   Activity, PieChart as PieChartIcon, BarChart3, LineChart as LineChartIcon,
   ChevronRight, ExternalLink, BookOpen, Code, Video,
-  Wrench, Calculator, RefreshCw
+  Wrench, Calculator, RefreshCw, Info
 } from 'lucide-react'
 import { 
   AreaChart, Area, BarChart, Bar,
   ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, 
   PieChart, Pie, Cell
 } from 'recharts'
+import { useXRPPrice } from '../services/websocketPriceFeeds'
 
-// Mock data
+// Illustrative data for RLUSD, ETF, allocation (not live APIs). XRP price is wired to live feed below.
 const rlusdMetrics = {
   marketCap: '2.45B',
   price: '1.0001',
@@ -61,7 +62,7 @@ const resources = [
     items: [
       { name: 'XRPL Docs', url: 'https://xrpl.org' },
       { name: 'Ripple Developer Portal', url: 'https://ripple.com/build' },
-      { name: 'RLUSD Documentation', url: '#' },
+      { name: 'RLUSD (Ripple)', url: 'https://ripple.com/ripple-usd/' },
     ]
   },
   {
@@ -69,9 +70,9 @@ const resources = [
     icon: Code,
     color: 'cyber-purple',
     items: [
-      { name: 'xrpl.js (JavaScript)', url: '#' },
-      { name: 'xrpl-py (Python)', url: '#' },
-      { name: 'xrpl4j (Java)', url: '#' },
+      { name: 'xrpl.js (JavaScript)', url: 'https://js.xrpl.org' },
+      { name: 'xrpl-py (Python)', url: 'https://xrpl-py.readthedocs.io' },
+      { name: 'xrpl4j (Java)', url: 'https://github.com/XRPLF/xrpl4j' },
     ]
   },
   {
@@ -79,9 +80,9 @@ const resources = [
     icon: Wrench,
     color: 'cyber-green',
     items: [
-      { name: 'XRPL Explorer', url: '#' },
-      { name: 'Testnet Faucet', url: '#' },
-      { name: 'Transaction Decoder', url: '#' },
+      { name: 'XRPL Explorer', url: 'https://livenet.xrpl.org' },
+      { name: 'Testnet Faucet', url: 'https://xrpl.org/xrp-testnet-faucet.html' },
+      { name: 'XRPScan', url: 'https://xrpscan.com' },
     ]
   },
   {
@@ -89,17 +90,29 @@ const resources = [
     icon: Video,
     color: 'cyber-yellow',
     items: [
-      { name: 'XRPL Learning Portal', url: '#' },
-      { name: 'YouTube Tutorials', url: '#' },
-      { name: 'Developer Workshops', url: '#' },
+      { name: 'XRPL Learn', url: 'https://xrpl.org/learn.html' },
+      { name: 'Ripple YouTube', url: 'https://www.youtube.com/ripple' },
+      { name: 'Developer Workshops', url: 'https://ripple.com/build/events' },
     ]
   },
 ]
 
 /** Portfolio section content (RLUSD, ETF, health, charts). Used inside Profile page. */
 export function PortfolioContent() {
+  const { price: xrpPrice, change24h: xrpChange24h, loading: xrpLoading, source: xrpSource } = useXRPPrice();
+
   return (
     <>
+        {/* Data disclaimer: RLUSD/ETF/allocation are illustrative; XRP is live where available */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center gap-2 mb-4 px-3 py-2 rounded-lg bg-cyber-darker/60 border border-cyber-border text-[11px] text-cyber-muted"
+        >
+          <Info size={14} className="shrink-0 text-cyber-cyan" />
+          <span>XRP price is live. RLUSD, ETF, and allocation charts use illustrative data.</span>
+        </motion.div>
+
         {/* Top Stats Row */}
         <motion.div 
           className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
@@ -107,7 +120,7 @@ export function PortfolioContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          {/* RLUSD Card */}
+          {/* RLUSD Card – illustrative */}
           <div className="cyber-panel p-4 border-cyber-green/30">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-cyber-muted">RLUSD Price</span>
@@ -122,7 +135,7 @@ export function PortfolioContent() {
             </div>
           </div>
           
-          {/* ETF Inflows */}
+          {/* ETF Inflows – illustrative */}
           <div className="cyber-panel p-4 border-cyber-purple/30">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-cyber-muted">ETF Inflows (24h)</span>
@@ -134,19 +147,29 @@ export function PortfolioContent() {
             </div>
           </div>
           
-          {/* XRP Price */}
+          {/* XRP Price – live */}
           <div className="cyber-panel p-4 border-cyber-glow/30">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-cyber-muted">XRP Price</span>
-              <span className="text-xs text-cyber-green">+3.2%</span>
+              {!xrpLoading && xrpChange24h != null && (
+                <span className={`text-xs ${xrpChange24h >= 0 ? 'text-cyber-green' : 'text-cyber-red'}`}>
+                  {xrpChange24h >= 0 ? '+' : ''}{xrpChange24h.toFixed(2)}%
+                </span>
+              )}
             </div>
-            <span className="font-cyber text-2xl text-cyber-glow">$2.34</span>
+            <div className="flex items-center gap-2">
+              <span className="font-cyber text-2xl text-cyber-glow">
+                {xrpLoading ? '…' : xrpPrice != null ? `$${xrpPrice.toFixed(4)}` : '—'}
+              </span>
+            </div>
             <div className="mt-2 pt-2 border-t border-cyber-border">
-              <span className="text-xs text-cyber-muted">24h Vol: $1.2B</span>
+              <span className="text-xs text-cyber-muted">
+                {xrpSource ? `${xrpSource}` : 'Live'}
+              </span>
             </div>
           </div>
           
-          {/* Portfolio Health */}
+          {/* Portfolio Health – illustrative */}
           <div className="cyber-panel p-4 border-cyber-cyan/30">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-cyber-muted">Portfolio Health</span>

@@ -5,7 +5,7 @@
  */
 
 import { lazy, Suspense, useEffect } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { useAgentPanelStore } from '../store/agentPanelStore'
 
@@ -37,6 +37,8 @@ function PayBackLink() {
 
 export default function PayPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
   const setAgentOpen = useAgentPanelStore((s) => s.setOpen)
   const setPendingPrompt = useAgentPanelStore((s) => s.setPendingSecureAgentPrompt)
 
@@ -51,6 +53,15 @@ export default function PayPage() {
       setSearchParams({}, { replace: true })
     }
   }, [searchParams, setSearchParams, setAgentOpen, setPendingPrompt])
+
+  // Open agent to Streams (OpenClaw) tab when navigating from Agent Economy "OpenClaw" link
+  useEffect(() => {
+    const tab = (location.state as { tab?: string } | null)?.tab
+    if (tab === 'openclaw') {
+      setAgentOpen(true, 'streams')
+      navigate('/pay', { replace: true })
+    }
+  }, [location.state, setAgentOpen, navigate])
 
   return (
     <Suspense fallback={<PageLoader />}>

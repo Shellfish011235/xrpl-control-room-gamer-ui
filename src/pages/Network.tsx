@@ -329,12 +329,13 @@ export default function Network() {
       ]
     }
     
-    // Fallback to static hub data
+    // Fallback to static hub/topology data (no live validator feed)
+    const totalValidators = hubs.reduce((sum, h) => sum + h.validators, 0)
     return [
-      { label: 'Active Validators', value: hubs.reduce((sum, h) => sum + h.validators, 0).toString(), change: '+3', color: 'cyber-green', live: false, lens: 'validators' as GlobeLens, hint: 'View on map', isPlaceholder: false },
-      { label: 'Total Hubs', value: hubs.length.toString(), change: '+2', color: 'cyber-glow', live: false, lens: 'corridors' as GlobeLens, hint: 'View on map', isPlaceholder: false },
-      { label: 'Corridors', value: corridors.length.toString(), change: '+1', color: 'cyber-purple', live: false, lens: 'corridors' as GlobeLens, hint: 'View on map', isPlaceholder: false },
-      { label: 'Ledger agreement', value: '99.5%', change: 'Same next ledger (24h)', color: 'cyber-cyan', live: false, lens: 'validators' as GlobeLens, hint: 'View details', isPlaceholder: false, description: 'Agreement on ledger closes: how often validators voted for the same next ledger (consensus). 24h average from XRPScan.' },
+      { label: 'Active Validators', value: totalValidators.toString(), change: 'From topology', color: 'cyber-green', live: false, lens: 'validators' as GlobeLens, hint: 'View on map', isPlaceholder: false },
+      { label: 'Total Hubs', value: hubs.length.toString(), change: 'From topology', color: 'cyber-glow', live: false, lens: 'corridors' as GlobeLens, hint: 'View on map', isPlaceholder: false },
+      { label: 'Corridors', value: corridors.length.toString(), change: 'From topology', color: 'cyber-purple', live: false, lens: 'corridors' as GlobeLens, hint: 'View on map', isPlaceholder: false },
+      { label: 'Ledger agreement', value: '—', change: 'Enable LIVE for real %', color: 'cyber-cyan', live: false, lens: 'validators' as GlobeLens, hint: 'View details', isPlaceholder: true, description: 'Agreement on ledger closes (consensus). Enable LIVE in the header for live data from XRPScan.' },
     ]
   }, [hubs, corridors, liveStats, showLiveData])
 

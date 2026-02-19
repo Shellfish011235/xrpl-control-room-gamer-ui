@@ -4,11 +4,13 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Zap, Star, Loader2, AlertCircle } from 'lucide-react';
+import { Zap, Star, Loader2, AlertCircle, ExternalLink } from 'lucide-react';
 import { useOptimizerStore, type RankedPath } from '../store/optimizerStore';
+import { useAgentPanelStore } from '../store/agentPanelStore';
 import { fetchRankedPaths } from '../services/optimizerService';
 
 export default function Optimizer() {
@@ -30,6 +32,9 @@ export default function Optimizer() {
     favorites,
     toggleFavorite,
   } = useOptimizerStore();
+  const navigate = useNavigate();
+  const setAgentOpen = useAgentPanelStore((s) => s.setOpen);
+  const setPendingPrompt = useAgentPanelStore((s) => s.setPendingSecureAgentPrompt);
 
   const [runKey, setRunKey] = useState(0);
 
@@ -158,6 +163,35 @@ export default function Optimizer() {
 
       {rankedPaths.length > 0 && (
         <>
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-xl border border-cyber-green/40 bg-cyber-green/10 mb-5"
+          >
+            <p className="text-sm text-cyber-green font-medium mb-2">
+              Best path: {rankedPaths[0].label}
+              {rankedPaths[0].effectiveRate != null && (
+                <span className="text-cyber-muted font-normal ml-2">Rate {rankedPaths[0].effectiveRate.toFixed(4)}</span>
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                const prompt = `Send ${amount} ${sourceAsset} to `;
+                setPendingPrompt(prompt);
+                setAgentOpen(true, 'chat');
+                navigate(`/pay?source=${encodeURIComponent(sourceAsset)}&dest=${encodeURIComponent(destAsset)}&amount=${encodeURIComponent(amount)}`);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan/50 text-cyber-cyan text-sm hover:bg-cyber-cyan/30"
+            >
+              <ExternalLink size={14} />
+              Use this in Secure Agent
+            </button>
+            <p className="text-[10px] text-cyber-muted mt-2">
+              Opens the agent with &quot;Send {amount} {sourceAsset} to &quot; — paste an XRPL address and confirm.
+            </p>
+          </motion.div>
+
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

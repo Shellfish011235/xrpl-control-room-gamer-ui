@@ -6,7 +6,7 @@ import {
   Image as ImageIcon, ChevronRight, Github, Twitter, Edit2, Check, X,
   Users, FileText
 } from 'lucide-react'
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { ProfilePictureUpload } from '../components/ProfilePictureUpload'
 import { WalletConnect } from '../components/WalletConnect'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
@@ -355,7 +355,7 @@ export default function Home() {
             </div>
             {/* Tab Content - no AnimatePresence in X in-app browser so content always paints */}
             {(() => {
-              const TabWrap = ({ k, children }: { k: string; children: ReactNode }) =>
+              const TabWrap = ({ k, children }: { k: string; children: React.ReactNode }) =>
                 isInAppBrowser
                   ? <div key={k}>{children}</div>
                   : <motion.div key={k} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }}>{children}</motion.div>;
@@ -679,11 +679,17 @@ export default function Home() {
                       </a>
                     </div>
                   </div>
-                </TabWrap>
-                  )}
+                </motion.div>
+              )}
 
               {activeTab === 'governance' && (
-                <TabWrap k="governance">
+                <motion.div
+                  key="governance"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
                   {/* Governance Header */}
                   <div className="cyber-panel p-4 mb-4">
                     <div className="flex items-center justify-between mb-4">
@@ -766,11 +772,17 @@ export default function Home() {
                       </a>
                     </div>
                   </div>
-                </TabWrap>
+                </motion.div>
               )}
 
               {activeTab === 'impact' && (
-                <TabWrap k="impact">
+                <motion.div
+                  key="impact"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
                   {/* Impact Tool Header */}
                   <div className="cyber-panel p-4 mb-4">
                     <div className="flex items-center justify-between mb-4">
@@ -832,12 +844,9 @@ export default function Home() {
                       ))}
                     </div>
                   </div>
-                </TabWrap>
+                </motion.div>
               )}
-                </>
-              );
-              return isInAppBrowser ? tabsContent : <AnimatePresence mode="wait">{tabsContent}</AnimatePresence>;
-            })()}
+            </AnimatePresence>
           </motion.div>
           
           {/* Right Panel - Tools & Wallet */}

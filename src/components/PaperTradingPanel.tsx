@@ -2082,6 +2082,9 @@ function PaperTradingPanelInner({
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
+            <p className="text-[10px] text-cyber-muted px-1">
+              Price alerts use live feeds. Market signals below are simulated for demo.
+            </p>
             {/* Alerts Toggle & Status */}
             <div className="flex items-center justify-between p-3 rounded bg-cyber-darker border border-cyber-border/50">
               <div className="flex items-center gap-2">

@@ -8,8 +8,9 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cpu, ListTodo, Receipt, Shield, Zap, ExternalLink, Loader2, CheckCircle,
-  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign, ChevronRight
+  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign, ChevronRight, Trophy
 } from 'lucide-react';
+import { BountyBoard } from '../components/agentEconomy';
 import { useWalletStore } from '../store/walletStore';
 import { useAgentEconomyStore } from '../store/agentEconomyStore';
 import { usePlatformModeStore } from '../store/platformModeStore';
@@ -19,9 +20,10 @@ import { getXamanMode } from '../config/xaman';
 
 // ==================== TABS ====================
 
-export type AgentEconomyTabId = 'agents' | 'requests' | 'caps' | 'receipts';
+export type AgentEconomyTabId = 'agents' | 'requests' | 'caps' | 'receipts' | 'bounties';
 
 export const agentEconomyTabs: { id: AgentEconomyTabId; label: string; icon: typeof Cpu }[] = [
+  { id: 'bounties', label: 'Bounties', icon: Trophy },
   { id: 'receipts', label: 'Receipts', icon: Receipt },
   { id: 'caps', label: 'Limits', icon: Shield },
   { id: 'requests', label: 'Pending', icon: ListTodo },
@@ -428,6 +430,11 @@ export default function AgentEconomy() {
         </div>
 
         <AnimatePresence mode="wait">
+          {tab === 'bounties' && (
+            <motion.div key="bounties" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <BountyBoard />
+            </motion.div>
+          )}
           {tab === 'agents' && (
             <motion.div key="agents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <AgentsTab />

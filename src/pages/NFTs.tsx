@@ -278,8 +278,13 @@ export default function NFTs() {
             exit={{ opacity: 0 }}
             className="cyber-panel p-6"
           >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-2 py-0.5 rounded text-[10px] bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/40">
+                Coming soon
+              </span>
+            </div>
             <p className="text-cyber-muted text-sm">
-              Sell/Buy offers (NFTokenCreateOffer, NFTokenAcceptOffer) – use Portfolio to select an NFT, then create a sell offer. Full broker mode coming soon.
+              Sell/Buy offers (NFTokenCreateOffer, NFTokenAcceptOffer) – use <strong className="text-cyber-text">Portfolio</strong> to select an NFT, then create a sell offer. Full broker mode in a future update.
             </p>
           </motion.div>
         )}

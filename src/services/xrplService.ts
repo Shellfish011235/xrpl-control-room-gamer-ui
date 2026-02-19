@@ -116,6 +116,7 @@ interface AccountTxResult {
       TransactionType: string;
       date: number;
       hash: string;
+      Memos?: Array<{ Memo: { MemoData?: string; MemoType?: string } }>;
     };
     validated: boolean;
   }>;
@@ -639,6 +640,58 @@ export async function getAccountTransactions(address: string, limit: number = 10
       };
     });
   } catch {
+    return [];
+  }
+}
+
+/** Incoming Payment txs to an account (for OpenClaw fee wallet dashboard). */
+export async function getIncomingPayments(
+  account: string,
+  limit: number = 50
+): Promise<Array<{ hash: string; from: string; amount: number; timestamp: number; memo: string }>> {
+  try {
+    const result = await xrplRequest<AccountTxResult>('account_tx', [
+      {
+        account,
+        ledger_index_min: -1,
+        ledger_index_max: -1,
+        limit,
+      },
+    ]);
+
+    const incoming: Array<{ hash: string; from: string; amount: number; timestamp: number; memo: string }> = [];
+    for (const item of result.transactions) {
+      const tx = item.tx;
+      if (tx.TransactionType !== 'Payment' || tx.Destination !== account) continue;
+
+      let amount = 0;
+      if (typeof tx.Amount === 'string') {
+        amount = dropsToXRP(tx.Amount);
+      } else if (tx.Amount && typeof tx.Amount === 'object' && 'value' in tx.Amount) {
+        amount = parseFloat((tx.Amount as { value: string }).value);
+      }
+
+      let memo = '';
+      if (tx.Memos?.[0]?.Memo?.MemoData) {
+        try {
+          const hex = tx.Memos[0].Memo.MemoData;
+          memo = typeof hex === 'string' ? decodeHex(hex) : '';
+        } catch {
+          memo = '';
+        }
+      }
+
+      incoming.push({
+        hash: tx.hash,
+        from: tx.Account,
+        amount,
+        timestamp: rippleTimeToUnix(tx.date),
+        memo,
+      });
+    }
+    return incoming;
+  } catch (e) {
+    console.warn('[XRPL] getIncomingPayments failed:', e);
     return [];
   }
 }

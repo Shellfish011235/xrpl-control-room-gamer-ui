@@ -5,9 +5,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Bot, Zap, Users, Activity,
   ExternalLink, Copy, Check,
-  Layers, Code, RefreshCw
+  Layers, Code, RefreshCw, Send
 } from 'lucide-react';
 import { PLATFORM_FEE_DISABLED } from '../../integrations/openclaw/OpenClawXRPL';
+import { getIncomingPayments } from '../../services/xrplService';
+import { useAgentPanelStore } from '../../store/agentPanelStore';
 
 // =============================================================================
 // TYPES
@@ -16,7 +18,7 @@ import { PLATFORM_FEE_DISABLED } from '../../integrations/openclaw/OpenClawXRPL'
 interface RealTransaction {
   hash: string;
   from: string;
-  amount: number;  // in XRP
+  amount: number;
   timestamp: number;
   memo?: string;
 }
@@ -33,6 +35,8 @@ interface RevenueStats {
 // =============================================================================
 
 export function OpenClawDashboard() {
+  const setAgentOpen = useAgentPanelStore((s) => s.setOpen);
+  const setPendingPrompt = useAgentPanelStore((s) => s.setPendingSecureAgentPrompt);
   const [transactions, setTransactions] = useState<RealTransaction[]>([]);
   const [stats, setStats] = useState<RevenueStats>({
     totalRevenue: 0,
@@ -46,71 +50,38 @@ export function OpenClawDashboard() {
 
   const PLATFORM_WALLET = 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64';
 
-  // Fetch REAL transaction data from XRPL Mainnet (no balance - privacy)
+  // Fetch real incoming payments from XRPL (shared xrplService with endpoint fallback)
   const fetchRealData = useCallback(async () => {
     setLoading(true);
     try {
-      // Get REAL transactions only (not balance)
-      const txResponse = await fetch('https://xrplcluster.com/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          method: 'account_tx',
-          params: [{ account: PLATFORM_WALLET, limit: 50 }],
-        }),
+      const incoming = await getIncomingPayments(PLATFORM_WALLET, 50);
+      const realTxs: RealTransaction[] = incoming.map((t) => ({
+        hash: t.hash,
+        from: t.from,
+        amount: t.amount,
+        timestamp: t.timestamp,
+        memo: t.memo || undefined,
+      }));
+
+      setTransactions(realTxs);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayMs = today.getTime();
+      const todayTxs = realTxs.filter((tx) => tx.timestamp >= todayMs);
+      const uniqueSenders = new Set(realTxs.map((tx) => tx.from)).size;
+      const totalRevenue = realTxs.reduce((sum, tx) => sum + tx.amount, 0);
+      const todayRevenue = todayTxs.reduce((sum, tx) => sum + tx.amount, 0);
+
+      setStats({
+        totalRevenue,
+        todayRevenue,
+        uniqueSenders,
+        totalTransactions: realTxs.length,
       });
-      const txData = await txResponse.json();
-      
-      if (txData.result?.transactions) {
-        const realTxs: RealTransaction[] = txData.result.transactions
-          .filter((tx: any) => tx.tx?.TransactionType === 'Payment' && tx.tx?.Destination === PLATFORM_WALLET)
-          .map((tx: any) => {
-            // Parse memo if present
-            let memo = '';
-            if (tx.tx?.Memos?.[0]?.Memo?.MemoData) {
-              try {
-                memo = Buffer.from(tx.tx.Memos[0].Memo.MemoData, 'hex').toString('utf8');
-              } catch { memo = ''; }
-            }
-            
-            // Amount in XRP (handle both native XRP and issued currencies)
-            let amount = 0;
-            if (typeof tx.tx?.Amount === 'string') {
-              amount = parseInt(tx.tx.Amount) / 1_000_000;
-            }
-            
-            return {
-              hash: tx.tx?.hash || '',
-              from: tx.tx?.Account || 'Unknown',
-              amount,
-              timestamp: tx.tx?.date ? (tx.tx.date + 946684800) * 1000 : Date.now(), // XRPL epoch to JS epoch
-              memo,
-            };
-          });
-        
-        setTransactions(realTxs);
-        
-        // Calculate stats from real transactions
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayMs = today.getTime();
-        
-        const todayTxs = realTxs.filter(tx => tx.timestamp >= todayMs);
-        const uniqueSenders = new Set(realTxs.map(tx => tx.from)).size;
-        const totalRevenue = realTxs.reduce((sum, tx) => sum + tx.amount, 0);
-        const todayRevenue = todayTxs.reduce((sum, tx) => sum + tx.amount, 0);
-        
-        setStats({
-          totalRevenue,
-          todayRevenue,
-          uniqueSenders,
-          totalTransactions: realTxs.length,
-        });
-      }
-      
       setLastUpdate(new Date());
     } catch (error) {
-      console.error('Failed to fetch XRPL data:', error);
+      console.error('[OpenClaw] Failed to fetch XRPL data:', error);
     } finally {
       setLoading(false);
     }
@@ -306,7 +277,17 @@ export function OpenClawDashboard() {
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setPendingPrompt(`Send 0.5 XRP to ${PLATFORM_WALLET} (OpenClaw fee wallet)`);
+              setAgentOpen(true, 'chat');
+            }}
+            className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-cyber-green/40 bg-cyber-green/10 text-xs text-cyber-green hover:bg-cyber-green/20 transition-colors"
+          >
+            <Send size={12} /> Send test payment
+          </button>
           <a href="https://github.com/Shellfish011235/xrpl-control-room-gamer-ui" target="_blank" rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 py-2.5 rounded-lg border border-cyber-border bg-cyber-darker/50 text-xs text-cyber-text hover:bg-cyber-cyan/10 hover:border-cyber-cyan/30 transition-colors">
             <Code size={12} /> GitHub

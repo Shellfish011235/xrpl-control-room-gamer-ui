@@ -392,15 +392,46 @@ const impactStyles: Record<PerformanceImpact, string> = {
   Unknown: '#94a3b8',
 };
 
+/** Get one amendment from static metadata (for AmendmentDetail when API fails, e.g. X in-app browser). */
+function getStaticAmendmentByName(name: string): Amendment | null {
+  const meta = amendmentMetadata[name];
+  if (!meta) return null;
+  const evidenceLinks: { label: string; url: string }[] = [
+    { label: 'View on XRPScan', url: `https://xrpscan.com/amendment/${name}` }
+  ];
+  if (meta.github) evidenceLinks.push({ label: 'GitHub Spec/PR', url: meta.github });
+  return {
+    id: name,
+    name,
+    summary: meta.summary,
+    tier: meta.tier,
+    performanceImpact: meta.impact,
+    waitingDays: 0,
+    ledgerImpact: {
+      estimatedImpact: meta.impact,
+      confidence: 'High',
+      affectedAreas: meta.areas,
+      rationale: meta.rationale,
+      evidenceLinks,
+    },
+    validatorSupport: { current: 0, required: 34 },
+    enabled: false,
+    percentSupport: 0,
+    status: 'pending',
+    author: meta.author,
+    github: meta.github,
+  };
+}
+
 /** Fetch a single amendment by name (for AmendmentDetail when location.state is lost, e.g. X in-app browser). */
 export async function fetchAmendmentByName(name: string): Promise<Amendment | null> {
   try {
     const list = await fetchXRPLAmendments();
     const found = list.find((a) => a.name === name);
-    return found ? convertToAmendment(found) : null;
+    return found ? convertToAmendment(found) : getStaticAmendmentByName(name);
   } catch (e) {
-    console.warn('[LedgerImpact] fetchAmendmentByName failed:', e);
-    return null;
+    console.warn('[LedgerImpact] fetchAmendmentByName failed (using static fallback):', e);
+    return getStaticAmendmentByName(name);
   }
 }
 
@@ -446,6 +477,10 @@ export function LedgerImpactTool() {
   
   // Responsive layout detection
   const { isSmallHeight, isTinyHeight, isMinimized } = useResponsiveLayout();
+
+  // Use full-page link (no modal) when in-app browser OR narrow viewport (e.g. iPhone in X).
+  // Modals often render blank in X/Twitter WebView; full page always shows content.
+  const useFullPageLink = isInAppBrowser || isMinimized || isSmallHeight;
 
   // Fetch live amendments from XRPScan; on failure keep showing static list so the box always has info
   const fetchAmendments = useCallback(async () => {
@@ -611,9 +646,9 @@ export function LedgerImpactTool() {
         ))}
       </div>
 
-      {isInAppBrowser && (
+      {useFullPageLink && (
         <p className="text-[10px] text-cyber-yellow/90 bg-cyber-yellow/10 border border-cyber-yellow/30 rounded px-2 py-1.5 mb-2">
-          Opening from X? Tap a row — amendment details open as a full page (no popup).
+          Tap a row — amendment details open as a full page (works best in X app and on phones).
         </p>
       )}
 
@@ -677,7 +712,7 @@ export function LedgerImpactTool() {
                 </div>
               </>
             );
-            if (isInAppBrowser) {
+            if (useFullPageLink) {
               return (
                 <Link
                   key={amendment.id}

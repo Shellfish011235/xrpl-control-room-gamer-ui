@@ -109,7 +109,7 @@ export default function Bridges() {
         transition={{ delay: 0.2 }}
         className="mt-8 text-center text-xs text-cyber-muted"
       >
-        XRPL + Bridges = Institutional Edge. Data: Axelar-style APIs; DefiLlama yields next.
+        XRPL + Bridges = Institutional Edge. Flows/routes use mock or external APIs. Bridge executor &amp; Cytoscape graph in Phase 3.
       </motion.p>
     </div>
   );

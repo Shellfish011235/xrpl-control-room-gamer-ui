@@ -1,13 +1,13 @@
 /**
- * Liquidity Crush – gamified pathfinding.
+ * Pathfinding – gamified pathfinding.
  * Match tiles (XRP, USD, EUR, etc.) → pathfinding runs → "Path found: USD → XRP → EUR" with
  * visual route. Ties to Liquidity Nexus, C2V, and optional testnet execution.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Loader2, ExternalLink, Info, Sparkles, Award } from 'lucide-react';
+import { Zap, Loader2, ExternalLink, Info, Sparkles } from 'lucide-react';
 import { findPathForGame, GAME_TILE_CURRENCIES, type GamePathResult } from '../services/gamePathfinding';
 import { fetchRankedPaths } from '../services/optimizerService';
 import type { RankedPath } from '../store/optimizerStore';
@@ -15,24 +15,6 @@ import { PathVisualization } from '../components/game';
 import { useAgentPanelStore } from '../store/agentPanelStore';
 
 const DEFAULT_AMOUNT = '10';
-const PATHS_FOUND_KEY = 'liquidity-crush-paths-found';
-const PATH_MASTER_THRESHOLD = 10;
-
-function getPathsFound(): number {
-  try {
-    const n = parseInt(localStorage.getItem(PATHS_FOUND_KEY) ?? '0', 10);
-    return Number.isFinite(n) ? n : 0;
-  } catch {
-    return 0;
-  }
-}
-
-function incrementPathsFound(): void {
-  try {
-    const n = getPathsFound() + 1;
-    localStorage.setItem(PATHS_FOUND_KEY, String(n));
-  } catch {}
-}
 
 export default function LiquidityCrush() {
   const [selected, setSelected] = useState<string[]>([]);
@@ -40,12 +22,9 @@ export default function LiquidityCrush() {
   const [result, setResult] = useState<GamePathResult | null>(null);
   const [optimizerPaths, setOptimizerPaths] = useState<RankedPath[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pathsFound, setPathsFound] = useState(getPathsFound);
   const navigate = useNavigate();
   const setAgentOpen = useAgentPanelStore((s) => s.setOpen);
   const setPendingPrompt = useAgentPanelStore((s) => s.setPendingSecureAgentPrompt);
-
-  useEffect(() => setPathsFound(getPathsFound()), [result?.success]);
 
   const handleTileClick = (id: string) => {
     if (selected.length === 0) {
@@ -76,10 +55,6 @@ export default function LiquidityCrush() {
         fetchRankedPaths({ sourceAsset: source, destAsset: dest, amount }).catch(() => [] as RankedPath[]),
       ]);
       setResult(res);
-      if (res.success) {
-        incrementPathsFound();
-        setPathsFound(getPathsFound());
-      }
       if (ranked.length > 0) setOptimizerPaths(ranked);
     } finally {
       setLoading(false);
@@ -104,28 +79,15 @@ export default function LiquidityCrush() {
   return (
     <div className="min-h-screen bg-cyber-dark text-cyber-text p-6">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-cyber-cyan/20">
-              <Zap size={24} className="text-cyber-cyan" />
-            </div>
-            <div>
-              <h1 className="font-cyber text-xl text-cyber-cyan">Liquidity Crush</h1>
-              <p className="text-xs text-cyber-muted">
-                Match two tiles → we find the best route on the real ledger. Practice pathfinding.
-              </p>
-            </div>
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-lg bg-cyber-cyan/20">
+            <Zap size={24} className="text-cyber-cyan" />
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-cyber-muted flex items-center gap-1">
-              <Award size={14} />
-              Paths found: <strong className="text-cyber-cyan">{pathsFound}</strong>
-            </span>
-            {pathsFound >= PATH_MASTER_THRESHOLD && (
-              <span className="px-2 py-0.5 rounded text-[10px] bg-cyber-green/20 text-cyber-green border border-cyber-green/40">
-                Path Master
-              </span>
-            )}
+          <div>
+            <h1 className="font-cyber text-xl text-cyber-cyan">Pathfinding</h1>
+            <p className="text-xs text-cyber-muted">
+              Match two tiles → we find the best route on the real ledger. Practice pathfinding.
+            </p>
           </div>
         </div>
 
@@ -144,7 +106,6 @@ export default function LiquidityCrush() {
           </span>
         </div>
 
-        {/* Tile grid */}
         <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 mb-8">
           {GAME_TILE_CURRENCIES.map((tile) => {
             const isSelected = selected.includes(tile.id);
@@ -250,7 +211,7 @@ export default function LiquidityCrush() {
           )}
         </AnimatePresence>
 
-        <div className="mt-10 p-4 rounded-lg border border-cyber-border/50 bg-cyber-darker/50 flex gap-3">
+        <div className="mt-6 p-4 rounded-lg border border-cyber-border/50 bg-cyber-darker/50 flex gap-3">
           <Info size={18} className="text-cyber-cyan shrink-0 mt-0.5" />
           <div className="text-[11px] text-cyber-muted space-y-1">
             <p>
