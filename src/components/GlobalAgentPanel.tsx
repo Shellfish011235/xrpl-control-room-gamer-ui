@@ -5,12 +5,15 @@
 
 import React, { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Send, ChevronDown, ChevronUp, Loader, Receipt, Zap } from 'lucide-react';
+import { Bot, X, Send, ChevronDown, ChevronUp, Loader, Receipt, Zap, MessageSquare } from 'lucide-react';
 import { useAgentPanelStore } from '../store/agentPanelStore';
 import { useCARVStore } from '../store/carvStore';
 
 const SecureAgentPanel = lazy(() =>
   import('./carv/SecureAgentPanel').then((m) => ({ default: m.SecureAgentPanel }))
+);
+const BenderChatPanel = lazy(() =>
+  import('./BenderChatPanel').then((m) => ({ default: m.BenderChatPanel }))
 );
 const AgentEconomyDrawerContent = lazy(() =>
   import('./AgentEconomyDrawerContent').then((m) => ({ default: m.AgentEconomyDrawerContent }))
@@ -23,6 +26,7 @@ const PANEL_TABS = [
   { id: 'chat' as const, label: 'Chat', icon: Bot },
   { id: 'economy' as const, label: 'Track', icon: Receipt },
   { id: 'streams' as const, label: 'Streams', icon: Zap },
+  { id: 'bender' as const, label: "Bender's Hook", icon: MessageSquare },
 ] as const;
 
 function QuickSendStrip() {
@@ -238,6 +242,17 @@ export function GlobalAgentPanel() {
                     }
                   >
                     <StreamsDrawerContent />
+                  </Suspense>
+                )}
+                {panelTab === 'bender' && (
+                  <Suspense
+                    fallback={
+                      <div className="flex items-center justify-center p-8">
+                        <Loader size={24} className="animate-spin text-cyber-cyan" />
+                      </div>
+                    }
+                  >
+                    <BenderChatPanel />
                   </Suspense>
                 )}
               </div>
