@@ -6,4 +6,5 @@
  */
 
 export * from './constants';
+export * from './encoding';
 export * from './utils';

@@ -1,6 +1,8 @@
 // CARV - Interledger Protocol Connector
 // Handles ILP STREAM payments for cross-network transfers
+// Uses browser-safe encoding (no Node Buffer).
 
+import { stringToBase64 } from '@/lib/encoding';
 import { SignedPIE, RouteResult, CARVEvent, CARVEventHandler } from './types';
 
 // ==================== TYPES ====================
@@ -108,7 +110,7 @@ export class ILPConnector {
       if (this.config.mode === 'test') {
         return {
           destinationAccount: `test.mock.${parsed.host}.${Date.now()}`,
-          sharedSecret: Buffer.from('test-secret-' + Date.now()).toString('base64'),
+          sharedSecret: stringToBase64('test-secret-' + Date.now()),
         };
       }
       

@@ -1,6 +1,8 @@
 // CARV - Real XRPL Connector
 // Handles actual XRPL transactions on testnet/mainnet
+// Uses browser-safe encoding (no Node Buffer).
 
+import { stringToHex as stringToHexUtil } from '@/lib/encoding';
 import { SignedPIE, RouteResult, CARVEvent, CARVEventHandler } from './types';
 
 // ==================== TYPES ====================
@@ -488,7 +490,7 @@ export class XRPLConnector {
     // This creates a mock signature for demonstration
     
     const txJson = JSON.stringify(tx);
-    const mockBlob = Buffer.from(txJson).toString('hex');
+    const mockBlob = stringToHexUtil(txJson);
     const mockHash = this.quickHash(txJson);
 
     return {
@@ -508,7 +510,7 @@ export class XRPLConnector {
   }
 
   private stringToHex(str: string): string {
-    return Buffer.from(str, 'utf8').toString('hex').toUpperCase();
+    return stringToHexUtil(str, true);
   }
 
   private delay(ms: number): Promise<void> {

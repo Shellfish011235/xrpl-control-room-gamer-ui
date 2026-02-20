@@ -1,8 +1,10 @@
 /**
  * Build settlement plan: netted obligations + remainder intents → PlannedTx.
  * XRPL payload shape compatible with xrpl.js / submission layer.
+ * Uses browser-safe encoding (no Node Buffer).
  */
 
+import { stringToHex } from '../lib/encoding';
 import type {
   Intent,
   NettedObligation,
@@ -71,7 +73,7 @@ function intentToPlannedTx(intent: Intent, seq: number): PlannedTx | null {
       TakerPays: assetToXRPLAmount(o.takerPays.asset, o.takerPays.amount),
       ...(o.flags != null && { Flags: o.flags }),
       ...(o.expiration != null && { Expiration: o.expiration }),
-      ...(o.memo && { Memo: { MemoData: Buffer.from(o.memo, 'utf8').toString('hex') } }),
+      ...(o.memo && { Memo: { MemoData: stringToHex(o.memo) } }),
     };
     return { kind: 'XRPL_TX', txType: 'OfferCreate', account: o.owner, payload, dependsOn: [] };
   }

@@ -295,7 +295,7 @@ class XamanService {
     if (!account) {
       throw new Error('No payer address. Connect Xaman or add a wallet in the app.');
     }
-    const payload = { ...tx, Account: tx.Account ?? account };
+    const payload = { ...tx, Account: account };
     const type = (payload.TransactionType as SigningRequest['type']) || 'other';
     return this.createSigningRequest(type, payload);
   }
