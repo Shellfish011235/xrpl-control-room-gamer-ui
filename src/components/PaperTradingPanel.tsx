@@ -856,10 +856,16 @@ function PaperTradingPanelInner({
     return priceAlerts.filter(a => !a.triggered).length;
   }, [priceAlerts]);
 
-  // Safe calculations
-  const totalValue = getTotalPortfolioValue?.() ?? cashBalance;
-  const totalPnL = totalValue - startingBalance;
-  const totalPnLPercent = startingBalance > 0 ? (totalPnL / startingBalance) * 100 : 0;
+  // Safe calculations — in live mode with connected wallet, show real balance so user isn't "stuck in demo"
+  const paperTotalValue = getTotalPortfolioValue?.() ?? cashBalance;
+  const paperTotalPnL = paperTotalValue - startingBalance;
+  const paperTotalPnLPercent = startingBalance > 0 ? (paperTotalPnL / startingBalance) * 100 : 0;
+  const useRealBalance = isLiveMode && activeWallet && typeof activeWallet.balance === 'number';
+  const liveBalanceLoading = isLiveMode && activeWallet && typeof activeWallet.balance !== 'number';
+  const totalValue = useRealBalance ? activeWallet.balance! : paperTotalValue;
+  const totalPnL = useRealBalance ? 0 : paperTotalPnL;
+  const totalPnLPercent = useRealBalance ? 0 : paperTotalPnLPercent;
+  const displayCash = useRealBalance ? activeWallet!.balance! : cashBalance;
   const stats = getStats?.() ?? {
     totalTrades: 0,
     winningTrades: 0,
@@ -977,8 +983,10 @@ function PaperTradingPanelInner({
             <GraduationCap size={12} />
             TUTORIAL
           </button>
-          <span className="px-2 py-0.5 text-[9px] rounded bg-cyber-yellow/20 text-cyber-yellow font-cyber">
-            SIMULATOR
+          <span className={`px-2 py-0.5 text-[9px] rounded font-cyber ${
+            isLiveMode && activeWallet ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-yellow/20 text-cyber-yellow'
+          }`}>
+            {isLiveMode && activeWallet ? 'LIVE' : 'SIMULATOR'}
           </span>
           <button
             id="reset-button"
@@ -1204,9 +1212,11 @@ function PaperTradingPanelInner({
         }`}
       >
         <div className="p-2 rounded bg-cyber-darker border border-cyber-border/50 text-center">
-          <p className="text-[9px] text-cyber-muted mb-1">PORTFOLIO VALUE</p>
+          <p className="text-[9px] text-cyber-muted mb-1">
+            PORTFOLIO VALUE {(useRealBalance && <span className="text-cyber-green">(real)</span>) || (liveBalanceLoading && <span className="text-cyber-muted">(loading)</span>)}
+          </p>
           <p className="font-cyber text-lg text-cyber-text">
-            {totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {liveBalanceLoading ? '…' : totalValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
           <p className="text-[9px] text-cyber-muted">XRP</p>
           <p className="text-[10px] text-cyber-yellow mt-1">
@@ -1214,13 +1224,15 @@ function PaperTradingPanelInner({
           </p>
         </div>
         <div className="p-2 rounded bg-cyber-darker border border-cyber-border/50 text-center">
-          <p className="text-[9px] text-cyber-muted mb-1">AVAILABLE CASH</p>
+          <p className="text-[9px] text-cyber-muted mb-1">
+            AVAILABLE CASH {(useRealBalance && <span className="text-cyber-green">(real)</span>) || (liveBalanceLoading && <span className="text-cyber-muted">(loading)</span>)}
+          </p>
           <p className="font-cyber text-lg text-cyber-cyan">
-            {cashBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            {liveBalanceLoading ? '…' : displayCash.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
           <p className="text-[9px] text-cyber-muted">XRP</p>
           <p className="text-[10px] text-cyber-yellow mt-1">
-            ≈ ${(cashBalance * (prices['XRP'] || 2.45)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            ≈ ${((liveBalanceLoading ? 0 : displayCash) * (prices['XRP'] || 2.45)).toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
         </div>
         <div className={`p-2 rounded border text-center ${
