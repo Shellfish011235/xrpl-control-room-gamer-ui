@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense, useRef } from 'react'
+import { lazyWithRetry } from './lib/lazyWithRetry'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AnimatePresence } from 'framer-motion'
