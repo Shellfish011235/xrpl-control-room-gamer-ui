@@ -614,7 +614,7 @@ export function PortfolioContent() {
                     </tr>
                   </thead>
                   <tbody>
-                    {stablecoinComparison.map((coin, idx) => (
+                    {stablecoinRows.map((coin, idx) => (
                       <tr key={coin.name} className="border-b border-cyber-border/50 hover:bg-cyber-darker/50">
                         <td className="py-3">
                           <div className="flex items-center gap-2">
