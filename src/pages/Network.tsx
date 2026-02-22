@@ -67,6 +67,8 @@ import {
   getVolumeColor,
   getTypeColor as getCorridorTypeColor,
   getChainStatusColor,
+  getSourceUrl,
+  getOdlDisclosureText,
   type PaymentCorridor,
   type ODLPartner,
   type CrossChainBridge,
@@ -667,9 +669,10 @@ export default function Network() {
                     </button>
                   </div>
                   
-                  {/* Monthly Volume */}
+                  {/* Total corridor market (not ODL — sourced from World Bank/central banks) */}
                   <div className="p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 mb-3">
-                    <p className="text-[9px] text-cyber-muted">Est. Monthly ODL Volume</p>
+                    <p className="text-[9px] text-cyber-muted">Total corridor market (est.)</p>
+                    <p className="text-[8px] text-cyber-muted mb-0.5">Source: World Bank / central banks · total market (all providers) · not ODL volume</p>
                     <p className="text-lg font-cyber text-cyber-green">{corridorStats.estimatedMonthlyVolume}</p>
                   </div>
                   
@@ -1257,7 +1260,7 @@ export default function Network() {
                           </div>
                           <p className="text-[9px] text-cyber-muted mt-0.5">{corridor.type}</p>
                           {corridor.monthlyVolume && (
-                            <p className="text-[10px] text-cyber-purple mt-1">{corridor.monthlyVolume}/month</p>
+                            <p className="text-[10px] text-cyber-purple mt-1" title="Total market, not ODL">{corridor.monthlyVolume}/mo</p>
                           )}
                         </button>
                       ))}
@@ -1507,13 +1510,13 @@ export default function Network() {
                             <span className="text-xs text-cyber-text font-medium">{corridor.name}</span>
                             <div className="flex items-center gap-1">
                               {corridor.odlEnabled && (
-                                <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-green/20 text-cyber-green">ODL</span>
+                                <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-green/20 text-cyber-green" title="ODL-enabled corridor; dollar amount above is total market, not ODL volume">ODL</span>
                               )}
                             </div>
                           </div>
                           <p className="text-[9px] text-cyber-muted mt-0.5">{corridor.type} • {corridor.volume}</p>
                           {corridor.monthlyVolume && (
-                            <p className="text-[10px] text-cyber-glow mt-1">{corridor.monthlyVolume}/month</p>
+                            <p className="text-[10px] text-cyber-glow mt-1" title="Total remittance market (source: World Bank/central banks), not ODL volume">{corridor.monthlyVolume}/mo (total market)</p>
                           )}
                           {corridor.growthYoY && (
                             <span className="text-[9px] text-cyber-green">{corridor.growthYoY} YoY</span>
@@ -1545,7 +1548,8 @@ export default function Network() {
                     {/* Main Stats Grid */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
                       <div className="p-3 rounded bg-cyber-darker/60 border border-cyber-border/30">
-                        <p className="text-[10px] text-cyber-muted mb-1">Monthly Volume</p>
+                        <p className="text-[10px] text-cyber-muted mb-1">Total market (monthly)</p>
+                        <p className="text-[9px] text-cyber-muted mb-0.5">Remittance market, not ODL</p>
                         <p className="text-xl font-cyber text-cyber-glow">
                           {selectedPaymentCorridor.monthlyVolume || 'N/A'}
                         </p>
@@ -1583,7 +1587,8 @@ export default function Network() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-cyber-muted mb-1">ODL Enabled</p>
+                        <p className="text-[10px] text-cyber-muted mb-1">ODL enabled (corridor)</p>
+                        <p className="text-[9px] text-cyber-muted mb-0.5">Ripple/partners serve a subset</p>
                         <p className={`text-sm ${selectedPaymentCorridor.odlEnabled ? 'text-cyber-green' : 'text-cyber-muted'}`}>
                           {selectedPaymentCorridor.odlEnabled ? 'Yes' : 'No'}
                         </p>
@@ -1644,16 +1649,28 @@ export default function Network() {
                       </div>
                     )}
                     
-                    {/* Data source for corridor */}
+                    {/* Data source for corridor — with verification link */}
                     {selectedPaymentCorridor.dataSource && (
                       <p className="text-[9px] text-cyber-muted mb-2">
-                        Source: {selectedPaymentCorridor.dataSource}
+                        Source:{' '}
+                        {getSourceUrl(selectedPaymentCorridor.dataSource) ? (
+                          <a
+                            href={getSourceUrl(selectedPaymentCorridor.dataSource)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyber-cyan hover:underline"
+                          >
+                            {selectedPaymentCorridor.dataSource}
+                          </a>
+                        ) : (
+                          selectedPaymentCorridor.dataSource
+                        )}
                         {selectedPaymentCorridor.dataAsOf && ` • As of ${selectedPaymentCorridor.dataAsOf}`}
                       </p>
                     )}
                     <div className="mt-4 pt-3 border-t border-cyber-border/30">
                       <p className="text-[9px] text-cyber-muted italic">
-                        Remittance volumes: total market (World Bank/Banxico/BSP). ODL share is a subset; no public corridor-level breakdown from Ripple.
+                        Dollar amounts above are <strong>total remittance market</strong> (World Bank/Banxico/BSP)—i.e. everyone in the corridor: banks, other MTOs (e.g. Western Union, Wise, MoneyGram), Ripple/ODL partners, and all other providers. They are <strong>not</strong> volume for any single provider. The portion that could involve XRP/XRPL may include: <strong>{getOdlDisclosureText()}</strong>. None of these publish corridor-level volume, so we do not attribute a dollar amount to ODL or to any partner. See <a href="https://www.worldbank.org/en/topic/remittances" target="_blank" rel="noopener noreferrer" className="text-cyber-cyan hover:underline">World Bank remittances</a> and <a href="https://www.bis.org/statistics/" target="_blank" rel="noopener noreferrer" className="text-cyber-cyan hover:underline">BIS statistics</a> for methodology.
                       </p>
                     </div>
                   </motion.div>
@@ -1965,16 +1982,28 @@ export default function Network() {
                       )}
                     </div>
                     
-                    {/* Data source & disclaimer */}
+                    {/* Data source & disclaimer — with verification link */}
                     {(selectedBridge.dataSource || selectedBridge.dataAsOf) && (
                       <p className="text-[9px] text-cyber-muted mb-2">
-                        Source: {selectedBridge.dataSource || '—'}
+                        Source:{' '}
+                        {selectedBridge.dataSource && getSourceUrl(selectedBridge.dataSource) ? (
+                          <a
+                            href={getSourceUrl(selectedBridge.dataSource)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyber-cyan hover:underline"
+                          >
+                            {selectedBridge.dataSource}
+                          </a>
+                        ) : (
+                          selectedBridge.dataSource || '—'
+                        )}
                         {selectedBridge.dataAsOf && ` • Data as of ${selectedBridge.dataAsOf}`}
                       </p>
                     )}
                     <div className="mt-4 pt-3 border-t border-cyber-border/30">
                       <p className="text-[9px] text-cyber-muted italic">
-                        Remittance volumes: total market (World Bank/Banxico/BSP). Bridge TVL/volume: DefiLlama where noted. ODL corridor figures are estimated; no public corridor-level breakdown from Ripple.
+                        Bridge TVL/volume: DefiLlama where noted. See <a href="https://defillama.com/" target="_blank" rel="noopener noreferrer" className="text-cyber-cyan hover:underline">DefiLlama</a> for methodology. Payment corridor dollar amounts elsewhere are total remittance market (not ODL); Ripple does not publish corridor-level ODL volume.
                       </p>
                     </div>
                   </motion.div>
@@ -2085,7 +2114,19 @@ export default function Network() {
                         </div>
                         {(selectedChain.dataSource ?? selectedChain.dataAsOf) && (
                           <p className="text-[8px] text-cyber-muted mb-2">
-                            Source: {selectedChain.dataSource ?? '—'}
+                            Source:{' '}
+                            {selectedChain.dataSource && getSourceUrl(selectedChain.dataSource) ? (
+                              <a
+                                href={getSourceUrl(selectedChain.dataSource)!}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-cyber-cyan hover:underline"
+                              >
+                                {selectedChain.dataSource}
+                              </a>
+                            ) : (
+                              selectedChain.dataSource ?? '—'
+                            )}
                             {selectedChain.dataAsOf && ` • Data as of ${selectedChain.dataAsOf}`}
                           </p>
                         )}

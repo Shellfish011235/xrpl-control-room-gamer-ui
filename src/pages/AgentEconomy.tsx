@@ -398,13 +398,13 @@ export default function AgentEconomy() {
                 <Zap size={14} /> Micropayments · Streams
               </Link>
               <Link to="/pay" state={{ tab: 'openclaw' }} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-green/10 border border-cyber-green/30 text-cyber-green hover:bg-cyber-green/20 text-xs font-cyber transition-colors">
-                <DollarSign size={14} /> OpenClaw (fee wallet)
+                <DollarSign size={14} /> OpenClaw
               </Link>
               <Link to="/pay/carv" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/20 text-xs font-cyber transition-colors">
                 <Bot size={14} /> Chat pay (CARV)
               </Link>
             </div>
-            <p className="text-[10px] text-cyber-muted">Receipts, caps, paid actions here. OpenClaw = fee wallet (off by default). CARV = pay in chat.</p>
+            <p className="text-[10px] text-cyber-muted">Receipts, caps, paid actions here. OpenClaw = no platform fees. CARV = pay in chat.</p>
             <p className="text-[9px] text-cyber-muted border-t border-cyber-border/50 pt-3">We do not transmit money or hold your funds. You sign in your own wallet. Comply with applicable laws. Not legal or financial advice.</p>
           </div>
         </motion.div>

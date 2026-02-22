@@ -1,6 +1,6 @@
 # Compliance Checklist – "Am I Compliant With What We Have Now?"
 
-**Short answer:** The app is **compliant by default**: non-custodial, user-signs-only, disclaimers, and **platform fee OFF** until you explicitly enable it after legal sign-off. You are **not** compliant for **running with the platform fee on** or paid tiers until you have **licenses/legal opinions** in place.
+**Short answer:** The app is **compliant by default**: non-custodial, user-signs-only, disclaimers, and **no platform fees or royalties**. This project does not collect any fees from user payments.
 
 ---
 
@@ -44,11 +44,6 @@
 4. **Subscriptions** – Before launching paid tiers, get counsel's sign-off.
 
 ---
-
-## Platform fee flag (default = compliant)
-
-- **Default (no env set):** Platform fee is **OFF**. App is compliant.
-- **To enable the 1% fee:** Set in `.env` only after legal sign-off: `VITE_OPENCLAW_PLATFORM_FEE_DISABLED=false`. With this set, the app includes the platform in the OpenClaw payment split. Get a legal opinion before doing this.
 
 ---
 

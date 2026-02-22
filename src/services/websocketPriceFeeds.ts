@@ -631,8 +631,9 @@ export function useXRPPrice(): {
   const [error, setError] = useState<string | null>(null);
 
   const fetchRest = useCallback(async () => {
+    const { proxyFetch } = await import('../lib/dataProxy');
     try {
-      const cg = await fetch(
+      const cg = await proxyFetch(
         'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true',
         { mode: 'cors' }
       );
@@ -650,7 +651,7 @@ export function useXRPPrice(): {
       console.warn('[useXRPPrice] CoinGecko failed:', e);
     }
     try {
-      const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+      const res = await proxyFetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
       if (res.ok) {
         const data = await res.json();
         const p = parseFloat(data?.price);

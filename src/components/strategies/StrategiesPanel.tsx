@@ -127,7 +127,7 @@ export function StrategiesPanel({ currentPrice, compact, killSwitch, setKillSwit
             </button>
           )}
         </div>
-        <p className="text-cyber-muted text-xs mb-3">Enable agents; you sign all txs (non-custodial).</p>
+        <p className="text-cyber-muted text-xs mb-3">Enable agents; you sign all txs (non-custodial). For real XRP: Terminal → switch to &quot;Live (real XRP)&quot; and connect a wallet (Profile).</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {STRATEGIES.map(({ id, label, icon, desc }) => (
             <button

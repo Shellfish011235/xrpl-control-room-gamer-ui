@@ -35,6 +35,8 @@ export interface PaymentCorridor {
   growthYoY?: string;
   /** e.g. "World Bank / Banxico" — for UI disclaimer */
   dataSource?: string;
+  /** Optional URL so users can verify the source (proof). */
+  sourceUrl?: string;
   /** e.g. "Feb 2026" */
   dataAsOf?: string;
 }
@@ -77,6 +79,8 @@ export interface CrossChainBridge {
   securityModel: string;
   /** e.g. "DefiLlama" — for UI disclaimer */
   dataSource?: string;
+  /** Optional URL so users can verify the source (proof). */
+  sourceUrl?: string;
   /** e.g. "Feb 7, 2026" */
   dataAsOf?: string;
 }
@@ -109,6 +113,8 @@ export interface XRPLConnectedChain {
   fees?: string;
   /** e.g. "DefiLlama" | "Chain explorer" */
   dataSource?: string;
+  /** Optional URL so users can verify the source (proof). */
+  sourceUrl?: string;
   /** e.g. "Feb 7, 2026" */
   dataAsOf?: string;
   status: ProjectStatus;
@@ -124,6 +130,33 @@ export interface GitHubRepo {
   language?: string;
   stars?: number;
   purpose: string;
+}
+
+// ==================== SOURCE URLS (proof / verification) ====================
+// Official links so numbers are not speculative — users can verify.
+
+export const DATA_SOURCE_URLS: Record<string, string> = {
+  'World Bank / Banxico': 'https://data.worldbank.org/indicator/BX.TRF.PWKR.CD.DT',
+  'World Bank / BSP': 'https://www.bsp.gov.ph/',
+  'World Bank / Banxico / partner estimates': 'https://www.banxico.org.mx/',
+  'Ripple / partner estimates': 'https://ripple.com/insights/',
+  'World Bank / SBV / partner estimates': 'https://www.sbv.gov.vn/',
+  'World Bank / BI / partner estimates': 'https://www.bi.go.id/en/',
+  'World Bank / BSP / partner estimates': 'https://www.bsp.gov.ph/',
+  'Partner estimates / trade data': 'https://www.bis.org/statistics/',
+  'World Bank / RBI / partner estimates': 'https://www.rbi.org.in/',
+  'World Bank / SBP / partner estimates': 'https://www.sbp.org.pk/',
+  'World Bank / Bangladesh Bank / partner estimates': 'https://www.bb.org.bd/',
+  'ECB / BoE / partner estimates': 'https://www.ecb.europa.eu/stats/html/index.en.html',
+  'DefiLlama / chain': 'https://defillama.com/',
+  'DefiLlama': 'https://defillama.com/',
+  'Chain explorer': 'https://defillama.com/chains',
+};
+
+/** Resolve a dataSource label to a verification URL (proof). */
+export function getSourceUrl(dataSource: string | undefined): string | undefined {
+  if (!dataSource?.trim()) return undefined;
+  return DATA_SOURCE_URLS[dataSource.trim()];
 }
 
 // ==================== ODL PARTNERS ====================
@@ -1170,6 +1203,25 @@ export const crossChainBridges: CrossChainBridge[] = [
   },
 ];
 
+// ==================== DISCLOSURE: WHO COULD BE IN THE "SUBSET" ====================
+// Total corridor numbers are total remittance market (World Bank/central banks). The portion
+// that could involve XRP/XRPL is a subset and may include the following; none publish
+// corridor-level volume, so we do not attribute dollar amounts to any of them.
+
+/** Names of Ripple ODL + partners we list — for disclosure so we don't imply only Ripple. */
+export function getOdlDisclosureNames(): string[] {
+  const active = odlPartners.filter(p => p.status === 'active' || p.status === 'pilot');
+  const names = active.map(p => p.name);
+  return ['Ripple (ODL)', ...names.filter(n => n !== 'Ripple')];
+}
+
+/** Short string for UI: "Ripple (ODL), Bitso, Coins.ph, SBI Remit, Tranglo, …" */
+export function getOdlDisclosureText(): string {
+  const names = getOdlDisclosureNames();
+  if (names.length <= 4) return names.join(', ');
+  return names.slice(0, 5).join(', ') + ', and others (see ODL Partners list)';
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 export function getCorridorsByCountry(countryCode: string): PaymentCorridor[] {
@@ -1244,6 +1296,7 @@ export function getCorridorStats() {
       return sum + vol;
     }, 0);
 
+  // Sum of corridor monthlyVolume (total remittance market from World Bank/central banks — not ODL volume)
   const estimatedMonthlyVolume =
     totalVolume > 0 && Number.isFinite(totalVolume)
       ? `$${(totalVolume / 1000).toFixed(1)}B+`

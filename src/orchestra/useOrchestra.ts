@@ -8,7 +8,7 @@ import { useEffect, useState, useRef } from 'react';
 import { Orchestra, TipJarAgent, MemeticSimAgent, subscribeToControlRoom } from './index';
 import type { ControlRoomEvent } from './types';
 import type { SettlementPlan } from './types';
-import { MarketMakerAgent, DCAgent, ArbitrageAgent } from '../strategyAgents';
+import { MarketMakerAgent, DCAgent, ArbitrageAgent, GridStrategyAgent } from '../strategyAgents';
 import { useStrategyStore } from '../store/strategyStore';
 import { useILPStore } from '../store/ilpStore';
 
@@ -36,7 +36,7 @@ export function useOrchestra(options?: { startImmediately?: boolean; includeStra
     const setSimulationResults = useILPStore.getState().setSimulationResults;
     orch.agents.push(new MemeticSimAgent({ onSimulationComplete: setSimulationResults }));
     if (options?.includeStrategyAgents) {
-      orch.agents.push(new MarketMakerAgent(), new DCAgent(), new ArbitrageAgent());
+      orch.agents.push(new GridStrategyAgent(), new MarketMakerAgent(), new DCAgent(), new ArbitrageAgent());
       orch.setMarketGetter(() => {
         const snap = useStrategyStore.getState().marketSnapshot;
         return snap ? { mid: snap.mid, spreadBps: snap.spreadBps, volatility: snap.volatility } : undefined;
@@ -44,6 +44,7 @@ export function useOrchestra(options?: { startImmediately?: boolean; includeStra
       orch.setStrategyStateGetter(() => {
         const s = useStrategyStore.getState();
         return {
+          'strategy:grid:enabled': s.enabled.grid,
           'strategy:mm:enabled': s.enabled.mm,
           'strategy:dca:enabled': s.enabled.dca,
           'strategy:arb:enabled': s.enabled.arbitrage,

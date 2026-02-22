@@ -1,4 +1,5 @@
 // XRPL Service - Fetches real data from the XRP Ledger
+import { getXrplProxyBase } from '../lib/dataProxy';
 
 // XRPL Public JSON-RPC Servers (with CORS support)
 // Ordered by reliability - xrplcluster.com is most reliable
@@ -12,6 +13,8 @@ const XRPL_ENDPOINTS = [
 let currentEndpointIndex = 0;
 
 function getXRPLUrl(): string {
+  const proxyBase = getXrplProxyBase();
+  if (proxyBase) return proxyBase;
   return XRPL_ENDPOINTS[currentEndpointIndex];
 }
 
@@ -644,7 +647,7 @@ export async function getAccountTransactions(address: string, limit: number = 10
   }
 }
 
-/** Incoming Payment txs to an account (for OpenClaw fee wallet dashboard). */
+/** Incoming Payment txs to an account (e.g. for viewing history). */
 export async function getIncomingPayments(
   account: string,
   limit: number = 50

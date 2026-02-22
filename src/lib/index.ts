@@ -6,5 +6,6 @@
  */
 
 export * from './constants';
+export * from './dataProxy';
 export * from './encoding';
 export * from './utils';

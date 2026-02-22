@@ -122,7 +122,7 @@ export default function Learn() {
                       <span><strong>Payment channels</strong>: You lock XRP (e.g. 10 XRP) into a &quot;channel&quot; for one recipient. Later, you can send them many small amounts from that channel without a new on-chain transaction every time. Setting one up needs your wallet and your public key (from your wallet). Best for: paying the same person or service often.</span>
                     </li>
                   </ul>
-                  <p className="text-[11px] text-cyber-muted mt-3">OpenClaw tab shows transaction history for the fee wallet. Platform fee is off by default (compliant); see compliance docs before enabling.</p>
+                  <p className="text-[11px] text-cyber-muted mt-3">OpenClaw tab: micropayments to recipients and optional skill creators. This project does not collect any platform fees or royalties.</p>
                 </div>
               </div>
 

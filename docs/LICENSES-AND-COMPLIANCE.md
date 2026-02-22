@@ -18,7 +18,7 @@ For a quick **“Am I compliant with what we have now?”** checklist, see [COMP
 The app is designed to be **non-custodial** (user signs in Xaman; we don’t hold funds). That **does not by itself** mean you need no licenses. Whether you need any of the following depends on your exact use case and jurisdiction. **Get qualified legal advice** (e.g. Florida-licensed attorney, US crypto/fintech counsel) before:
 
 - Offering **paid subscriptions** (Stripe, etc.) for Premium / Agent Fleet
-- Taking any **fee from user payments** (e.g. platform fee wallet, % of tips)
+- Taking any **fee from user payments** (this project does not; do not add without legal sign-off)
 - Marketing the app as **financial** or **investment** advice or as a **trading** service
 - Operating in **Florida** or other states with money transmission / virtual currency rules
 
@@ -29,7 +29,7 @@ The app is designed to be **non-custodial** (user signs in Xaman; we don’t hol
 | **Money transmission (US / Florida)** | Florida Ch. 560, F.S.; FinCEN MSB. Our docs assume no custody + user-sign-only keeps you outside MT; **have a lawyer confirm** for your product and any fee flows. |
 | **Securities / investment advice** | If you present the app or features as investment/financial advice, different rules may apply. |
 | **Subscriptions (Stripe, etc.)** | Usually treated as **sale of software access**, not money transmission. Still: confirm with counsel for your entity and jurisdiction. |
-| **Platform fee on user payments** | Taking a cut of user-to-user payments is the **highest risk**; get a written legal opinion or disable until you do. See [FLORIDA-NOT-MONEY-TRANSMITTER.md](./FLORIDA-NOT-MONEY-TRANSMITTER.md). |
+| **Platform fee on user payments** | This project does not collect any. Do not add such flows without a written legal opinion. See [FLORIDA-NOT-MONEY-TRANSMITTER.md](./FLORIDA-NOT-MONEY-TRANSMITTER.md). |
 
 ### What we do *not* provide
 

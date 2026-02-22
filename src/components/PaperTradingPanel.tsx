@@ -24,6 +24,7 @@ import { generateHistoricalBars, PAPER_TRADING_SYMBOLS, type SimScenario } from 
 import { barsFromOHLCV, runBacktest } from '../services/backtestingEngine';
 import { useRealtimePrices, type AggregatedPrice } from '../services/websocketPriceFeeds';
 import { subscribeToPrices as subscribeLivePrices, getAvailableSymbols } from '../services/livePrices';
+import { proxyFetch } from '../lib/dataProxy';
 
 // Auto-trade icons
 import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink } from 'lucide-react';
@@ -483,7 +484,7 @@ function PaperTradingPanelInner({
       let price = prices?.XRP ?? 2.45;
       let priceChange24h = 0;
       try {
-        const cgRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true', { mode: 'cors' });
+        const cgRes = await proxyFetch('https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd&include_24hr_change=true', { mode: 'cors' });
         if (cgRes.ok) {
           const priceRes = await cgRes.json();
           if (priceRes?.ripple?.usd != null) {
@@ -492,7 +493,7 @@ function PaperTradingPanelInner({
           }
         }
         if (price === (prices?.XRP ?? 2.45) && priceChange24h === 0) {
-          const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
+          const binanceRes = await proxyFetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' });
           if (binanceRes.ok) {
             const binanceData = await binanceRes.json();
             const p = parseFloat(binanceData?.price);
@@ -500,7 +501,7 @@ function PaperTradingPanelInner({
           }
         }
       } catch {
-        const binanceRes = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' }).catch(() => null);
+        const binanceRes = await proxyFetch('https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT', { mode: 'cors' }).catch(() => null);
         if (binanceRes?.ok) {
           const binanceData = await binanceRes.json();
           const p = parseFloat(binanceData?.price);

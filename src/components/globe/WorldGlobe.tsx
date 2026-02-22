@@ -1087,7 +1087,8 @@ export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: 
             </div>
             {hoveredPaymentCorridor.monthlyVolume && (
               <div>
-                <p className="text-[9px] text-cyber-muted">Monthly Volume</p>
+                <p className="text-[9px] text-cyber-muted">Total market (monthly)</p>
+                <p className="text-[8px] text-cyber-muted">Not ODL volume</p>
                 <p className="text-xs text-cyber-green font-cyber">{hoveredPaymentCorridor.monthlyVolume}</p>
               </div>
             )}

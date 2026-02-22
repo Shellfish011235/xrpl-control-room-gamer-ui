@@ -4,17 +4,20 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader, Settings2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Send, Loader, Settings2, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import {
   sendBenderMessage,
   getBenderInstructions,
   setBenderInstructions,
+  getBenderMessages,
+  setBenderMessages,
+  clearBenderMessages,
   isBenderConfigured,
   type ChatMessage,
 } from '../services/benderChat';
 
 export function BenderChatPanel() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => getBenderMessages());
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +27,10 @@ export function BenderChatPanel() {
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
+
+  useEffect(() => {
+    setBenderMessages(messages);
   }, [messages]);
 
   const handleSend = async () => {
@@ -51,23 +58,39 @@ export function BenderChatPanel() {
     setShowInstructions(false);
   };
 
+  const handleClearChat = () => {
+    clearBenderMessages();
+    setMessages([]);
+    setError(null);
+  };
+
   const configured = isBenderConfigured();
 
   return (
     <div className="flex flex-col h-full min-h-0">
       {/* Optional: paste Bender instructions (from ChatGPT GPT editor) */}
       <div className="shrink-0 border-b border-cyber-border/60">
-        <button
-          type="button"
-          onClick={() => setShowInstructions(!showInstructions)}
-          className="w-full flex items-center justify-between px-4 py-2 text-left text-xs text-cyber-muted hover:text-cyber-text"
-        >
-          <span className="font-cyber text-cyber-yellow flex items-center gap-2">
+        <div className="flex items-center justify-between px-4 py-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setShowInstructions(!showInstructions)}
+            className="flex items-center gap-2 text-left text-xs text-cyber-muted hover:text-cyber-text"
+          >
             <Settings2 size={14} />
-            Bender instructions
-          </span>
-          {showInstructions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </button>
+            <span className="font-cyber text-cyber-yellow">Bender instructions</span>
+            {showInstructions ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          </button>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearChat}
+              className="flex items-center gap-1.5 px-2 py-1 rounded text-[10px] text-cyber-muted hover:text-cyber-red hover:bg-cyber-red/10 border border-transparent hover:border-cyber-red/30 shrink-0"
+            >
+              <Trash2 size={12} />
+              Clear chat
+            </button>
+          )}
+        </div>
         {showInstructions && (
           <div className="px-4 pb-3 space-y-2">
             <p className="text-[10px] text-cyber-muted">

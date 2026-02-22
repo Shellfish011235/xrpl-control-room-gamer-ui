@@ -1,14 +1,11 @@
 /**
  * OpenClaw XRPL Micropayment Plugin
  * Powered by XRPL Control Room (https://xrplcontrolroom.com)
- * 
+ *
  * Drop this into any OpenClaw installation to enable micropayments.
- * 
- * Fee Structure:
- *   - 97% goes to skill/service recipient
- *   - 2% goes to skill creator (set your wallet via creatorWallet param)
- *   - 1% platform fee to XRPL Control Room
- * 
+ *
+ * Fee structure: no platform fees or royalties. Optional 2% to skill creator when creatorWallet is set; remainder to recipient (handled by caller or separate flow).
+ *
  * Usage:
  *   import { OpenClawPayments } from 'openclaw-xrpl-plugin';
  *   const payments = new OpenClawPayments();
@@ -23,18 +20,12 @@ import { Client, Wallet, xrpToDrops, dropsToXrp } from 'xrpl';
 // =============================================================================
 
 export const CONFIG = {
-  // XRPL Control Room Platform Fee Wallet
-  // This wallet receives 1% platform fee on every transaction
-  // Skill creators receive 2% - set via OPENCLAW_CREATOR_WALLET env var
-  PLATFORM_FEE_WALLET: 'ra7Zj3GMAvuY7QEAJr1YADJ6Ss43Rxyo64',
-  PLATFORM_FEE_PERCENT: 0.01,  // 1% to platform
-  CREATOR_FEE_PERCENT: 0.02,   // 2% to skill creator
-  TOTAL_FEE_PERCENT: 0.03,     // 3% total
-  
+  CREATOR_FEE_PERCENT: 0.02,   // 2% to skill creator (optional, when creatorWallet is set)
+
   // Network
   TESTNET: 'wss://s.altnet.rippletest.net:51233',
   MAINNET: 'wss://xrplcluster.com',
-  
+
   // Safety
   USE_TESTNET: true,  // SET TO false ONLY AFTER AUDIT
   MAX_TX_PER_MINUTE: 100,
@@ -78,7 +69,7 @@ export class OpenClawPayments {
     this.client = new Client(network);
     
     console.log(`[OpenClaw XRPL] Initialized on ${useMainnet ? 'MAINNET' : 'TESTNET'}`);
-    console.log(`[OpenClaw XRPL] Fee wallet: ${CONFIG.FEE_WALLET}`);
+    // No platform fee wallet; payments to recipient and optional creator only.
   }
   
   // ---------------------------------------------------------------------------

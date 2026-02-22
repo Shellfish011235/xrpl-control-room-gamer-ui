@@ -10,6 +10,7 @@
 
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const STORAGE_KEY = 'bender-instructions';
+const MESSAGES_STORAGE_KEY = 'bender-messages';
 const DEFAULT_INSTRUCTIONS =
   'You are Bender, a helpful and witty assistant. You help users with the XRPL Control Room dashboard, XRP Ledger, and general questions. Stay in character.';
 
@@ -46,6 +47,42 @@ export function setBenderInstructions(instructions: string): void {
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
+  } catch {
+    // ignore
+  }
+}
+
+/** Persist conversation in sessionStorage so it survives refresh. */
+export function getBenderMessages(): ChatMessage[] {
+  try {
+    const raw = sessionStorage.getItem(MESSAGES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (m): m is ChatMessage =>
+        m != null &&
+        typeof m === 'object' &&
+        (m.role === 'user' || m.role === 'assistant' || m.role === 'system') &&
+        typeof (m as ChatMessage).content === 'string'
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function setBenderMessages(messages: ChatMessage[]): void {
+  try {
+    const toStore = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
+    sessionStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(toStore));
+  } catch {
+    // ignore
+  }
+}
+
+export function clearBenderMessages(): void {
+  try {
+    sessionStorage.removeItem(MESSAGES_STORAGE_KEY);
   } catch {
     // ignore
   }

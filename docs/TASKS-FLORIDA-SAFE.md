@@ -95,7 +95,7 @@ All items below stay within [FLORIDA-NOT-MONEY-TRANSMITTER.md](./FLORIDA-NOT-MON
 - [ ] **Logging for sim and testnet**  
   Log intents, plans, approvals (no real funds). For mock audits and support.
 
-- [ ] **Review platform fee wallet with counsel**  
+- [ ] **No platform fees or royalties (removed)**  
   Get Florida/US legal opinion on existing 1%/3% platform fee flow, or disable that flow in production until approved. Do not add new “we receive value from user payments” flows without sign-off.
 
 ---
@@ -143,7 +143,7 @@ All items below stay within [FLORIDA-NOT-MONEY-TRANSMITTER.md](./FLORIDA-NOT-MON
 
 ## Explicitly out of scope (do not add without legal sign-off)
 
-- **Platform receiving value from user payments** — No new fee/royalty flows where we receive a cut of user-to-user payments until Florida/US counsel approves.
+- **Platform receiving value from user payments** — None in this project. Do not add fee/royalty flows without Florida/US counsel approval.
 - **Custody or pooled funds** — No holding or controlling user funds.
 - **Signing or submitting for the user without their signature** — Every real value movement requires user sign in their own wallet.
 - **Autonomous execution** — No transfers without a clear user approval step per payment/plan.
@@ -155,7 +155,7 @@ All items below stay within [FLORIDA-NOT-MONEY-TRANSMITTER.md](./FLORIDA-NOT-MON
 | Priority | Task |
 |----------|------|
 | **P0** | ~~Wire wallet into strategy store; Run Orchestra with strategy agents on Terminal (user still signs).~~ ✅ |
-| **P0** | Review platform fee wallet with counsel or disable in production. |
+| **P0** | ~~Review platform fee wallet~~ — No platform fees or royalties; removed. |
 | **P1** | Strategy fill tracking & PnL (display); real AMM quote for arb suggestions. |
 | **P1** | Plan → sign → submit (LIVE): after user signs in Xaman, submit signed tx; we do not sign. |
 | **P2** | WebSocket price feeds; order book depth (display). |

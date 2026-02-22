@@ -23,6 +23,7 @@ import { StrategiesPanel } from '../components/strategies';
 import { useOrchestra, publishToControlRoom } from '../orchestra';
 import { xamanService } from '../services/xaman';
 import { useStrategyStore } from '../store/strategyStore';
+import { useWalletStore } from '../store/walletStore';
 import { useXRPPrice } from '../services/websocketPriceFeeds';
 
 // Error Boundary to catch component crashes
@@ -71,11 +72,19 @@ export default function Terminal() {
   const { price: xrpPrice, source: priceSource, loading: priceLoading, error: priceError } = useXRPPrice();
 
   useAlertInitialization();
-  const { killSwitch, setKillSwitch, mode, lastPlanReadyForSign, dismissPlanReady } = useOrchestra({
+  const { killSwitch, setKillSwitch, mode, setMode, lastPlanReadyForSign, dismissPlanReady } = useOrchestra({
     includeStrategyAgents: true,
     startImmediately: true,
   });
   const walletAddress = useStrategyStore((s) => s.walletAddress);
+  const activeWallet = useWalletStore((s) => {
+    const id = s.activeWalletId;
+    return id ? s.wallets.find((w) => w.id === id) : null;
+  });
+  // Sync connected wallet to strategy store so Grid/DCA/MM/Arb use it for real XRP
+  useEffect(() => {
+    if (activeWallet?.address) useStrategyStore.getState().setWalletAddress(activeWallet.address);
+  }, [activeWallet?.address]);
   const [planSigning, setPlanSigning] = useState(false);
   const [planSignError, setPlanSignError] = useState<string | null>(null);
   const unreadAlerts = useAlertStore(state => state.getUnreadCount());
@@ -149,33 +158,58 @@ export default function Terminal() {
         </div>
       </motion.div>
 
-      {/* Orchestra kill switch – visible control to pause all strategy agents */}
+      {/* Mode + Orchestra: Simulate (no sign) vs Live (real XRP via Xaman) */}
       <motion.div
         initial={{ opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`mb-4 flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border shadow-sm ${
-          killSwitch ? 'bg-cyber-darker border-cyber-yellow/50' : 'bg-cyber-darker border-cyber-green/40'
-        }`}
+        className="mb-4 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-xl border border-cyber-border bg-cyber-darker"
       >
-        <div className="flex items-center gap-2">
-          <Shield className={`w-4 h-4 ${killSwitch ? 'text-cyber-yellow' : 'text-cyber-green'}`} />
-          <span className="text-xs font-cyber text-cyber-text">
-            Orchestra agents: {killSwitch ? 'Paused' : 'Running'}
-          </span>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-cyber-muted uppercase tracking-wider">Strategy mode</span>
+            <div className="flex rounded-lg border border-cyber-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setMode('SIMULATE')}
+                className={`px-3 py-1.5 text-xs font-cyber transition-colors ${mode === 'SIMULATE' ? 'bg-cyber-cyan/20 text-cyber-cyan border-r border-cyber-border' : 'text-cyber-muted hover:text-cyber-text'}`}
+                title="Agents suggest trades; no real signing"
+              >
+                Simulate
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('LIVE')}
+                className={`px-3 py-1.5 text-xs font-cyber transition-colors ${mode === 'LIVE' ? 'bg-cyber-green/20 text-cyber-green' : 'text-cyber-muted hover:text-cyber-text'}`}
+                title="Plans require your sign in Xaman (real XRP)"
+              >
+                Live (real XRP)
+              </button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Shield className={`w-4 h-4 ${killSwitch ? 'text-cyber-yellow' : 'text-cyber-green'}`} />
+            <span className="text-xs font-cyber text-cyber-text">
+              Agents: {killSwitch ? 'Paused' : 'Running'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setKillSwitch(!killSwitch)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-cyber transition-colors ${
+                killSwitch ? 'border-cyber-green/50 text-cyber-green bg-cyber-green/10' : 'border-cyber-yellow/50 text-cyber-yellow bg-cyber-yellow/10'
+              }`}
+            >
+              {killSwitch ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+              {killSwitch ? 'Resume' : 'Pause'}
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setKillSwitch(!killSwitch)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-cyber transition-colors ${
-            killSwitch
-              ? 'border-cyber-green/50 text-cyber-green bg-cyber-green/10 hover:bg-cyber-green/20'
-              : 'border-cyber-yellow/50 text-cyber-yellow bg-cyber-yellow/10 hover:bg-cyber-yellow/20'
-          }`}
-          title={killSwitch ? 'Resume strategy agent suggestions' : 'Pause all strategy agent suggestions'}
-        >
-          {killSwitch ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
-          {killSwitch ? 'Resume' : 'Pause'}
-        </button>
+        {mode === 'LIVE' && (
+          <p className="text-[10px] text-cyber-muted w-full lg:w-auto">
+            {walletAddress
+              ? `Wallet: ${walletAddress.slice(0, 8)}…${walletAddress.slice(-4)} — sign in Xaman when a plan appears.`
+              : 'Connect a wallet (Profile or header) to use Grid/DCA/MM with real XRP.'}
+          </p>
+        )}
       </motion.div>
 
       {/* LIVE: Plan ready for sign – show Sign in Xaman and publish EXECUTION_RESULT on success */}

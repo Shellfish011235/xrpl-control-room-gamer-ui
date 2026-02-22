@@ -8,7 +8,7 @@ From `C:\Users\anamb\xrpl-control-room-gamer-ui\.env` (or from memory), note:
 
 - `VITE_XAMAN_API_KEY` – Xaman app API key (real signing vs demo mode)
 - `VITE_AGENT_SERVICE_WALLET` – XRPL address for Power Mode / paid actions
-- `VITE_OPENCLAW_FEE_WALLET` – (optional) OpenClaw fee wallet
+- (OpenClaw: no platform fees or royalties in this project)
 - `VITE_COINGECKO_API_KEY` – (optional) if you use it
 - `VITE_ANALYTICS_ID` – (optional) if you use it
 

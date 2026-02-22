@@ -197,7 +197,8 @@ export function RegulationsContent() {
             </div>
           </div>
           <div className="cyber-panel p-3">
-            <p className="text-[10px] text-cyber-muted mb-1">Monthly Volume</p>
+            <p className="text-[10px] text-cyber-muted mb-1">Total corridor market (est.)</p>
+            <p className="text-[9px] text-cyber-muted mb-0.5">Not ODL volume · World Bank/central banks</p>
             <div className="flex items-center gap-2">
               <TrendingUp size={16} className="text-cyber-green" />
               <span className="font-cyber text-lg text-cyber-green">{corridorStats.estimatedMonthlyVolume}</span>
@@ -205,7 +206,7 @@ export function RegulationsContent() {
           </div>
         </motion.div>
         <p className="text-[10px] text-cyber-muted -mt-2 mb-4">
-          Corridor & bridge metrics as of {corridorStats.dataAsOf ?? 'N/A'} · Curated.
+          Corridor & bridge metrics as of {corridorStats.dataAsOf ?? 'N/A'} · Total market sourced; ODL share not public.
         </p>
         
         {/* Alert Ticker */}

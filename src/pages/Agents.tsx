@@ -40,6 +40,7 @@ export default function Agents() {
 
       <p className="text-xs text-cyber-muted mb-6">
         Autonomous sims only. All actions require user confirm via Xaman.
+        To train or improve agents: edit skills in <code className="bg-cyber-darker px-1 rounded">src/agents/skills/registry.ts</code>, agents in <code className="bg-cyber-darker px-1 rounded">src/store/agentStore.ts</code>, and optional AI via <code className="bg-cyber-darker px-1 rounded">VITE_AI_API_URL</code>. Full guide: <code className="bg-cyber-darker px-1 rounded">docs/AGENT-HUB-TRAINING.md</code>.
       </p>
 
       <motion.div

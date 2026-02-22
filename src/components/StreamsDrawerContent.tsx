@@ -1,6 +1,6 @@
 /**
- * Streams & OpenClaw tab: real payment channels, real stream (repeated Payments), OpenClaw fee-wallet dashboard.
- * Platform fee is off by default (compliant). Uses topology: agent economy hub (use on XRPL now + chains that support fewer signs).
+ * Streams & OpenClaw tab: real payment channels, real stream (repeated Payments), OpenClaw dashboard.
+ * This project does not collect any platform fees or royalties.
  */
 
 import React from 'react';
@@ -20,7 +20,7 @@ export function StreamsDrawerContent() {
         <RealStreamsPanel />
       </section>
       <section className="space-y-3">
-        <h3 className="font-cyber text-cyber-purple text-xs uppercase tracking-wider text-cyber-muted">OpenClaw · fee wallet</h3>
+        <h3 className="font-cyber text-cyber-purple text-xs uppercase tracking-wider text-cyber-muted">OpenClaw</h3>
         <OpenClawDashboard />
       </section>
     </div>

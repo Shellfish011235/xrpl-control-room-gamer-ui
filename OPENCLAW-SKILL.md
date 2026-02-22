@@ -69,10 +69,7 @@ Use the xrpl-micropayments skill to pay 0.001 XRP for a premium web search about
 
 ## Revenue Model
 
-Every transaction splits:
-- **97%** to skill/service recipient
-- **2%** to skill creator (you!)
-- **1%** platform fee to XRPL Control Room
+Every transaction: 98–100% to skill/service recipient, 0–2% to skill creator (optional). This project does not collect any platform fees or royalties.
 
 At scale:
 - 10,000 uses/day × $0.001 = $10/day passive income

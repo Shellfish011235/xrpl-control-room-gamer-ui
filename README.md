@@ -166,7 +166,7 @@ console.log(result.neonImpactScore, result.analysis);
 
 ### Next steps
 
-To expand, add a `@security-auditor` skill for XRPL vulnerability scans, or wire a real AI backend in `Orchestrator.callAI()` (e.g. `fetch('/api/ai', { body: prompt })`).
+To expand, add a `@security-auditor` skill for XRPL vulnerability scans, or wire a real AI backend in `Orchestrator.callAI()` (e.g. `fetch('/api/ai', { body: prompt })`). To **train or improve agents**, see [docs/AGENT-HUB-TRAINING.md](./docs/AGENT-HUB-TRAINING.md) and [docs/AGENT-HUB-REFERENCES.md](./docs/AGENT-HUB-REFERENCES.md) (FinRL, OpenBB, MARL, Langflow, and a Cursor prompt template).
 
 ## 🚀 Getting Started
 
@@ -276,6 +276,7 @@ This dashboard features a **cyberpunk/gaming aesthetic** inspired by:
 | **ILP Topology** | Ledgers, connectors, corridors (in-app) | ✅ Live |
 | **Full Network Topology** | Unified graph, full-screen | ✅ Live |
 | **CoinGlass** | Liquidation data | 🔧 Ready for API key |
+| **CoinGlass XRP ETF** | ETF flow history, 24h net flow (Profile → Portfolio) | 🔧 Set `VITE_COINGLASS_API_KEY` |
 | **Telegram Bot API** | Alert notifications | 🔧 Ready for token |
 | **Discord Webhooks** | Alert notifications | 🔧 Ready for webhook URL |
 
@@ -374,7 +375,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## 📄 License
 
-**Software:** [MIT License](LICENSE) – feel free to use this project for your own purposes.
+**Software:** [MIT License](LICENSE) – feel free to use this project for your own purposes. **Non-custodial:** Users control their own funds and keys; this project does not provide financial, investment, or money transmission services.
 
 **Operating / monetizing:** You are responsible for having any required **regulatory or business licenses** (e.g. money transmission, securities, subscriptions) in place before offering paid tiers or fee flows. See **[docs/LICENSES-AND-COMPLIANCE.md](docs/LICENSES-AND-COMPLIANCE.md)** and [docs/FLORIDA-NOT-MONEY-TRANSMITTER.md](docs/FLORIDA-NOT-MONEY-TRANSMITTER.md). Not legal advice.
 

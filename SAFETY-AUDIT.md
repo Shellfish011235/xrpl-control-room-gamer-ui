@@ -47,7 +47,7 @@
 ### 2.3 Other Env / Config
 
 - **VITE_AGENT_SERVICE_WALLET:** Public XRPL address; not sensitive.
-- **VITE_OPENCLAW_FEE_WALLET:** Public address; not sensitive.
+- (OpenClaw: no platform fees or royalties; no fee wallet.)
 - **LLM API keys (OpenAI/Anthropic):** Used in `src/services/carv/llmAgent.ts` for payment approval. If supplied in the client, they are visible in the bundle/network. Prefer backend proxy for production if keys must stay server-only.
 
 ### 2.4 Sample Code in Repo
