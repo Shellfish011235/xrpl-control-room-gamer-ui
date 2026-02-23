@@ -9,6 +9,7 @@ import { useWalletStore, walletProviders, DEMO_WALLETS } from '../store/walletSt
 import { usePlatformModeStore } from '../store/platformModeStore';
 import type { WalletProvider } from '../store/walletStore';
 import { isValidXRPLAddress } from '../services/xrplService';
+import * as localWalletService from '../services/localWalletService';
 
 // Truncate address for display
 const truncateAddress = (address: string) => {
@@ -113,6 +114,10 @@ export function WalletConnect() {
   const [manualAddress, setManualAddress] = useState('');
   const [walletLabel, setWalletLabel] = useState('');
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [controlRoomSeedToBackup, setControlRoomSeedToBackup] = useState<string | null>(null);
+  const [controlRoomImportSeed, setControlRoomImportSeed] = useState('');
+  const [controlRoomShowImport, setControlRoomShowImport] = useState(false);
+  const [controlRoomAdding, setControlRoomAdding] = useState(false);
   
   // Privacy toggle - persisted in localStorage
   const [hideAmounts, setHideAmounts] = useState(() => {
@@ -668,8 +673,107 @@ export function WalletConnect() {
                       );
                     })}
                   </div>
+                ) : selectedProvider === 'control-room' ? (
+                  // Control Room Wallet: Create or Import (session-only, sign locally)
+                  <div className="space-y-4">
+                    <div className="text-center mb-4">
+                      <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 text-3xl bg-cyber-green/20">
+                        🎛️
+                      </div>
+                      <h4 className="text-lg text-cyber-text font-cyber">Control Room Wallet</h4>
+                      <p className="text-xs text-cyber-muted mt-1">
+                        Create or import an in-app wallet. Signs locally; seed is session-only (lost on refresh).
+                      </p>
+                    </div>
+
+                    {!controlRoomSeedToBackup ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const { address, seed } = localWalletService.generate();
+                              setManualAddress(address);
+                              setControlRoomSeedToBackup(seed ?? null);
+                            }}
+                            className="py-3 rounded border border-cyber-green/50 bg-cyber-green/10 text-cyber-green hover:bg-cyber-green/20 font-cyber text-sm"
+                          >
+                            Create new wallet
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setControlRoomShowImport(true)}
+                            className="py-3 rounded border border-cyber-border bg-cyber-darker text-cyber-muted hover:border-cyber-cyan/50 hover:text-cyber-cyan font-cyber text-sm"
+                          >
+                            Import from seed
+                          </button>
+                        </div>
+
+                        {controlRoomShowImport && (
+                          <div className="space-y-2 pt-2 border-t border-cyber-border">
+                            <label className="text-xs text-cyber-muted block">Secret (seed) — never share</label>
+                            <input
+                              type="password"
+                              value={controlRoomImportSeed}
+                              onChange={(e) => setControlRoomImportSeed(e.target.value)}
+                              placeholder="sXXXXXXXX..."
+                              className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-2 text-sm font-mono placeholder:text-cyber-muted focus:border-cyber-cyan outline-none"
+                            />
+                            <p className="text-[10px] text-cyber-yellow">Pasting your seed in the browser is a risk. Prefer Xaman for large holdings.</p>
+                            <button
+                              type="button"
+                              disabled={!controlRoomImportSeed.trim() || controlRoomAdding}
+                              onClick={async () => {
+                                try {
+                                  setControlRoomAdding(true);
+                                  const { address } = localWalletService.importFromSeed(controlRoomImportSeed.trim());
+                                  await addWalletAndFetch({ address, provider: 'control-room', label: walletLabel || 'Control Room Wallet' });
+                                  setControlRoomImportSeed('');
+                                  setControlRoomShowImport(false);
+                                  setSelectedProvider(null);
+                                  setWalletLabel('');
+                                } finally {
+                                  setControlRoomAdding(false);
+                                }
+                              }}
+                              className="w-full py-2 rounded bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/50 hover:bg-cyber-cyan/30 text-sm font-cyber disabled:opacity-50"
+                            >
+                              {controlRoomAdding ? 'Adding…' : 'Import & add to my wallets'}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-xs text-cyber-green">Back up your seed (shown once):</p>
+                        <div className="p-2 rounded bg-cyber-darker border border-cyber-yellow/50 font-mono text-xs break-all">
+                          {controlRoomSeedToBackup}
+                        </div>
+                        <p className="text-[10px] text-cyber-yellow">Store offline. Lost on refresh if not saved.</p>
+                        <button
+                          type="button"
+                          disabled={controlRoomAdding}
+                          onClick={async () => {
+                            try {
+                              setControlRoomAdding(true);
+                              await addWalletAndFetch({ address: manualAddress, provider: 'control-room', label: walletLabel || 'Control Room Wallet' });
+                              setControlRoomSeedToBackup(null);
+                              setManualAddress('');
+                              setSelectedProvider(null);
+                              setWalletLabel('');
+                            } finally {
+                              setControlRoomAdding(false);
+                            }
+                          }}
+                          className="w-full py-2 rounded bg-cyber-green/20 text-cyber-green border border-cyber-green/50 text-sm font-cyber disabled:opacity-50"
+                        >
+                          {controlRoomAdding ? 'Adding…' : 'I saved my seed — add to my wallets'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 ) : (
-                  // Address Entry for ALL providers
+                  // Address Entry for ALL other providers
                   <div className="space-y-4">
                     <div className="text-center mb-4">
                       <div 
@@ -684,7 +788,6 @@ export function WalletConnect() {
                       </p>
                     </div>
 
-                    {/* Wallet Label */}
                     <div>
                       <label className="text-xs text-cyber-muted block mb-2">Wallet Label</label>
                       <input
@@ -696,7 +799,6 @@ export function WalletConnect() {
                       />
                     </div>
                     
-                    {/* XRPL Address */}
                     <div>
                       <label className="text-xs text-cyber-muted block mb-2">XRPL Address</label>
                       <input
@@ -714,7 +816,6 @@ export function WalletConnect() {
                       )}
                     </div>
 
-                    {/* Info Box */}
                     <div className="p-3 rounded border" style={{ 
                       backgroundColor: `${walletProviders[selectedProvider].color}10`,
                       borderColor: `${walletProviders[selectedProvider].color}30`
@@ -724,7 +825,6 @@ export function WalletConnect() {
                       </p>
                     </div>
                     
-                    {/* How to find address hints */}
                     {(selectedProvider === 'xaman' || selectedProvider === 'joey') && (
                       <div className="p-3 rounded bg-cyber-darker/50 border border-cyber-border">
                         <p className="text-xs text-cyber-muted mb-2">📱 How to find your address:</p>

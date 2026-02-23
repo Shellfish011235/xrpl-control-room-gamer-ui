@@ -222,6 +222,20 @@ export function isValidXRPLAddress(address: string): boolean {
   return xrplAddressRegex.test(address);
 }
 
+/** Submit a signed transaction blob (hex). Returns tx hash and engine result. */
+export async function submitSignedTx(txBlob: string): Promise<{ hash: string; engineResult: string }> {
+  const result = await xrplRequest<{ engine_result: string; tx_json?: { hash?: string }; hash?: string }>(
+    'submit',
+    [{ tx_blob: txBlob }]
+  );
+  const hash = result.tx_json?.hash ?? result.hash ?? '';
+  const engineResult = result.engine_result ?? '';
+  if (engineResult !== 'tesSUCCESS' && engineResult !== 'terQUEUED') {
+    throw new Error(`Submit failed: ${engineResult}`);
+  }
+  return { hash, engineResult };
+}
+
 // Get account info (balance, sequence, etc.)
 export async function getAccountInfo(address: string): Promise<{
   balance: number;

@@ -25,6 +25,10 @@ import { barsFromOHLCV, runBacktest } from '../services/backtestingEngine';
 import { useRealtimePrices, type AggregatedPrice } from '../services/websocketPriceFeeds';
 import { subscribeToPrices as subscribeLivePrices, getAvailableSymbols } from '../services/livePrices';
 import { proxyFetch } from '../lib/dataProxy';
+import { xamanService } from '../services/xaman';
+import type { SigningRequest } from '../services/xaman';
+import { buildOfferCreate } from '../services/paperTradingLiveExecute';
+import * as localWalletService from '../services/localWalletService';
 
 // Auto-trade icons
 import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink } from 'lucide-react';
@@ -302,9 +306,12 @@ function PaperTradingPanelInner({
   // Live trading state
   const [isLiveMode, setIsLiveMode] = useState(false);
   const [showWalletConnect, setShowWalletConnect] = useState(false);
+  const [liveSigningRequest, setLiveSigningRequest] = useState<SigningRequest | null>(null);
+  const [liveSigningError, setLiveSigningError] = useState<string | null>(null);
   const connectedWallets = walletStore?.wallets?.filter(w => w.provider !== 'demo') || [];
   const activeWallet = walletStore?.wallets?.find(w => w.id === walletStore?.activeWalletId);
   const hasRealWallet = connectedWallets.length > 0;
+  const refreshWallet = walletStore?.refreshWallet;
   
   // Destructure with fallbacks
   const cashBalance = store?.cashBalance ?? 10000;
@@ -883,10 +890,82 @@ function PaperTradingPanelInner({
   const tradeAmountNum = parseFloat(tradeAmount) || 0;
   const tradeCost = tradeAmountNum * currentPrice;
 
-  // Execute trade handler
-  const handleTrade = useCallback(() => {
-    if (tradeAmountNum <= 0 || !executeTrade) return;
+  // When in Live mode, listen for Xaman signing result and refresh wallet on success
+  const liveRequestIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!liveSigningRequest || !activeWallet || !refreshWallet) return;
+    const id = liveSigningRequest.id;
+    liveRequestIdRef.current = id;
+    const onSigned = (req: SigningRequest) => {
+      if (req.id !== id) return;
+      liveRequestIdRef.current = null;
+      refreshWallet(activeWallet.id);
+      setTradeAmount('');
+      setLiveSigningRequest(null);
+      setLiveSigningError(null);
+    };
+    const onRejected = (req: SigningRequest) => {
+      if (req.id !== id) return;
+      liveRequestIdRef.current = null;
+      setLiveSigningRequest(null);
+      setLiveSigningError('Signing rejected or expired.');
+    };
+    const onExpired = (req: SigningRequest) => {
+      if (req.id !== id) return;
+      liveRequestIdRef.current = null;
+      setLiveSigningRequest(null);
+      setLiveSigningError('Signing request expired.');
+    };
+    xamanService.on('signingSigned', onSigned);
+    xamanService.on('signingRejected', onRejected);
+    xamanService.on('signingExpired', onExpired);
+    return () => {
+      xamanService.off('signingSigned', onSigned);
+      xamanService.off('signingRejected', onRejected);
+      xamanService.off('signingExpired', onExpired);
+      if (liveRequestIdRef.current === id) liveRequestIdRef.current = null;
+    };
+  }, [liveSigningRequest, activeWallet, refreshWallet]);
 
+  // Execute trade handler — in Live mode with XRP, open Xaman to sign real DEX offer
+  const handleTrade = useCallback(() => {
+    if (tradeAmountNum <= 0) return;
+
+    const doingLiveTrade = isLiveMode && activeWallet && tradeAsset === 'XRP';
+    const effectiveCash = useRealBalance ? (activeWallet?.balance ?? 0) : cashBalance;
+    if (tradeType === 'buy' && tradeCost > effectiveCash) return;
+
+    if (doingLiveTrade) {
+      setLiveSigningError(null);
+      const payload = buildOfferCreate(activeWallet.address, tradeType, tradeAmountNum, currentPrice);
+
+      if (activeWallet.provider === 'control-room') {
+        if (!localWalletService.hasSessionWallet()) {
+          setLiveSigningError('Control Room wallet not in session. Re-import from Profile → Wallets.');
+          return;
+        }
+        localWalletService
+          .signAndSubmit(payload as Record<string, unknown>)
+          .then(() => {
+            setTradeAmount('');
+            if (refreshWallet && activeWallet.id) refreshWallet(activeWallet.id);
+          })
+          .catch((err) => setLiveSigningError(err instanceof Error ? err.message : 'Sign/submit failed.'));
+        return;
+      }
+
+      if (!xamanService.hasApiCredentials()) {
+        setLiveSigningError('Add Xaman API key in Profile or Secure Agent to sign real trades.');
+        return;
+      }
+      xamanService
+        .requestCustomTransactionSignature(payload as any, activeWallet.address)
+        .then((req) => setLiveSigningRequest(req))
+        .catch((err) => setLiveSigningError(err instanceof Error ? err.message : 'Failed to create signing request.'));
+      return;
+    }
+
+    if (!executeTrade) return;
     const success = executeTrade({
       type: tradeType,
       asset: tradeAsset,
@@ -894,11 +973,8 @@ function PaperTradingPanelInner({
       price: currentPrice,
       source: 'manual',
     });
-
-    if (success) {
-      setTradeAmount('');
-    }
-  }, [executeTrade, tradeType, tradeAsset, tradeAmountNum, currentPrice]);
+    if (success) setTradeAmount('');
+  }, [executeTrade, tradeType, tradeAsset, tradeAmountNum, currentPrice, isLiveMode, activeWallet, useRealBalance, cashBalance, tradeCost]);
 
   // Execute suggested trade
   const handleSuggestedTrade = useCallback((trade: { asset: string; action: 'buy' | 'sell'; price: number }) => {
@@ -1094,11 +1170,16 @@ function PaperTradingPanelInner({
         
         {/* Live mode warning */}
         {isLiveMode && (
-          <div className="mt-3 pt-3 border-t border-cyber-green/20 flex items-start gap-2">
-            <AlertTriangle size={14} className="text-cyber-yellow shrink-0 mt-0.5" />
-            <p className="text-[9px] text-cyber-yellow">
-              <strong>CAUTION:</strong> Live mode uses real XRP. Trades on the XRPL DEX are irreversible. 
-              Start with small amounts and verify all transactions in your wallet app before signing.
+          <div className="mt-3 pt-3 border-t border-cyber-green/20 space-y-2">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={14} className="text-cyber-yellow shrink-0 mt-0.5" />
+              <p className="text-[9px] text-cyber-yellow">
+                <strong>CAUTION:</strong> Live mode uses real XRP. Trades on the XRPL DEX are irreversible.
+                Start with small amounts and verify all transactions in your wallet app before signing.
+              </p>
+            </div>
+            <p className="text-[9px] text-cyber-cyan pl-6">
+              Click Buy or Sell XRP below → <strong>Sign in Xaman</strong> to execute on the DEX. You can also use <Link to="/terminal" className="underline hover:text-cyber-glow">Terminal</Link> for strategy bots (Grid, DCA).
             </p>
           </div>
         )}
@@ -1199,6 +1280,57 @@ function PaperTradingPanelInner({
                   </div>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Live trade: Sign in Xaman modal */}
+      <AnimatePresence>
+        {liveSigningRequest && (
+          <motion.div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLiveSigningRequest(null)}
+          >
+            <motion.div
+              className="cyber-panel cyber-glow w-full max-w-sm p-6"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-cyber text-cyber-green">Sign in Xaman</h3>
+                <button
+                  type="button"
+                  onClick={() => setLiveSigningRequest(null)}
+                  className="p-1 hover:bg-cyber-border/30 rounded text-cyber-muted"
+                  aria-label="Cancel"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <p className="text-[10px] text-cyber-muted mb-3">
+                Approve the trade in the Xaman app. Your wallet will sign the DEX offer.
+              </p>
+              {liveSigningRequest.qrCodeUrl && (
+                <div className="flex justify-center mb-3">
+                  <img src={liveSigningRequest.qrCodeUrl} alt="Scan with Xaman" className="w-40 h-40 rounded border border-cyber-border" />
+                </div>
+              )}
+              {liveSigningRequest.deepLink && (
+                <a
+                  href={liveSigningRequest.deepLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-2 rounded bg-cyber-cyan/20 text-cyber-cyan border border-cyber-cyan/50 hover:bg-cyber-cyan/30 text-center text-sm font-cyber"
+                >
+                  Open Xaman
+                </a>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -1465,6 +1597,16 @@ function PaperTradingPanelInner({
                 </div>
               </div>
 
+              {liveSigningError && (
+                <div className="p-2 rounded bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-[10px] flex items-center gap-2">
+                  <AlertCircle size={14} className="shrink-0" />
+                  {liveSigningError}
+                  <button type="button" onClick={() => setLiveSigningError(null)} className="ml-auto p-0.5 hover:bg-cyber-red/20 rounded" aria-label="Dismiss">
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+
               {/* Execute Button */}
               <div
                 id="execute-button"
@@ -1472,23 +1614,27 @@ function PaperTradingPanelInner({
               >
                 <button
                   onClick={handleTrade}
-                  disabled={tradeAmountNum <= 0 || (tradeType === 'buy' && tradeCost > cashBalance)}
+                  disabled={
+                    tradeAmountNum <= 0 ||
+                    !!liveSigningRequest ||
+                    (tradeType === 'buy' && tradeCost > (useRealBalance ? (activeWallet?.balance ?? 0) : cashBalance))
+                  }
                   className={`w-full py-3 rounded font-cyber text-sm transition-all flex items-center justify-center gap-2 ${
-                    tradeAmountNum <= 0 || (tradeType === 'buy' && tradeCost > cashBalance)
+                    tradeAmountNum <= 0 || liveSigningRequest || (tradeType === 'buy' && tradeCost > (useRealBalance ? (activeWallet?.balance ?? 0) : cashBalance))
                       ? 'bg-cyber-muted/20 text-cyber-muted cursor-not-allowed'
                       : tradeType === 'buy'
                         ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/50 hover:bg-cyber-green/30'
                         : 'bg-cyber-red/20 text-cyber-red border border-cyber-red/50 hover:bg-cyber-red/30'
                   }`}
-              >
-                <Play size={16} />
-                  {tradeType === 'buy' ? 'BUY' : 'SELL'} {tradeAsset}
+                >
+                  <Play size={16} />
+                  {liveSigningRequest ? 'Opening Xaman…' : isLiveMode && activeWallet && tradeAsset === 'XRP' ? (activeWallet.provider === 'control-room' ? `${tradeType === 'buy' ? 'BUY' : 'SELL'} XRP (sign locally)` : `${tradeType === 'buy' ? 'BUY' : 'SELL'} XRP → Sign in Xaman`) : `${tradeType === 'buy' ? 'BUY' : 'SELL'} ${tradeAsset}`}
                 </button>
               </div>
 
-              {tradeType === 'buy' && tradeCost > cashBalance && (
+              {tradeType === 'buy' && tradeCost > (useRealBalance ? (activeWallet?.balance ?? 0) : cashBalance) && (
                 <p className="text-[10px] text-cyber-red text-center">
-                  Insufficient funds ({(tradeCost - cashBalance).toFixed(2)} XRP short)
+                  Insufficient funds ({(tradeCost - (useRealBalance ? (activeWallet?.balance ?? 0) : cashBalance)).toFixed(2)} XRP short)
                 </p>
               )}
 

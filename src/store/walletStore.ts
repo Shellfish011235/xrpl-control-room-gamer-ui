@@ -24,6 +24,7 @@ export type WalletProvider =
   | 'robinhood'
   | 'bank'
   | 'ledger'
+  | 'control-room'
   | 'demo';
 
 export interface WalletToken {
@@ -411,6 +412,13 @@ export const walletProviders: Record<WalletProvider, {
     color: '#00D4FF',
     category: 'direct',
     description: 'Enter XRPL address manually',
+  },
+  'control-room': {
+    name: 'Control Room Wallet',
+    icon: '🎛️',
+    color: '#22c55e',
+    category: 'wallet',
+    description: 'Create or import in-app wallet (session-only, sign locally)',
   },
   demo: {
     name: 'Demo Wallet',
