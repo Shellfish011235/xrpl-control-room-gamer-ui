@@ -787,21 +787,21 @@ export async function getWalletData(address: string): Promise<{
 
     if (results[0].status === 'fulfilled') {
       tokens = results[0].value;
-      console.log(`[XRPL] Got ${tokens.length} tokens`);
+      if (!isProd) console.log(`[XRPL] Got ${tokens.length} tokens`);
     } else {
       console.warn(`[XRPL] Failed to get tokens:`, results[0].reason);
     }
 
     if (results[1].status === 'fulfilled') {
       nfts = results[1].value;
-      console.log(`[XRPL] Got ${nfts.length} NFTs`);
+      if (!isProd) console.log(`[XRPL] Got ${nfts.length} NFTs`);
     } else {
       console.warn(`[XRPL] Failed to get NFTs:`, results[1].reason);
     }
 
     if (results[2].status === 'fulfilled') {
       transactions = results[2].value;
-      console.log(`[XRPL] Got ${transactions.length} transactions`);
+      if (!isProd) console.log(`[XRPL] Got ${transactions.length} transactions`);
     } else {
       console.warn(`[XRPL] Failed to get transactions:`, results[2].reason);
     }

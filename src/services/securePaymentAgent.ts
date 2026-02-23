@@ -413,11 +413,12 @@ class SecurePaymentAgent {
 
     // Add the payment step
     if (parsed.currency === 'XRP') {
-      // Check balance before creating plan (need amount + 10 XRP reserve)
-      const availableXRP = this.walletState!.xrpBalance - 10;
+      // Check balance before creating plan (need amount + base reserve; XRPL base reserve = 1 XRP as of 2024)
+      const baseReserveXRP = 1;
+      const availableXRP = this.walletState!.xrpBalance - baseReserveXRP;
       if (availableXRP < parsed.amount) {
         throw new Error(
-          `Insufficient XRP. You need at least ${(parsed.amount + 10).toFixed(2)} XRP (${parsed.amount} to send + 10 XRP reserve). Your balance: ${this.walletState!.xrpBalance.toFixed(2)} XRP.`
+          `Insufficient XRP. You need at least ${(parsed.amount + baseReserveXRP).toFixed(2)} XRP (${parsed.amount} to send + ${baseReserveXRP} XRP reserve). Your balance: ${this.walletState!.xrpBalance.toFixed(2)} XRP.`
         );
       }
       steps.push({

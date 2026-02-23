@@ -118,6 +118,7 @@ export function WalletConnect() {
   const [controlRoomImportSeed, setControlRoomImportSeed] = useState('');
   const [controlRoomShowImport, setControlRoomShowImport] = useState(false);
   const [controlRoomAdding, setControlRoomAdding] = useState(false);
+  const [controlRoomShowSeed, setControlRoomShowSeed] = useState(false);
   
   // Privacy toggle - persisted in localStorage
   const [hideAmounts, setHideAmounts] = useState(() => {
@@ -727,7 +728,7 @@ export function WalletConnect() {
                                 try {
                                   setControlRoomAdding(true);
                                   const { address } = localWalletService.importFromSeed(controlRoomImportSeed.trim());
-                                  await addWalletAndFetch({ address, provider: 'control-room', label: walletLabel || 'Control Room Wallet', isDefault: false });
+                                  await addWalletAndFetch({ address, provider: 'control-room', label: walletLabel || 'Control Room Wallet' });
                                   setControlRoomImportSeed('');
                                   setControlRoomShowImport(false);
                                   setSelectedProvider(null);
@@ -756,7 +757,7 @@ export function WalletConnect() {
                           onClick={async () => {
                             try {
                               setControlRoomAdding(true);
-                              await addWalletAndFetch({ address: manualAddress, provider: 'control-room', label: walletLabel || 'Control Room Wallet', isDefault: false });
+                              await addWalletAndFetch({ address: manualAddress, provider: 'control-room', label: walletLabel || 'Control Room Wallet' });
                               setControlRoomSeedToBackup(null);
                               setManualAddress('');
                               setSelectedProvider(null);

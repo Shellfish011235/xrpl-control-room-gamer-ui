@@ -91,6 +91,13 @@ export async function signOnly(tx: Record<string, unknown>): Promise<{ hash: str
   if (!sessionWallet) throw new Error('No Control Room wallet in session.');
   const account = tx.Account as string;
   if (!account) throw new Error('Transaction missing Account');
+  if (account !== sessionWallet.classicAddress) {
+    throw new Error('Transaction Account does not match session wallet. Refusing to sign.');
+  }
+  const txType = tx.TransactionType as string;
+  if (!txType || typeof txType !== 'string') {
+    throw new Error('Transaction missing TransactionType. Refusing to sign.');
+  }
 
   const [accountInfo, serverInfo] = await Promise.all([
     getAccountInfo(account),

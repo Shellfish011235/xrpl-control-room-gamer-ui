@@ -202,7 +202,7 @@ export const useWalletStore = create<WalletState>()(
                     isLoading: false,
                     lastUpdated: Date.now(),
                     creationYear: creationYear,
-                    error: data.exists ? undefined : 'Account not found on ledger',
+                    error: data.exists ? undefined : 'Account not activated. Send at least 1 XRP to this address to activate it on the ledger.',
                   } : w
                 ),
               };
@@ -267,7 +267,7 @@ export const useWalletStore = create<WalletState>()(
                   exists: data.exists,
                   isLoading: false,
                   lastUpdated: Date.now(),
-                  error: data.exists ? undefined : 'Account not found on ledger',
+                  error: data.exists ? undefined : 'Account not activated. Send at least 1 XRP to this address to activate it on the ledger.',
                 } : w
               ),
             }));
