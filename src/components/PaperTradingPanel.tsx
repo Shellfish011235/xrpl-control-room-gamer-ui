@@ -945,7 +945,7 @@ function PaperTradingPanelInner({
           return;
         }
         localWalletService
-          .signAndSubmit(payload as Record<string, unknown>)
+          .signAndSubmit(payload as unknown as Record<string, unknown>)
           .then(() => {
             setTradeAmount('');
             if (refreshWallet && activeWallet.id) refreshWallet(activeWallet.id);

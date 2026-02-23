@@ -727,7 +727,7 @@ export function WalletConnect() {
                                 try {
                                   setControlRoomAdding(true);
                                   const { address } = localWalletService.importFromSeed(controlRoomImportSeed.trim());
-                                  await addWalletAndFetch({ address, provider: 'control-room', label: walletLabel || 'Control Room Wallet' });
+                                  await addWalletAndFetch({ address, provider: 'control-room', label: walletLabel || 'Control Room Wallet', isDefault: false });
                                   setControlRoomImportSeed('');
                                   setControlRoomShowImport(false);
                                   setSelectedProvider(null);
@@ -756,7 +756,7 @@ export function WalletConnect() {
                           onClick={async () => {
                             try {
                               setControlRoomAdding(true);
-                              await addWalletAndFetch({ address: manualAddress, provider: 'control-room', label: walletLabel || 'Control Room Wallet' });
+                              await addWalletAndFetch({ address: manualAddress, provider: 'control-room', label: walletLabel || 'Control Room Wallet', isDefault: false });
                               setControlRoomSeedToBackup(null);
                               setManualAddress('');
                               setSelectedProvider(null);
