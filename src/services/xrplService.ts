@@ -1,6 +1,8 @@
 // XRPL Service - Fetches real data from the XRP Ledger
 import { getXrplProxyBase } from '../lib/dataProxy';
 
+const isProd = typeof import.meta !== 'undefined' && (import.meta as { env?: { PROD?: boolean } }).env?.PROD === true;
+
 // XRPL Public JSON-RPC Servers (with CORS support)
 // Ordered by reliability - xrplcluster.com is most reliable
 const XRPL_ENDPOINTS = [
