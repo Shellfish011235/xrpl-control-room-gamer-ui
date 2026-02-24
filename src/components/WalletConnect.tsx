@@ -114,6 +114,7 @@ export function WalletConnect() {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
   /** Backup seed modal payload; when set, modal is open. Seed only lives here until modal closes (H-2). */
   const [backupModalPayload, setBackupModalPayload] = useState<{ seed: string; address: string } | null>(null);
+  const [controlRoomSeedToBackup, setControlRoomSeedToBackup] = useState<string | null>(null);
   const [controlRoomImportSeed, setControlRoomImportSeed] = useState('');
   const [controlRoomShowImport, setControlRoomShowImport] = useState(false);
   const [controlRoomAdding, setControlRoomAdding] = useState(false);
