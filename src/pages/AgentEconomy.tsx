@@ -188,8 +188,6 @@ export function PowerModeUnlockCard() {
               <AlertCircle size={12} /> {error}
             </p>
           )}
-          {!xamanProduction && !platformLive && (
-          )}
           {platformLive && !xamanProduction && (
             <p className="text-xs text-cyber-cyan mb-2">Platform is Live. Configure Xaman (e.g. in CARV) to sign for real.</p>
           )}
