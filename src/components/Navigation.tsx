@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Cpu, Wallet, Bot, BookOpen, LayoutGrid, ArrowRightLeft, Sparkles, Zap } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import defaultLogo from '../assets/profile-default.png'
-import { usePlatformModeStore } from '../store/platformModeStore'
 import { useAgentPanelStore } from '../store/agentPanelStore'
 import { useXRPPrice } from '../services/websocketPriceFeeds'
 
@@ -133,30 +132,6 @@ function useLedgerIndex() {
   return { ledgerIndex, loading, error }
 }
 
-// Platform mode toggle — one click switches entire platform Demo ↔ Live
-function PlatformModeToggle() {
-  const mode = usePlatformModeStore((s) => s.mode)
-  const toggleMode = usePlatformModeStore((s) => s.toggleMode)
-  const isLive = mode === 'live'
-  return (
-    <button
-      type="button"
-      onClick={toggleMode}
-      title={isLive ? 'Switch to Demo mode (platform-wide)' : 'Switch to Live mode (platform-wide)'}
-      className={`flex items-center gap-2 px-3 py-1.5 cyber-panel border rounded-lg transition-colors ${
-        isLive
-          ? 'border-cyber-green/30 hover:border-cyber-green/50 bg-cyber-green/10'
-          : 'border-cyber-yellow/30 hover:border-cyber-yellow/50 bg-cyber-yellow/10'
-      }`}
-    >
-      <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-cyber-green animate-pulse' : 'bg-cyber-yellow'}`} />
-      <span className={`text-xs font-cyber ${isLive ? 'text-cyber-green' : 'text-cyber-yellow'}`}>
-        {isLive ? 'LIVE' : 'DEMO'}
-      </span>
-    </button>
-  )
-}
-
 const navItems = [
   { path: '/', label: 'Home', icon: User },
   { path: '/network', label: 'Network', icon: Globe },
@@ -179,12 +154,12 @@ export default function Navigation() {
   const setAgentOpen = useAgentPanelStore((s) => s.setOpen)
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50">
+    <header className="fixed top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top)]">
       {/* Top Border Glow */}
       <div className="h-0.5 bg-gradient-to-r from-transparent via-cyber-glow to-transparent" />
       
       <nav className="cyber-panel border-t-0 rounded-t-none px-4 lg:px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 flex-nowrap">
           {/* Logo - XRPL Control Room logo (matches profile default) */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#00d4ff] flex items-center justify-center p-0 ring-1 ring-cyber-glow/40 profile-default-logo-wrap">
@@ -278,8 +253,11 @@ export default function Navigation() {
               <span className="font-cyber text-xs uppercase">Agent</span>
             </button>
 
-            {/* Platform mode: Demo / Live — click to toggle entire platform */}
-            <PlatformModeToggle />
+            {/* Platform: live only (no demo toggle) */}
+            <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-cyber-green/30 bg-cyber-green/10">
+              <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
+              <span className="text-xs font-cyber text-cyber-green">LIVE</span>
+            </span>
 
             {/* Ledger - Live Feed */}
             <div className="text-right">
@@ -314,11 +292,14 @@ export default function Navigation() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden border-t border-cyber-border"
+            className="md:hidden border-t border-cyber-border max-h-[70vh] max-h-[70dvh] overflow-y-auto"
           >
-            {/* Mobile: Platform mode toggle */}
-            <div className="px-4 py-3 border-b border-cyber-border/50">
-              <PlatformModeToggle />
+            {/* Mobile: Platform live (no demo) */}
+            <div className="px-4 py-3 border-b border-cyber-border/50 flex items-center gap-2">
+              <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-cyber-green/30 bg-cyber-green/10">
+                <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
+                <span className="text-xs font-cyber text-cyber-green">LIVE</span>
+              </span>
             </div>
             {/* Mobile XRP Price */}
             <div className="px-4 py-3 border-b border-cyber-border/50 flex items-center justify-between">

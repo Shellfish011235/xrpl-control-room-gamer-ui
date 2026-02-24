@@ -8,10 +8,11 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cpu, ListTodo, Receipt, Shield, Zap, ExternalLink, Loader2, CheckCircle,
-  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign, ChevronRight, Trophy
+  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign, ChevronRight, Trophy, Pause, Play
 } from 'lucide-react';
 import { BountyBoard } from '../components/agentEconomy';
 import { useWalletStore } from '../store/walletStore';
+import { useStrategyStore } from '../store/strategyStore';
 import { useAgentEconomyStore } from '../store/agentEconomyStore';
 import { usePlatformModeStore } from '../store/platformModeStore';
 import { xamanService } from '../services/xaman';
@@ -188,7 +189,6 @@ export function PowerModeUnlockCard() {
             </p>
           )}
           {!xamanProduction && !platformLive && (
-            <p className="text-xs text-cyber-yellow mb-2">Demo mode: switch to Live in the nav bar, or configure Xaman API key for real signing.</p>
           )}
           {platformLive && !xamanProduction && (
             <p className="text-xs text-cyber-cyan mb-2">Platform is Live. Configure Xaman (e.g. in CARV) to sign for real.</p>
@@ -373,6 +373,8 @@ export function ReceiptsTab() {
 
 export default function AgentEconomy() {
   const [tab, setTab] = useState<AgentEconomyTabId>('agents');
+  const killSwitch = useStrategyStore((s) => s.orchestraKillSwitch);
+  const setKillSwitch = useStrategyStore((s) => s.setOrchestraKillSwitch);
 
   return (
     <div className="min-h-screen px-4 md:px-8 pt-24 md:pt-28 pb-8">
@@ -390,6 +392,24 @@ export default function AgentEconomy() {
           <p className="text-cyber-muted text-sm max-w-2xl mb-5">
             Structured actions with clear price and destination. You sign; funds go wallet-to-wallet. No custody.
           </p>
+
+          {/* Orchestra kill switch: pause/resume strategy agents (shared with Terminal) */}
+          <div className="flex flex-wrap items-center gap-3 mb-4 px-3 py-2.5 rounded-xl border border-cyber-border bg-cyber-darker/40">
+            <Shield className={`w-4 h-4 shrink-0 ${killSwitch ? 'text-cyber-yellow' : 'text-cyber-green'}`} />
+            <span className="text-xs font-cyber text-cyber-text">
+              Strategy agents (Terminal): {killSwitch ? 'Paused' : 'Running'}
+            </span>
+            <button
+              type="button"
+              onClick={() => setKillSwitch(!killSwitch)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs font-cyber transition-colors ${
+                killSwitch ? 'border-cyber-green/50 text-cyber-green bg-cyber-green/10' : 'border-cyber-yellow/50 text-cyber-yellow bg-cyber-yellow/10'
+              }`}
+            >
+              {killSwitch ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
+              {killSwitch ? 'Resume' : 'Pause'}
+            </button>
+          </div>
 
           <div className="p-5 rounded-xl border border-cyber-border bg-cyber-darker/40 space-y-4">
             <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-medium">In this app</p>

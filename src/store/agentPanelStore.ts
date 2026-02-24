@@ -5,7 +5,7 @@
 
 import { create } from 'zustand'
 
-export type AgentPanelTab = 'chat' | 'economy' | 'streams' | 'bender'
+export type AgentPanelTab = 'chat' | 'economy' | 'streams'
 
 interface AgentPanelState {
   open: boolean

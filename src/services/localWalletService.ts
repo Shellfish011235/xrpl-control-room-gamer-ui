@@ -84,32 +84,5 @@ export async function signAndSubmit(tx: Record<string, unknown>): Promise<{ hash
   return { hash };
 }
 
-/**
- * Sign a transaction and return the signed blob (caller submits).
- */
-export async function signOnly(tx: Record<string, unknown>): Promise<{ hash: string; tx_blob: string }> {
-  if (!sessionWallet) throw new Error('No Control Room wallet in session.');
-  const account = tx.Account as string;
-  if (!account) throw new Error('Transaction missing Account');
-  if (account !== sessionWallet.classicAddress) {
-    throw new Error('Transaction Account does not match session wallet. Refusing to sign.');
-  }
-  const txType = tx.TransactionType as string;
-  if (!txType || typeof txType !== 'string') {
-    throw new Error('Transaction missing TransactionType. Refusing to sign.');
-  }
-
-  const [accountInfo, serverInfo] = await Promise.all([
-    getAccountInfo(account),
-    getServerInfo(),
-  ]);
-
-  const prepared = {
-    ...tx,
-    Fee: tx.Fee ?? '12',
-    Sequence: tx.Sequence ?? accountInfo.sequence,
-    LastLedgerSequence: (tx.LastLedgerSequence as number) ?? serverInfo.ledgerIndex + 75,
-  };
-
-  return sessionWallet.sign(prepared as any);
-}
+// Single signing path: signAndSubmit only. signOnly was removed (M-3) to avoid
+// callers submitting tx_blob to untrusted endpoints; see SECURITY-AUDIT-CONTROL-ROOM-WALLET.md.

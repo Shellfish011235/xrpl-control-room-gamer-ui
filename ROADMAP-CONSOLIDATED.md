@@ -8,6 +8,9 @@ Single list of what’s left to do and suggested priorities. Use with [ROADMAP.m
 
 ## Done recently (for context)
 
+- [x] Strategy fill tracking & PnL: EXECUTION_RESULT (sim + LIVE after Xaman sign) updates strategyStore (addExposure, updatePnL, addDCAEntry); Terminal shows "Verified on ledger" after reconcile.
+- [x] Plan → sign → submit (LIVE): Xaman auto-submits; Terminal gets txHash, publishes EXECUTION_RESULT, reconciles via getTransaction; execution.ts doc updated.
+- [x] Orchestra kill switch in UI: Terminal has Pause/Resume (Agents: Paused/Running) next to Strategy mode; persisted in strategy store.
 - [x] Paper trading: TWAP & Iceberg (sim), backtest equity curve
 - [x] Orchestra: LoopJam Sentinel, Wall Street Elite, VentureEval agents; Run the Orchestra link + cost clarity (drops/XRP, free sim)
 - [x] Strategy agents: MarketMaker, DCA, Arbitrage (modular, event-based); strategy store; Strategies panel (Terminal) with PnL gauge, DCA chart, arb heatmap, ladder
@@ -29,8 +32,8 @@ Single list of what’s left to do and suggested priorities. Use with [ROADMAP.m
 - [ ] **Real AMM quote for ArbitrageAgent**  
   Replace synthetic AMM quote with real `amm_info` or AMM quote API; feed into strategy state so arb logic uses real CLOB vs AMM spread.
 
-- [ ] **Strategy fill tracking & PnL**  
-  On fill (ledger subscription or post-sign reconciliation): update `strategyStore.addExposure`, `updatePnL(strategyId, …)`, and for DCA `addDCAEntry` / `setDCAAvgCost` so PnL gauge, DCA chart, and ladder stay in sync.
+- [x] **Strategy fill tracking & PnL**  
+  On fill (post-sign): `EXECUTION_RESULT` in useOrchestra updates `strategyStore.addExposure`, `updatePnL`, `addDCAEntry`; Terminal publishes EXECUTION_RESULT with plan + txHashes after Xaman sign; reconcile runs and UI shows "Verified on ledger."
 
 - [ ] **Grid strategy agent**  
   Add a GridStrategyAgent (or plug existing grid logic into Orchestra) that reads `strategy:grid:enabled` and shared exposure, emits `OFFER_MAKE` / `OFFER_CANCEL` for re-grids; keep 100% non-custodial.
@@ -64,7 +67,7 @@ Single list of what’s left to do and suggested priorities. Use with [ROADMAP.m
 
 ## 2. Orchestra & agents
 
-- [ ] **Plan → sign → submit flow (LIVE)**  
+- [x] **Plan → sign → submit flow (LIVE)**  
   When mode is LIVE, after user signs (Xaman), submit `PlannedTx` via xrpl.js and reconcile with `account_tx`; today execution is “plan ready for sign” only.
 
 - [ ] **Offer cancel in strategy agents**  
@@ -73,8 +76,8 @@ Single list of what’s left to do and suggested priorities. Use with [ROADMAP.m
 - [ ] **Netting for OFFER_MAKE**  
   Optional: net multiple offer intents into fewer txs where possible (e.g. same pair/side); currently each intent → one tx.
 
-- [ ] **Orchestra kill switch in UI**  
-  Expose Orchestra kill switch in a visible control (Terminal or Agent Economy) so users can pause all agent emissions.
+- [x] **Orchestra kill switch in UI**  
+  Terminal has Pause/Resume next to Strategy mode (Agents: Paused/Running); persisted in strategy store; useOrchestra applies killSwitch to orchestra.
 
 - [ ] **More “Run the Orchestra” tasks**  
   Add tasks that call pathfinding, AMM quote, or TrustGraph when backend is available; keep Learn/Pay agents page as single entry point.

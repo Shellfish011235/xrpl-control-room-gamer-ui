@@ -98,8 +98,8 @@ class XamanService {
   // API Key - only need API Key for browser SDK (not the secret!)
   private apiKey: string | null = null;
   
-  // Demo mode flag
-  private demoMode: boolean = true;
+  // No demo — signing requires API key (live/functional only)
+  private demoMode: boolean = false;
 
   constructor() {
     // Try to load saved API key
@@ -160,15 +160,13 @@ class XamanService {
   clearCredentials(): void {
     this.apiKey = null;
     this.xumm = null;
-    this.demoMode = true;
-    
+    this.demoMode = false;
     try {
       localStorage.removeItem('xaman-api-key');
     } catch (e) {
       // Ignore
     }
-    
-    console.log('[Xaman] Credentials cleared - demo mode enabled');
+    console.log('[Xaman] Credentials cleared. Add API key in Settings to sign.');
   }
 
   /**
@@ -335,10 +333,9 @@ class XamanService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
 
-    // Demo mode
-    if (this.demoMode || !this.xumm) {
-      console.log('[Xaman] 🎮 Demo mode - no real signing');
-      return this.createDemoRequest(type, payload, now, expiresAt);
+    // No demo — require API key for signing
+    if (!this.xumm) {
+      throw new Error('Xaman API key not set. Add your key in Settings (e.g. Profile or Agent panel) to sign transactions.');
     }
 
     // Real mode - use Xumm SDK
@@ -461,15 +458,12 @@ class XamanService {
     } catch (error) {
       console.error('[Xaman] SDK error:', error);
       // If we have credentials, do NOT silently fall back to demo — surface the error so the user can fix it
-      if (this.apiKey && this.xumm) {
-        const msg = error instanceof Error ? error.message : String(error);
-        const isConnectionError = /fetch|network|cors|Failed to fetch|connect|server not found|ECONNREFUSED|timeout/i.test(msg);
-        const hint = isConnectionError
-          ? ' Add your site URL to Allowed origins at apps.xumm.dev (Your app → Allowed origins).'
-          : '';
-        throw new Error(`Real signing failed: ${msg}.${hint} Check API key and allowed origins at apps.xumm.dev.`);
-      }
-      return this.createDemoRequest(type, payload, now, expiresAt);
+      const msg = error instanceof Error ? error.message : String(error);
+      const isConnectionError = /fetch|network|cors|Failed to fetch|connect|server not found|ECONNREFUSED|timeout/i.test(msg);
+      const hint = isConnectionError
+        ? ' Add your site URL to Allowed origins at apps.xumm.dev (Your app → Allowed origins).'
+        : '';
+      throw new Error(`Signing failed: ${msg}.${hint} Check API key and allowed origins at apps.xumm.dev.`);
     }
   }
 

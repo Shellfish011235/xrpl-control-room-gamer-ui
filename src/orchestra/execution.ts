@@ -1,12 +1,14 @@
 /**
  * Execution per mode: SIMULATE, MANUAL, LIVE.
  * Non-custodial: LIVE requires UI/wallet to sign; we only build and emit plan.
+ * When user signs in Xaman, Xaman auto-submits the tx to the ledger (we do not call submit from the app).
+ * After sign, Terminal receives txHash from Xaman, publishes EXECUTION_RESULT (strategy store updated), then we reconcile via getTransaction(txHash).
+ * For in-app signing flows, use submitPlannedTx + submitSignedTx from xrplService.
  */
 
 import type { SettlementPlan, PlannedTx } from '../types/agentIntents';
 import { publishToControlRoom } from './events';
-
-const MAX_RETRIES = 3;
+import { getTransaction } from '../services/xrplService';
 
 export function simulate(plan: SettlementPlan): void {
   publishToControlRoom({
@@ -22,28 +24,38 @@ export function requestApproval(plan: SettlementPlan): void {
 }
 
 /**
- * LIVE: emit plan for UI to sign (Xumm/wallet). No direct submit from orchestra.
- * A separate reconciler can call account_tx after user signs to confirm.
+ * LIVE: emit plan for UI to sign (Xaman/wallet). Xaman submits the signed tx to the ledger.
+ * No app-side submit; after sign we reconcile via getTransaction(txHash).
  */
 export function executeOnXRPL(plan: SettlementPlan): void {
   publishToControlRoom({ type: 'PLAN_READY_FOR_SIGN', plan });
 }
 
 /**
- * Reconciler: after execution, scan ledger (account_tx) to confirm txs.
- * Stub: returns success; real impl would call xrplClient.request({ command: 'account_tx', ... }).
+ * Reconciler: after user signed (Xaman auto-submitted), verify each tx on the ledger.
+ * Calls xrpl getTransaction(txHash) to confirm validated and success.
  */
 export async function reconcileAfterExecute(
   _plan: SettlementPlan,
-  _submittedTxHashes: string[]
+  submittedTxHashes: string[]
 ): Promise<{ ok: boolean; confirmed: string[]; errors?: string[] }> {
-  await new Promise((r) => setTimeout(r, 100));
-  return { ok: true, confirmed: _submittedTxHashes };
+  const confirmed: string[] = [];
+  const errors: string[] = [];
+  for (const hash of submittedTxHashes) {
+    try {
+      const tx = await getTransaction(hash);
+      if (tx.validated && tx.success) confirmed.push(hash);
+      else if (tx.error) errors.push(`${hash}: ${tx.error}`);
+    } catch (e) {
+      errors.push(`${hash}: ${e instanceof Error ? e.message : 'Unknown'}`);
+    }
+  }
+  return { ok: errors.length === 0, confirmed, errors: errors.length ? errors : undefined };
 }
 
 /**
- * Submit a single PlannedTx (called by UI after wallet sign).
- * Stub: real impl uses xrpl.js and signed blob from wallet.
+ * Submit a single PlannedTx (e.g. when using Control Room wallet instead of Xaman).
+ * For Xaman flow, Xaman submits; use this only for in-app signing + submit.
  */
 export async function submitPlannedTx(
   _tx: PlannedTx,

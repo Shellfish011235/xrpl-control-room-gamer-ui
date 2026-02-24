@@ -39,7 +39,7 @@ export type ControlRoomEvent =
   | { type: 'WINDOW_CLOSED'; plan: SettlementPlan; windowId: string }
   | { type: 'INTENT_REJECTED'; intent: Intent; reasons?: string[] }
   | { type: 'PLAN_READY_FOR_SIGN'; plan: SettlementPlan }
-  | { type: 'EXECUTION_RESULT'; planId: string; ok: boolean; txHashes?: string[]; error?: string }
+  | { type: 'EXECUTION_RESULT'; planId: string; ok: boolean; txHashes?: string[]; error?: string; plan?: SettlementPlan }
   | { type: 'KILL_SWITCH'; active: boolean }
   | { type: 'MODE_CHANGED'; mode: OrchestraMode };
 

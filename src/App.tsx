@@ -70,7 +70,7 @@ function App() {
         console.log('🚀 XRPL Control Room ready')
         console.log(`📱 Xaman mode: ${xamanConfig.mode}`)
       } catch (e) {
-        console.warn('[Xaman] Init failed (demo mode):', e)
+        console.warn('[Xaman] Init failed:', e)
       }
     }).catch((e) => console.warn('[Xaman] Load failed:', e))
 
@@ -123,12 +123,12 @@ function App() {
     <RootErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Router>
-          <div className="min-h-screen bg-cyber-darker relative">
+          <div className="min-h-screen min-h-[100dvh] w-full max-w-full bg-cyber-darker relative overflow-x-hidden">
           <ProfileBackground />
           <Navigation />
           <DisclaimerBanner />
 
-          <main className="relative z-10 pt-16">
+          <main className="relative z-10 pt-16 pt-[calc(4rem+env(safe-area-inset-top,0px))]">
             <PlatformModeBar />
             <GlobalAgentPanel />
             <Suspense fallback={<PageLoader />}>

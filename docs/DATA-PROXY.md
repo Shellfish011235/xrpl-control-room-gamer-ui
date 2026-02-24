@@ -71,6 +71,14 @@ Your backend should:
 
 This gives you one place to cache, rate-limit, or swap nodes.
 
+### Security and trust (VITE_XRPL_PROXY_URL)
+
+**When `VITE_XRPL_PROXY_URL` is set, all XRPL JSON-RPC (including `account_info`, `submit`, etc.) goes to that URL.** The app does not verify that the proxy forwards to a real XRPL node.
+
+- **You must** ensure the proxy points to a **trusted backend** that forwards only to **known XRPL nodes** (e.g. `https://xrplcluster.com` or your own node). A malicious or compromised proxy could return fake data (e.g. balances) or drop or misuse signed transactions.
+- **For critical flows** (e.g. after submitting a signed transaction), consider verifying with a read-only call (e.g. `tx` by hash) to a **known-good** XRPL endpoint if you need extra assurance when using a proxy. The app does not perform this verification by default; implement it in your backend or via a separate read-only env if required.
+- In production, the app does not log `params` or response bodies for XRPL calls (see `xrplService` and Control Room wallet security audit).
+
 ---
 
 ## Optional: single backend for all data

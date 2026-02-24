@@ -141,8 +141,8 @@ The Control Room wallet is **non-custodial**, **session-only**, and does **not p
 
 - [x] **C-1:** Add Lock / Clear session that calls `localWalletService.clear()` — **Done:** "Lock session" button in WalletConnect when Control Room wallet is active and session has key.
 - [x] **H-1:** Gate or remove verbose XRPL logging in production — **Done:** `isProd` check in xrplService; params/result not logged in production.
-- [ ] **H-2:** Ensure seed state is cleared as soon as possible after use; consider modal for backup seed.
-- [ ] **M-1:** Document proxy trust; consider tx verification when using proxy.
+- [x] **H-2:** Ensure seed state is cleared as soon as possible after use; consider modal for backup seed — **Done:** Backup seed shown in modal that unmounts when closed; import seed cleared immediately in handler (copy then clear before async).
+- [x] **M-1:** Document proxy trust; consider tx verification when using proxy — **Done:** docs/DATA-PROXY.md § Security and trust (VITE_XRPL_PROXY_URL); comment in xrplService getXRPLUrl.
 - [x] **M-2:** In `signAndSubmit` (and `signOnly`), validate TransactionType and Account === session wallet — **Done.**
-- [ ] **M-3:** Remove or document `signOnly`; prefer single signing path.
+- [x] **M-3:** Remove or document `signOnly`; prefer single signing path — **Done:** `signOnly` removed; single path is `signAndSubmit`.
 - [x] **L-3:** Catch Wallet.fromSeed errors and show generic invalid-seed message — **Done:** WalletConnect shows "Invalid secret key. Check the value and try again."

@@ -13,23 +13,30 @@ export type NFTRecord = Awaited<ReturnType<typeof getAccountNFTs>>[number] & {
 
 const XRPSCAN_NFT_API = 'https://api.xrpscan.com/api/v1';
 
-/** Fetch NFTs for an address (uses existing xrplService.getAccountNFTs). */
+const METADATA_BATCH_SIZE = 8;
+
+/** Fetch NFTs for an address; metadata is loaded in parallel batches so the list appears faster. */
 export async function fetchAccountNFTs(address: string): Promise<NFTRecord[]> {
   const list = await getAccountNFTs(address);
-  const out: NFTRecord[] = [];
-  for (const nft of list) {
-    const rec: NFTRecord = { ...nft };
-    if (nft.uri) {
-      try {
-        const meta = await parseNFTUri(nft.uri);
-        rec.image = meta.image;
-        rec.name = meta.name;
-        rec.description = meta.description;
-      } catch {
-        // keep uri only
+  const out: NFTRecord[] = list.map((nft) => ({ ...nft } as NFTRecord));
+
+  const withUri = list
+    .map((nft, i) => (nft.uri ? { nft, index: i } : null))
+    .filter((x): x is { nft: (typeof list)[number]; index: number } => x !== null);
+
+  for (let start = 0; start < withUri.length; start += METADATA_BATCH_SIZE) {
+    const batch = withUri.slice(start, start + METADATA_BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(({ nft }) => parseNFTUri(nft.uri!))
+    );
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled' && batch[i]) {
+        const rec = out[batch[i].index];
+        rec.image = result.value.image;
+        rec.name = result.value.name;
+        rec.description = result.value.description;
       }
-    }
-    out.push(rec);
+    });
   }
   return out;
 }

@@ -1189,14 +1189,14 @@ function PaperTradingPanelInner({
       <AnimatePresence>
         {showWalletConnect && (
           <motion.div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 max-h-[100dvh] overflow-y-auto modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setShowWalletConnect(false)}
           >
             <motion.div
-              className="cyber-panel cyber-glow w-full max-w-md p-6"
+              className="cyber-panel cyber-glow w-full max-w-md p-6 modal-content-fit"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -1289,14 +1289,14 @@ function PaperTradingPanelInner({
       <AnimatePresence>
         {liveSigningRequest && (
           <motion.div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 max-h-[100dvh] overflow-y-auto modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setLiveSigningRequest(null)}
           >
             <motion.div
-              className="cyber-panel cyber-glow w-full max-w-sm p-6"
+              className="cyber-panel cyber-glow w-full max-w-sm p-6 modal-content-fit"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -3243,7 +3243,7 @@ function PaperTradingPanelInner({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 max-h-[100dvh] overflow-y-auto modal-overlay"
             onClick={() => setShowReset(false)}
           >
             <motion.div
@@ -3283,7 +3283,7 @@ function PaperTradingPanelInner({
         )}
       </AnimatePresence>
 
-      {/* Tutorial Overlay */}
+      {/* Tutorial Overlay – centered so it doesn't obstruct Advanced Orders or footer */}
       <AnimatePresence>
         {showTutorial && currentTutorialStep && (
           <>
@@ -3292,17 +3292,21 @@ function PaperTradingPanelInner({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40"
+              className="fixed inset-0 bg-black/60 z-[100]"
               onClick={skipTutorial}
             />
             
-            {/* Tutorial Tooltip */}
+            {/* Tutorial Tooltip – viewport-centered for clear visibility */}
             <motion.div
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.95 }}
-              className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-cyber-dark border-2 border-cyber-cyan rounded-lg p-4 z-50 shadow-2xl shadow-cyber-cyan/20"
+              className="fixed inset-0 flex items-center justify-center p-4 z-[100] pointer-events-none max-h-[100dvh] overflow-y-auto modal-overlay"
             >
+              <div
+                className="w-full max-w-md bg-cyber-dark border-2 border-cyber-cyan rounded-lg p-4 shadow-2xl shadow-cyber-cyan/20 pointer-events-auto modal-content-fit flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
               {/* Progress Bar */}
               <div className="flex gap-1 mb-3">
                 {TUTORIAL_STEPS.map((_, idx) => (
@@ -3378,9 +3382,7 @@ function PaperTradingPanelInner({
                   <ChevronRight size={14} />
                 </button>
               </div>
-              
-              {/* Pointer Arrow */}
-              <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-cyber-dark border-l-2 border-t-2 border-cyber-cyan" />
+              </div>
             </motion.div>
           </>
         )}

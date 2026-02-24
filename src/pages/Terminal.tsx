@@ -87,7 +87,15 @@ export default function Terminal() {
   }, [activeWallet?.address]);
   const [planSigning, setPlanSigning] = useState(false);
   const [planSignError, setPlanSignError] = useState<string | null>(null);
+  const [reconciledSuccess, setReconciledSuccess] = useState(false);
   const unreadAlerts = useAlertStore(state => state.getUnreadCount());
+
+  // Clear "Verified on ledger" after 4s
+  useEffect(() => {
+    if (!reconciledSuccess) return;
+    const t = setTimeout(() => setReconciledSuccess(false), 4000);
+    return () => clearTimeout(t);
+  }, [reconciledSuccess]);
 
   const priceSourceLabel =
     priceLoading
@@ -231,12 +239,14 @@ export default function Terminal() {
                 if (!plan?.xrplTxs.length || !walletAddress) return;
                 setPlanSigning(true);
                 setPlanSignError(null);
-                const onSigned = (req: { txHash?: string }) => {
+                const onSigned = async (req: { txHash?: string }) => {
+                  const txHashes = req.txHash ? [req.txHash] : undefined;
                   publishToControlRoom({
                     type: 'EXECUTION_RESULT',
                     planId: plan.id,
                     ok: true,
-                    txHashes: req.txHash ? [req.txHash] : undefined,
+                    txHashes,
+                    plan,
                   });
                   dismissPlanReady(plan.id);
                   setPlanSigning(false);
@@ -244,6 +254,15 @@ export default function Terminal() {
                   xamanService.off('signingSigned', onSigned);
                   xamanService.off('signingRejected', onRejected);
                   xamanService.off('signingExpired', onExpired);
+                  if (txHashes?.length) {
+                    try {
+                      const { reconcileAfterExecute } = await import('../orchestra/execution');
+                      const result = await reconcileAfterExecute(plan, txHashes);
+                      if (result.ok) setReconciledSuccess(true);
+                    } catch (_) {
+                      // Verification best-effort; plan already recorded
+                    }
+                  }
                 };
                 const onRejected = () => {
                   setPlanSigning(false);
@@ -298,6 +317,19 @@ export default function Terminal() {
               {planSignError}
             </p>
           )}
+        </motion.div>
+      )}
+
+      {/* LIVE: brief success after reconcile */}
+      {reconciledSuccess && (
+        <motion.div
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="mb-4 px-4 py-2 rounded-lg border border-cyber-green/50 bg-cyber-green/10 text-cyber-green text-xs font-cyber"
+          role="status"
+        >
+          Verified on ledger. Strategy PnL and exposure updated.
         </motion.div>
       )}
 

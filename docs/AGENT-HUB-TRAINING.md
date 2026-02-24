@@ -1,5 +1,7 @@
 # How to Train / Improve the Agent Hub
 
+**Autonomous sims only. All actions require user confirm via Xaman.** To train or improve agents: edit skills in `src/agents/skills/registry.ts`, agents in `src/store/agentStore.ts`, and optional AI via `VITE_AI_API_URL`. This doc is the full guide.
+
 The Agent Hub uses **skills** and **orchestration** rather than in-app ML training. You improve agents by configuring skills, assigning them to agents, and optionally connecting your own AI API (including a fine-tuned model).
 
 ---

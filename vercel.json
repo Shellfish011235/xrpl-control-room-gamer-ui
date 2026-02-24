@@ -13,7 +13,7 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss://s1.ripple.com wss://s2.ripple.com wss://xrplcluster.com https://xrplcluster.com https://api.coingecko.com https://api.xumm.app wss://stream.binance.com wss://stream.binance.com:9443 https://api.binance.com https://*.xrpl.org https://xrpscan.com https://livenet.xrpl.org blob:; frame-src 'self' https://xumm.app; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' wss://s1.ripple.com wss://s2.ripple.com wss://xrplcluster.com https://xrplcluster.com https://api.coingecko.com https://api.xumm.app wss://stream.binance.com wss://stream.binance.com:9443 https://api.binance.com https://*.xrpl.org https://xrpscan.com https://api.xrpscan.com https://livenet.xrpl.org https://cdn.jsdelivr.net https://unpkg.com https://raw.githubusercontent.com https://ipfs.io https://cloudflare-ipfs.com https://gateway.pinata.cloud blob:; frame-src 'self' https://xumm.app; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
         },
         {
           "key": "Permissions-Policy",

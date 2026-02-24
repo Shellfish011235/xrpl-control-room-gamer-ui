@@ -8,6 +8,18 @@ import { useEffect, useState, useRef } from 'react';
 import { Orchestra, TipJarAgent, MemeticSimAgent, subscribeToControlRoom } from './index';
 import type { ControlRoomEvent } from './types';
 import type { SettlementPlan } from './types';
+
+/** Sum XRP (in XRP) from plan tx payloads: Payment Amount (drops), OfferCreate TakerGets/TakerPays (drops). */
+function xrpAmountFromPlan(plan: SettlementPlan): number {
+  let totalDrops = 0;
+  for (const tx of plan.xrplTxs) {
+    const p = tx.payload as Record<string, unknown>;
+    if (typeof p.Amount === 'string') totalDrops += Number(p.Amount);
+    if (typeof p.TakerGets === 'string') totalDrops += Number(p.TakerGets);
+    if (typeof p.TakerPays === 'string') totalDrops += Number(p.TakerPays);
+  }
+  return totalDrops / 1e6;
+}
 import { MarketMakerAgent, DCAgent, ArbitrageAgent, GridStrategyAgent } from '../strategyAgents';
 import { useStrategyStore } from '../store/strategyStore';
 import { useILPStore } from '../store/ilpStore';
@@ -60,24 +72,28 @@ export function useOrchestra(options?: { startImmediately?: boolean; includeStra
 
     const unsub = subscribeToControlRoom((ev) => {
       setEvents((prev) => [...prev.slice(-99), ev]);
-      // Strategy fill tracking: on sim result, update exposure + PnL so UI stays in sync
+      // Strategy fill tracking: on execution result (sim or LIVE), update exposure + PnL so UI stays in sync
       if (ev.type === 'EXECUTION_RESULT' && ev.ok && options?.includeStrategyAgents) {
         const store = useStrategyStore.getState();
-        const exposureDelta = 2; // sim fill
-        store.addExposure(exposureDelta);
         const mid = store.marketSnapshot?.mid ?? 0.5;
+        const isLiveFill = ev.plan && ev.txHashes?.length && !ev.txHashes[0]?.startsWith('sim_');
+        const exposureDelta = isLiveFill && ev.plan
+          ? xrpAmountFromPlan(ev.plan)
+          : 2; // sim fill fallback
+        store.addExposure(exposureDelta);
         (['grid', 'dca', 'mm', 'arbitrage'] as const).forEach((id) => {
           if (store.enabled[id]) {
+            const pnl = store.pnlByStrategy[id];
             store.updatePnL(id, {
-              tradesCount: store.pnlByStrategy[id].tradesCount + 1,
-              realizedPnL: store.pnlByStrategy[id].realizedPnL + 0.01,
+              tradesCount: pnl.tradesCount + 1,
+              realizedPnL: pnl.realizedPnL + (isLiveFill ? exposureDelta * mid * 0.001 : 0.01),
             });
             if (id === 'dca') {
               store.addDCAEntry({
                 timestamp: Date.now(),
                 price: mid,
-                amountXRP: 1,
-                totalCost: mid,
+                amountXRP: Math.min(exposureDelta, 100),
+                totalCost: mid * Math.min(exposureDelta, 100),
                 avgCostAfter: mid,
               });
             }

@@ -1,18 +1,16 @@
 /**
- * Platform mode: Demo vs Live
- * Single switch at the top of the app; when Live, the whole platform treats flows as live
- * (real signing still requires Xaman credentials; this controls presentation and intent).
+ * Platform mode: always live (functional). No demo/safe mode.
+ * Real signing requires Xaman API key; platform is live-only for personal use.
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export type PlatformMode = 'demo' | 'live';
+export type PlatformMode = 'live';
 
 interface PlatformModeState {
   mode: PlatformMode;
   setMode: (mode: PlatformMode) => void;
-  toggleMode: () => void;
   isDemo: () => boolean;
   isLive: () => boolean;
 }
@@ -20,15 +18,12 @@ interface PlatformModeState {
 export const usePlatformModeStore = create<PlatformModeState>()(
   persist(
     (set, get) => ({
-      mode: 'demo',
+      mode: 'live',
 
-      setMode: (mode) => set({ mode }),
+      setMode: (mode) => set({ mode: 'live' }),
 
-      toggleMode: () =>
-        set((s) => ({ mode: s.mode === 'demo' ? 'live' : 'demo' })),
-
-      isDemo: () => get().mode === 'demo',
-      isLive: () => get().mode === 'live',
+      isDemo: () => false,
+      isLive: () => true,
     }),
     { name: 'xrpl-platform-mode-v3' }
   )

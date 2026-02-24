@@ -5,8 +5,7 @@ import {
   Smartphone, Building2, Landmark, FileText, Copy, RefreshCw,
   AlertCircle, Loader2, Coins, Eye, EyeOff, ChevronDown, TrendingUp, TrendingDown
 } from 'lucide-react';
-import { useWalletStore, walletProviders, DEMO_WALLETS } from '../store/walletStore';
-import { usePlatformModeStore } from '../store/platformModeStore';
+import { useWalletStore, walletProviders } from '../store/walletStore';
 import type { WalletProvider } from '../store/walletStore';
 import { isValidXRPLAddress } from '../services/xrplService';
 import * as localWalletService from '../services/localWalletService';
@@ -98,9 +97,8 @@ function useXRPPrice(currency: CurrencyCode) {
   return { price, change24h, loading, usingFallback };
 }
 
-// Category groupings
+// Category groupings (no demo — live/functional only)
 const providerCategories = {
-  demo: { label: 'DEMO MODE', icon: Wallet, color: 'cyber-magenta' },
   wallet: { label: 'WALLETS', icon: Smartphone, color: 'cyber-glow' },
   exchange: { label: 'EXCHANGES', icon: Building2, color: 'cyber-yellow' },
   bank: { label: 'BANKS', icon: Landmark, color: 'cyber-purple' },
@@ -114,7 +112,8 @@ export function WalletConnect() {
   const [manualAddress, setManualAddress] = useState('');
   const [walletLabel, setWalletLabel] = useState('');
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
-  const [controlRoomSeedToBackup, setControlRoomSeedToBackup] = useState<string | null>(null);
+  /** Backup seed modal payload; when set, modal is open. Seed only lives here until modal closes (H-2). */
+  const [backupModalPayload, setBackupModalPayload] = useState<{ seed: string; address: string } | null>(null);
   const [controlRoomImportSeed, setControlRoomImportSeed] = useState('');
   const [controlRoomShowImport, setControlRoomShowImport] = useState(false);
   const [controlRoomAdding, setControlRoomAdding] = useState(false);
@@ -149,8 +148,6 @@ export function WalletConnect() {
   };
 
   const activeWallet = wallets.find(w => w.id === activeWalletId);
-  const hasDemoWallets = wallets.some(w => w.provider === 'demo');
-  const platformLive = usePlatformModeStore((s) => s.mode === 'live');
 
   // Calculate total XRP balance across all wallets (excluding demo)
   const totalXRP = useMemo(() => {
@@ -184,22 +181,8 @@ export function WalletConnect() {
     })));
   }, [wallets]);
 
-  const loadDemoWallets = () => {
-    // Clear existing wallets and load demo ones
-    DEMO_WALLETS.forEach((wallet, index) => {
-      setTimeout(() => {
-        addWallet(wallet);
-      }, index * 300); // Stagger the additions for visual effect
-    });
-    setShowModal(false);
-  };
-
   const handleProviderSelect = (provider: WalletProvider) => {
-    if (provider === 'demo') {
-      loadDemoWallets();
-      return;
-    }
-    
+    if (provider === 'demo') return; // Demo removed — live only
     setSelectedProvider(provider);
     setWalletLabel('');
     setManualAddress('');
@@ -247,14 +230,9 @@ export function WalletConnect() {
           <div className="flex items-center gap-2">
             <Wallet size={16} className="text-cyber-yellow" />
             <span className="font-cyber text-sm text-cyber-yellow tracking-wider">WALLETS</span>
-            <span className={`px-1.5 py-0.5 text-[10px] rounded border ${platformLive ? 'bg-cyber-green/20 text-cyber-green border-cyber-green/30' : 'bg-cyber-yellow/20 text-cyber-yellow border-cyber-yellow/30'}`}>
-              Platform: {platformLive ? 'LIVE' : 'DEMO'}
+            <span className="px-1.5 py-0.5 text-[10px] rounded border bg-cyber-green/20 text-cyber-green border-cyber-green/30">
+              LIVE
             </span>
-            {hasDemoWallets && (
-              <span className="px-1.5 py-0.5 text-[10px] rounded bg-cyber-magenta/20 text-cyber-magenta border border-cyber-magenta/30">
-                Demo wallets
-              </span>
-            )}
           </div>
           <button
             onClick={toggleHideAmounts}
@@ -482,21 +460,7 @@ export function WalletConnect() {
           <div className="text-center py-4 mb-4">
             <Wallet size={32} className="mx-auto text-cyber-muted mb-2 opacity-50" />
             <p className="text-sm text-cyber-muted">No wallets connected</p>
-            <p className="text-xs text-cyber-muted/70 mb-4">Add a wallet to get started</p>
-            
-            {/* Demo Button - Prominent in empty state */}
-            <button
-              onClick={loadDemoWallets}
-              className="w-full py-3 rounded-lg border-2 border-dashed border-cyber-magenta/50 bg-cyber-magenta/10 hover:bg-cyber-magenta/20 hover:border-cyber-magenta transition-all group"
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span className="text-xl">🎮</span>
-                <div className="text-left">
-                  <p className="text-sm text-cyber-magenta font-cyber">Try Demo Mode</p>
-                  <p className="text-[10px] text-cyber-muted">Load sample wallets to explore</p>
-                </div>
-              </div>
-            </button>
+            <p className="text-xs text-cyber-muted/70">Add a wallet below to get started</p>
           </div>
         )}
 
@@ -549,16 +513,6 @@ export function WalletConnect() {
         {/* Clear Wallets Options */}
         {wallets.length > 0 && (
           <div className="mt-2 flex gap-2">
-            {hasDemoWallets && (
-              <button 
-                onClick={() => {
-                  wallets.filter(w => w.provider === 'demo').forEach(w => removeWallet(w.id));
-                }}
-                className="flex-1 py-1.5 text-xs rounded border border-cyber-magenta/30 text-cyber-magenta/70 hover:border-cyber-magenta/50 hover:text-cyber-magenta hover:bg-cyber-magenta/10 transition-colors"
-              >
-                Clear Demo
-              </button>
-            )}
             <button 
               onClick={() => {
                 if (window.confirm('Are you sure you want to clear all wallets? This cannot be undone.')) {

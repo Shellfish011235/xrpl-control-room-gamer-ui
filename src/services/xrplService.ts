@@ -14,6 +14,7 @@ const XRPL_ENDPOINTS = [
 // Current endpoint index for fallback
 let currentEndpointIndex = 0;
 
+/** Base URL for XRPL JSON-RPC. When using proxy (VITE_XRPL_PROXY_URL), all requests go there; see docs/DATA-PROXY.md for trust requirements. */
 function getXRPLUrl(): string {
   const proxyBase = getXrplProxyBase();
   if (proxyBase) return proxyBase;

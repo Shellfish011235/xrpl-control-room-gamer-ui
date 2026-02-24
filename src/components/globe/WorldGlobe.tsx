@@ -145,8 +145,9 @@ export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: 
   const [geoError, setGeoError] = useState<string | null>(null);
   const [currentGeoUrl, setCurrentGeoUrl] = useState(GEO_URLS[0]);
   const [geoUrlIndex, setGeoUrlIndex] = useState(0);
+  const [geoRetryTrigger, setGeoRetryTrigger] = useState(0);
 
-  // Pre-fetch and validate geography data
+  // Pre-fetch and validate geography data (re-runs when geoRetryTrigger changes)
   useEffect(() => {
     const testGeoUrl = async (url: string): Promise<boolean> => {
       try {
@@ -163,7 +164,6 @@ export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: 
     const findWorkingUrl = async () => {
       setGeoLoading(true);
       setGeoError(null);
-      
       for (let i = 0; i < GEO_URLS.length; i++) {
         const url = GEO_URLS[i];
         console.log(`[WorldGlobe] Trying geo source ${i + 1}/${GEO_URLS.length}: ${url}`);
@@ -176,15 +176,13 @@ export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: 
           return;
         }
       }
-      
-      // All sources failed
       console.error('[WorldGlobe] All geography sources failed');
       setGeoError('Unable to load map data. Please check your internet connection.');
       setGeoLoading(false);
     };
 
     findWorkingUrl();
-  }, []);
+  }, [geoRetryTrigger]);
   
   const hubs = useMemo(() => getHubs(), []);
   const corridors = useMemo(() => getCorridors(), []);
@@ -364,7 +362,8 @@ export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: 
           <p className="font-cyber text-cyber-red text-sm mb-2">MAP LOAD FAILED</p>
           <p className="text-cyber-muted text-xs mb-4">{geoError}</p>
           <button
-            onClick={() => window.location.reload()}
+            type="button"
+            onClick={() => setGeoRetryTrigger((n) => n + 1)}
             className="px-4 py-2 rounded bg-cyber-glow/20 border border-cyber-glow/50 text-cyber-glow text-xs font-cyber hover:bg-cyber-glow/30 transition-all"
           >
             RETRY

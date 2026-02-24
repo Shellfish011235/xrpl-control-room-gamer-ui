@@ -2,8 +2,9 @@
  * NFT card for Arena grid – image, taxon, issuer, actions.
  */
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ImageIcon, Flame, ExternalLink } from 'lucide-react';
+import { ImageIcon, Flame, ExternalLink, Loader2 } from 'lucide-react';
 import type { NFTRecord } from '../../services/nftService';
 
 function truncate(str: string, len: number) {
@@ -19,6 +20,7 @@ interface NFTCardProps {
 
 export function NFTCard({ nft, onSelect, onBurn, showActions = true }: NFTCardProps) {
   const imgUrl = nft.image || (nft.uri?.startsWith('http') ? nft.uri : undefined);
+  const [imgState, setImgState] = useState<'loading' | 'ok' | 'error'>('loading');
 
   return (
     <motion.div
@@ -34,11 +36,25 @@ export function NFTCard({ nft, onSelect, onBurn, showActions = true }: NFTCardPr
       >
         <div className="aspect-square bg-cyber-darker/80 relative">
           {imgUrl ? (
-            <img
-              src={imgUrl}
-              alt={nft.name || `NFT ${nft.tokenId.slice(0, 8)}`}
-              className="w-full h-full object-cover"
-            />
+            <>
+              {(imgState === 'loading' || imgState === 'error') && (
+                <div className="absolute inset-0 flex items-center justify-center text-cyber-muted">
+                  {imgState === 'loading' ? (
+                    <Loader2 size={32} className="animate-spin" />
+                  ) : (
+                    <ImageIcon size={48} />
+                  )}
+                </div>
+              )}
+              <img
+                src={imgUrl}
+                alt={nft.name || `NFT ${nft.tokenId.slice(0, 8)}`}
+                className={`w-full h-full object-cover ${imgState !== 'ok' ? 'opacity-0' : 'opacity-100'} transition-opacity`}
+                loading="lazy"
+                onLoad={() => setImgState('ok')}
+                onError={() => setImgState('error')}
+              />
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center text-cyber-muted">
               <ImageIcon size={48} />

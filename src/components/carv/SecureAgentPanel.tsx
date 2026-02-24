@@ -119,20 +119,19 @@ export function SecureAgentPanel() {
   // Connect wallet
   const connectWallet = async () => {
     if (!activeWallet) {
-      addMessage('system', '⚠️ No wallet selected. Add a wallet above (e.g. Demo) to start.');
+      addMessage('system', '⚠️ No wallet selected. Add a wallet above (Xaman, Control Room, or address) to start.');
       return;
     }
 
-    const isDemo = activeWallet.provider === 'demo';
+    if (activeWallet.provider === 'demo') {
+      addMessage('system', 'Demo wallets are not used. Add a real wallet (Xaman or Control Room) to sign payments.');
+      return;
+    }
     try {
-      if (isDemo) {
-        await securePaymentAgent.connectDemoWallet(activeWallet.address);
-      } else {
-        await securePaymentAgent.connectWallet(activeWallet.address);
-      }
+      await securePaymentAgent.connectWallet(activeWallet.address);
       setWalletConnected(true);
-      const balanceStr = isDemo ? '10,000 (demo)' : (activeWallet.balance?.toFixed(2) ?? '?');
-      addMessage('agent', `✅ **Connected** to ${activeWallet.label}.\n\nBalance: **${balanceStr} XRP**${isDemo ? ' — use **Connect Xaman** above for real signing.' : '.'}`);
+      const balanceStr = activeWallet.balance?.toFixed(2) ?? '?';
+      addMessage('agent', `✅ **Connected** to ${activeWallet.label}.\n\nBalance: **${balanceStr} XRP**`);
       addMessage('agent', `What would you like to do? You can say:\n\n• **"Send 5 XRP to r..."** — I’ll build the payment and show you a QR to sign in Xaman.\n• **"Pay $25 to r..."** — I’ll convert to the right amount and do the same.\n• **"Help"** or **"What can you do?"** — I’ll explain more.`);
     } catch (error) {
       addMessage('system', `❌ Failed to connect wallet: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -174,17 +173,12 @@ export function SecureAgentPanel() {
   // Keep agent wallet state in sync with UI (e.g. after HMR or session restore). Returns true if we can create payments.
   const ensureWalletSynced = async (): Promise<boolean> => {
     if (securePaymentAgent.getWalletState() != null) return true;
-    if (!activeWallet) {
+    if (!activeWallet || activeWallet.provider === 'demo') {
       setWalletConnected(false);
       return false;
     }
     try {
-      const isDemo = activeWallet.provider === 'demo';
-      if (isDemo) {
-        await securePaymentAgent.connectDemoWallet(activeWallet.address);
-      } else {
-        await securePaymentAgent.connectWallet(activeWallet.address);
-      }
+      await securePaymentAgent.connectWallet(activeWallet.address);
       setWalletConnected(true);
       return true;
     } catch {
@@ -341,18 +335,11 @@ export function SecureAgentPanel() {
             );
           }
         } else {
-          // Demo or manual confirmation mode
-          const isDemoTx = txHash?.startsWith('DEMO_');
-          const demoLine = isDemoTx
-            ? (platformLive
-                ? '📡 **Simulated** — real signing failed or no API key. Add your Xaman API key (Connect Xaman) to sign for real.'
-                : '🎮 **Simulated (demo)** — switch to Live and add Xaman API key to sign for real.')
-            : 'Check your Xaman app for transaction details.';
-          addMessage('agent', 
-            (isDemoTx ? '🔄 **Payment simulated**\n\n' : '✅ **Payment Processed!**\n\n') +
+          addMessage('agent',
+            '✅ **Payment Processed!**\n\n' +
             `Amount: ${result.execution?.actualCost} XRP\n` +
             `Reference: \`${txHash}\`\n\n` +
-            demoLine
+            'Check your Xaman app for transaction details.'
           );
         }
         
@@ -464,7 +451,7 @@ export function SecureAgentPanel() {
   const handleClearXamanCredentials = () => {
     xamanService.clearCredentials();
     setXamanMode('demo');
-    addMessage('system', '🎮 Switched to Demo Mode. Your API credentials have been removed.');
+    addMessage('system', 'Xaman API key removed. Add your key again in this panel to sign transactions.');
   };
 
   return (
@@ -490,24 +477,13 @@ export function SecureAgentPanel() {
               <p className="text-[10px] text-cyber-muted">
                 Daily limit: {securePaymentAgent.getRemainingDailyLimit().toFixed(2)} XRP remaining
               </p>
-              <span className={`px-1.5 py-0.5 rounded text-[8px] ${
-                (platformLive || xamanMode === 'production') ? 'bg-cyber-green/20 text-cyber-green border border-cyber-green/30' : 'bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/30'
-              }`}>
-                {(platformLive || xamanMode === 'production') ? 'LIVE' : 'DEMO'} {xamanMode === 'production' ? '· Xaman' : ''}
+              <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
+                LIVE {xamanMode === 'production' ? '· Xaman' : ''}
               </span>
               {xamanMode !== 'production' && (
                 <span className="text-[9px] text-cyber-muted ml-1">
-                  Tap &quot;Connect Xaman&quot; for real signing
+                  Tap &quot;Connect Xaman&quot; to add API key for signing
                 </span>
-              )}
-              {!platformLive && xamanMode !== 'production' && (
-                <button
-                  type="button"
-                  onClick={() => setPlatformMode('live')}
-                  className="px-3 py-1.5 rounded-lg text-xs font-cyber bg-cyber-green/20 text-cyber-green border border-cyber-green/50 hover:bg-cyber-green/30"
-                >
-                  → Go Live
-                </button>
               )}
             </div>
           </div>
@@ -526,7 +502,7 @@ export function SecureAgentPanel() {
             }`}
           >
             <Smartphone size={14} />
-            {xamanMode === 'production' ? 'Xaman Connected' : platformLive ? 'Add Xaman (real signing)' : 'Connect Xaman'}
+            {xamanMode === 'production' ? 'Xaman Connected' : 'Add Xaman (API key)'}
           </button>
           
           {!walletConnected && activeWallet && (

@@ -46,7 +46,7 @@ export function initializeXaman(): XamanConfig {
     };
   }
 
-  console.log('[Xaman] 🎮 Demo mode - configure API Key in Settings to enable real signing');
+  console.log('[Xaman] Configure API Key in Settings to sign transactions');
   
   return {
     apiKey: null,

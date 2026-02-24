@@ -1,15 +1,10 @@
 /**
- * Platform Demo/Live + Network (Testnet/Mainnet) + Premium gate.
- * Phase 0: Testnet default; mainnet shows red warning.
+ * Platform: live only. Network (Testnet/Mainnet) + Premium gate.
  */
 
-import { usePlatformModeStore } from '../store/platformModeStore';
-import { useSettingsStore, type NetworkMode } from '../store/settingsStore';
+import { useSettingsStore } from '../store/settingsStore';
 
 export function PlatformModeBar() {
-  const mode = usePlatformModeStore((s) => s.mode);
-  const toggleMode = usePlatformModeStore((s) => s.toggleMode);
-  const isLive = mode === 'live';
   const network = useSettingsStore((s) => s.network);
   const setNetwork = useSettingsStore((s) => s.setNetwork);
   const premium = useSettingsStore((s) => s.premium);
@@ -23,19 +18,10 @@ export function PlatformModeBar() {
           <span className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber">
             Platform
           </span>
-          <button
-            type="button"
-            onClick={toggleMode}
-            title={isLive ? 'Switch to Demo (platform-wide)' : 'Switch to Live (platform-wide)'}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-cyber transition-colors ${
-              isLive
-                ? 'border-cyber-green/40 bg-cyber-green/10 text-cyber-green hover:bg-cyber-green/20'
-                : 'border-cyber-yellow/40 bg-cyber-yellow/10 text-cyber-yellow hover:bg-cyber-yellow/20'
-            }`}
-          >
-            <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-cyber-green animate-pulse' : 'bg-cyber-yellow'}`} />
-            {isLive ? 'LIVE' : 'DEMO'}
-          </button>
+          <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-cyber-green/40 bg-cyber-green/10 text-cyber-green text-xs font-cyber">
+            <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
+            LIVE
+          </span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
