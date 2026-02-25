@@ -8,10 +8,10 @@ import { Zap, LayoutGrid, ArrowRightLeft, Sparkles, BarChart3 } from 'lucide-rea
 
 const TABS = [
   { path: '/tools/ledger-impact', label: 'Ledger Impact', labelShort: 'Impact', icon: BarChart3 },
-  { path: '/tools/optimizer', label: 'Optimizer', icon: Zap },
+  { path: '/tools/optimizer', label: 'Optimizer', labelShort: 'Optim', icon: Zap },
   { path: '/tools/nfts', label: 'NFT Arena', labelShort: 'NFT', icon: LayoutGrid },
-  { path: '/tools/bridges', label: 'Bridges', icon: ArrowRightLeft },
-  { path: '/tools/agents', label: 'Agents', icon: Sparkles },
+  { path: '/tools/bridges', label: 'Bridges', labelShort: 'Bridge', icon: ArrowRightLeft },
+  { path: '/tools/agents', label: 'Agents', labelShort: 'Agents', icon: Sparkles },
 ] as const;
 
 export default function Tools() {
@@ -36,7 +36,7 @@ export default function Tools() {
             >
               <Icon size={18} />
               <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden">{tab.labelShort ?? tab.label}</span>
+              <span className="sm:hidden">{tab.labelShort}</span>
             </NavLink>
           );
         })}
