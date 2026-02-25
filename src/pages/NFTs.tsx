@@ -4,6 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -44,6 +45,8 @@ export default function NFTs() {
     error,
     setError,
   } = useNFTStore();
+  const location = useLocation();
+  const inToolsHub = location.pathname.startsWith('/tools');
 
   const activeWallet = useWalletStore((s) => {
     const id = s.activeWalletId;
@@ -93,7 +96,7 @@ export default function NFTs() {
   );
 
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
+    <div className={`min-h-screen ${inToolsHub ? 'pt-4' : 'pt-20'} pb-8 px-4 lg:px-8`}>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}

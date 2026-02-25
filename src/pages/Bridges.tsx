@@ -4,11 +4,14 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRightLeft, Zap, ExternalLink } from 'lucide-react';
 import { fetchBridgeFlows, fetchBridgeRoutes } from '../services/bridgeService';
 
 export default function Bridges() {
+  const location = useLocation();
+  const inToolsHub = location.pathname.startsWith('/tools');
   const { data: flows = [] } = useQuery({
     queryKey: ['bridgeFlows'],
     queryFn: fetchBridgeFlows,
@@ -21,7 +24,7 @@ export default function Bridges() {
   });
 
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
+    <div className={`min-h-screen ${inToolsHub ? 'pt-4' : 'pt-20'} pb-8 px-4 lg:px-8`}>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}

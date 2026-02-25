@@ -37,10 +37,12 @@ const PayPage = lazyWithRetry(() => import('./pages/PayPage'))
 const PayAgentsPage = lazyWithRetry(() => import('./pages/PayPage').then((m) => ({ default: m.PayAgentsPage })))
 const PayAgentsRedirect = lazyWithRetry(() => import('./pages/PayPage').then((m) => ({ default: m.PayAgentsRedirect })))
 const PayCARVRedirect = lazyWithRetry(() => import('./pages/PayPage').then((m) => ({ default: m.PayCARVRedirect })))
+const Tools = lazyWithRetry(() => import('./pages/Tools'))
 const NFTs = lazyWithRetry(() => import('./pages/NFTs'))
 const Bridges = lazyWithRetry(() => import('./pages/Bridges'))
 const Agents = lazyWithRetry(() => import('./pages/Agents'))
 const Optimizer = lazyWithRetry(() => import('./pages/Optimizer'))
+const LedgerImpactPage = lazyWithRetry(() => import('./pages/LedgerImpactPage'))
 const AmendmentDetail = lazyWithRetry(() => import('./pages/AmendmentDetail'))
 
 function PageLoader() {
@@ -152,11 +154,19 @@ function App() {
                   <Route path="/carv" element={<Navigate to="/pay/carv" replace />} />
                   <Route path="/radar" element={<Navigate to="/network" replace />} />
                   <Route path="/learn" element={<Learn />} />
-                  <Route path="/nfts" element={<NFTs />} />
-                  <Route path="/bridges" element={<Bridges />} />
-                  <Route path="/agents" element={<Agents />} />
-                  <Route path="/optimizer" element={<Optimizer />} />
-                  <Route path="/liquidity-crush" element={<Navigate to="/optimizer" replace />} />
+                  <Route path="/tools" element={<Tools />}>
+                    <Route index element={<Navigate to="/tools/optimizer" replace />} />
+                    <Route path="ledger-impact" element={<LedgerImpactPage />} />
+                    <Route path="optimizer" element={<Optimizer />} />
+                    <Route path="nfts" element={<NFTs />} />
+                    <Route path="bridges" element={<Bridges />} />
+                    <Route path="agents" element={<Agents />} />
+                  </Route>
+                  <Route path="/optimizer" element={<Navigate to="/tools/optimizer" replace />} />
+                  <Route path="/nfts" element={<Navigate to="/tools/nfts" replace />} />
+                  <Route path="/bridges" element={<Navigate to="/tools/bridges" replace />} />
+                  <Route path="/agents" element={<Navigate to="/tools/agents" replace />} />
+                  <Route path="/liquidity-crush" element={<Navigate to="/tools/optimizer" replace />} />
                   <Route path="/amendment/:amendmentId" element={<AmendmentDetail />} />
                   <Route path="/innovation" element={<Navigate to="/network" replace />} />
                 </Routes>

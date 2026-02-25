@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  User, Star, Trophy, Zap, Github, Twitter, Globe, 
+  User, Trophy, Zap, Github, Twitter, Globe, 
   ChevronRight, Code, Users,
-  Calendar, MessageSquare, Heart, ExternalLink,
+  Calendar, MessageSquare, ExternalLink,
   Image as ImageIcon, Loader2, X as XIcon, RefreshCw, Coins, Copy, Check, Edit2,
   Palette, Sparkles, UserCircle, PieChart as PieChartIcon,
   Skull, BookOpen, Activity, Brain, Database, TrendingUp,
@@ -467,7 +467,7 @@ function NftDetailModal({
 }
 
 export default function Character() {
-  const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, level, xp, setDisplayName, setXHandle, setMemberSinceYear, profileImage, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
+  const { displayName, xHandle, memberSinceYear, level, xp, setDisplayName, setXHandle, setMemberSinceYear, profileImage, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
   const { wallets, refreshAllWallets } = useWalletStore()
   const { nfts, memeTokens, isLoading, fetchAllAssets, lastUpdated } = useAssetsStore()
   const nextLevel = 10000
@@ -693,65 +693,50 @@ export default function Character() {
                   />
                 </div>
               </div>
-              
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                {[
-                  { label: 'Reputation', value: reputation, icon: Star, color: 'cyber-yellow' },
-                  { label: 'Social Score', value: socialScore, icon: Heart, color: 'cyber-red' },
-                  { label: 'Skill Points', value: skillPoints, icon: Zap, color: 'cyber-glow' },
-                  { label: 'Rank', value: '#247', icon: Trophy, color: 'cyber-purple' },
-                ].map((stat) => (
-                  <div key={stat.label} className="p-3 rounded bg-cyber-darker/50 border border-cyber-border/50 text-center">
-                    <stat.icon size={16} className={`text-${stat.color} mx-auto mb-1`} />
-                    <p className="font-cyber text-lg text-cyber-text">{stat.value}</p>
-                    <p className="text-xs text-cyber-muted">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
 
-              {/* Background - coordinates with profile picture */}
-              <div className="mb-4 p-3 rounded bg-cyber-darker/50 border border-cyber-border/50 space-y-2">
-                <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber">Background</p>
-                <select
-                  value={backgroundStyle}
-                  onChange={(e) => setBackgroundStyle(e.target.value as BackgroundStyle)}
-                  className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-xs text-cyber-text focus:border-cyber-glow focus:outline-none"
-                >
-                  <option value="auto">Auto (profile colors when custom pic)</option>
-                  <option value="gradient">Gradient orbs</option>
-                  <option value="mesh">Mesh gradient</option>
-                  <option value="bubbles">Bubbles</option>
-                  <option value="generated">Generated (image + palette)</option>
-                  <option value="cyber">Cyber default</option>
-                </select>
-                <div>
-                  <div className="flex justify-between text-[10px] text-cyber-muted mb-0.5">
-                    <span>Intensity</span>
-                    <span>{Math.round(backgroundIntensity * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.2"
-                    max="1"
-                    step="0.1"
-                    value={backgroundIntensity}
-                    onChange={(e) => setBackgroundIntensity(parseFloat(e.target.value))}
-                    className="w-full h-1.5 rounded-full appearance-none bg-cyber-border accent-cyber-glow"
-                  />
-                </div>
-                {/* Zero-cost generated background preview (NFT/profile image + palette) */}
-                {profileImage && profileImage !== '/profile-default.png' && !profileImage.startsWith('/profile-default.png') && (
-                  <div className="pt-2 border-t border-cyber-border/50">
-                    <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber mb-2">Generated preview</p>
-                    <BackgroundPreview
-                      imageUrl={profileImage}
-                      onUseAsBackground={() => setBackgroundStyle('generated')}
-                      isActive={backgroundStyle === 'generated'}
+              {/* Background — only visible inside Edit (pencil) */}
+              {isEditingProfile && (
+                <div className="mb-4 p-3 rounded bg-cyber-darker/50 border border-cyber-border/50 space-y-2">
+                  <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber">Background</p>
+                  <select
+                    value={backgroundStyle}
+                    onChange={(e) => setBackgroundStyle(e.target.value as BackgroundStyle)}
+                    className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-xs text-cyber-text focus:border-cyber-glow focus:outline-none"
+                  >
+                    <option value="auto">Auto (profile colors when custom pic)</option>
+                    <option value="gradient">Gradient orbs</option>
+                    <option value="mesh">Mesh gradient</option>
+                    <option value="bubbles">Bubbles</option>
+                    <option value="generated">Generated (image + palette)</option>
+                    <option value="cyber">Cyber default</option>
+                  </select>
+                  <div>
+                    <div className="flex justify-between text-[10px] text-cyber-muted mb-0.5">
+                      <span>Intensity</span>
+                      <span>{Math.round(backgroundIntensity * 100)}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="1"
+                      step="0.1"
+                      value={backgroundIntensity}
+                      onChange={(e) => setBackgroundIntensity(parseFloat(e.target.value))}
+                      className="w-full h-1.5 rounded-full appearance-none bg-cyber-border accent-cyber-glow"
                     />
                   </div>
-                )}
-              </div>
+                  {profileImage && profileImage !== '/profile-default.png' && !profileImage.startsWith('/profile-default.png') && (
+                    <div className="pt-2 border-t border-cyber-border/50">
+                      <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-cyber mb-2">Generated preview</p>
+                      <BackgroundPreview
+                        imageUrl={profileImage}
+                        onUseAsBackground={() => setBackgroundStyle('generated')}
+                        isActive={backgroundStyle === 'generated'}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Social Links */}
               <div className="flex items-center justify-center gap-3">

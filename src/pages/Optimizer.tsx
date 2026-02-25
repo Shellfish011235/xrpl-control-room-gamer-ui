@@ -4,7 +4,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -33,6 +33,7 @@ export default function Optimizer() {
     toggleFavorite,
   } = useOptimizerStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const setAgentOpen = useAgentPanelStore((s) => s.setOpen);
   const setPendingPrompt = useAgentPanelStore((s) => s.setPendingSecureAgentPrompt);
 
@@ -70,8 +71,9 @@ export default function Optimizer() {
     risk: p.riskScore,
   }));
 
+  const inToolsHub = location.pathname.startsWith('/tools');
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
+    <div className={`min-h-screen ${inToolsHub ? 'pt-4' : 'pt-20'} pb-8 px-4 lg:px-8`}>
       <div className="max-w-5xl mx-auto space-y-6">
       <motion.div
         initial={{ opacity: 0, y: -10 }}

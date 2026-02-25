@@ -4,13 +4,15 @@
  */
 
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Bot, Brain, ChevronRight } from 'lucide-react';
 import { AgentHub } from '../components/AgentHub';
 
 export default function Agents() {
+  const location = useLocation();
+  const inToolsHub = location.pathname.startsWith('/tools');
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">
+    <div className={`min-h-screen ${inToolsHub ? 'pt-4' : 'pt-20'} pb-8 px-4 lg:px-8`}>
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
