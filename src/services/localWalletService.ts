@@ -5,7 +5,7 @@
  */
 
 import { Wallet } from 'xrpl';
-import { getAccountInfo, getServerInfo, submitSignedTx } from './xrplService';
+import { getAccountInfo, getServerInfo, submitSignedTx, xrpToDrops, isValidXRPLAddress } from './xrplService';
 
 let sessionWallet: Wallet | null = null;
 
@@ -82,6 +82,33 @@ export async function signAndSubmit(tx: Record<string, unknown>): Promise<{ hash
   const signed = sessionWallet.sign(prepared as any);
   const { hash } = await submitSignedTx(signed.tx_blob);
   return { hash };
+}
+
+/**
+ * Send XRP from the Control Room wallet. Builds Payment tx and submits via signAndSubmit.
+ */
+export interface SendPaymentParams {
+  destination: string;
+  amountXrp: number;
+  destinationTag?: number;
+}
+
+export async function sendPayment(params: SendPaymentParams): Promise<{ hash: string }> {
+  if (!sessionWallet) throw new Error('No Control Room wallet in session. Create or import one first.');
+  const account = sessionWallet.classicAddress;
+  const { destination, amountXrp, destinationTag } = params;
+  if (!isValidXRPLAddress(destination)) throw new Error('Invalid destination address.');
+  if (amountXrp <= 0) throw new Error('Amount must be positive.');
+  if (destination === account) throw new Error('Cannot send to yourself.');
+
+  const tx: Record<string, unknown> = {
+    TransactionType: 'Payment',
+    Account: account,
+    Destination: destination,
+    Amount: xrpToDrops(amountXrp),
+  };
+  if (destinationTag != null) tx.DestinationTag = destinationTag;
+  return signAndSubmit(tx);
 }
 
 // Single signing path: signAndSubmit only. signOnly was removed (M-3) to avoid
