@@ -414,42 +414,18 @@ export const walletProviders: Record<WalletProvider, {
     description: 'Enter XRPL address manually',
   },
   'control-room': {
-    name: 'Control Room Wallet',
-    icon: '🎛️',
+    name: 'Watch only',
+    icon: '👁️',
     color: '#22c55e',
     category: 'wallet',
-    description: 'Create or import in-app wallet (session-only, sign locally)',
+    description: 'Enter address to watch (read-only; no keys stored)',
   },
   demo: {
-    name: 'Demo Wallet',
-    icon: '🎮',
-    color: '#FF00FF',
-    category: 'demo',
-    description: 'Try the app with a demo wallet',
+    name: 'Legacy',
+    icon: '📋',
+    color: '#64748b',
+    category: 'direct',
+    description: 'Not offered; for existing data only',
   },
 };
 
-// Demo wallet data
-export const DEMO_WALLETS = [
-  {
-    address: 'rDemoXRPLWallet1234567890abcdefg',
-    provider: 'demo' as WalletProvider,
-    label: 'Demo Main Wallet',
-    balance: 15420,
-    isDefault: true,
-  },
-  {
-    address: 'rDemoSavings9876543210zyxwvuts',
-    provider: 'demo' as WalletProvider,
-    label: 'Demo Savings',
-    balance: 52000,
-    isDefault: false,
-  },
-  {
-    address: 'rDemoTradingABCDEF123456789xyz',
-    provider: 'demo' as WalletProvider,
-    label: 'Demo Trading',
-    balance: 3250,
-    isDefault: false,
-  },
-];

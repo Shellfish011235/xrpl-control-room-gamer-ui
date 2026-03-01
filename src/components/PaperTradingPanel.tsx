@@ -28,7 +28,6 @@ import { proxyFetch } from '../lib/dataProxy';
 import { xamanService } from '../services/xaman';
 import type { SigningRequest } from '../services/xaman';
 import { buildOfferCreate } from '../services/paperTradingLiveExecute';
-import * as localWalletService from '../services/localWalletService';
 
 // Auto-trade icons
 import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink, Flag } from 'lucide-react';
@@ -955,17 +954,15 @@ function PaperTradingPanelInner({
       const payload = buildOfferCreate(activeWallet.address, tradeType, tradeAmountNum, currentPrice);
 
       if (activeWallet.provider === 'control-room') {
-        if (!localWalletService.hasSessionWallet()) {
-          setLiveSigningError('Control Room wallet not in session. Re-import from Profile → Wallets.');
+        // Watch-only; sign in Xaman (no in-app signing)
+        if (!xamanService.hasApiCredentials()) {
+          setLiveSigningError('Add Xaman API key to sign. Control Room is watch-only.');
           return;
         }
-        localWalletService
-          .signAndSubmit(payload as unknown as Record<string, unknown>)
-          .then(() => {
-            setTradeAmount('');
-            if (refreshWallet && activeWallet.id) refreshWallet(activeWallet.id);
-          })
-          .catch((err) => setLiveSigningError(err instanceof Error ? err.message : 'Sign/submit failed.'));
+        xamanService
+          .requestCustomTransactionSignature(payload as any, activeWallet.address)
+          .then((req) => setLiveSigningRequest(req))
+          .catch((err) => setLiveSigningError(err instanceof Error ? err.message : 'Failed to create signing request.'));
         return;
       }
 
@@ -1643,7 +1640,7 @@ function PaperTradingPanelInner({
                   }`}
                 >
                   <Play size={16} />
-                  {liveSigningRequest ? 'Opening Xaman…' : isLiveMode && activeWallet && tradeAsset === 'XRP' ? (activeWallet.provider === 'control-room' ? `${tradeType === 'buy' ? 'BUY' : 'SELL'} XRP (sign locally)` : `${tradeType === 'buy' ? 'BUY' : 'SELL'} XRP → Sign in Xaman`) : `${tradeType === 'buy' ? 'BUY' : 'SELL'} ${tradeAsset}`}
+                  {liveSigningRequest ? 'Opening Xaman…' : isLiveMode && activeWallet && tradeAsset === 'XRP' ? `${tradeType === 'buy' ? 'BUY' : 'SELL'} XRP → Sign in Xaman` : `${tradeType === 'buy' ? 'BUY' : 'SELL'} ${tradeAsset}`}
                 </button>
               </div>
 

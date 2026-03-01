@@ -23,6 +23,12 @@ export default function ControlRoomHomeSection({
   const useTestnet = networkUI === 'testnet';
   const { xrpBalance, tokens, error, loading } = useXrplAccount(address ?? undefined, useTestnet);
 
+  const isAccountNotFound =
+    error &&
+    (error.toLowerCase().includes('account not found') ||
+      error.toLowerCase().includes('actnotfound') ||
+      error === 'Account not found.');
+
   const quickActions = [
     { id: 'wallet' as const, label: 'Send XRP', icon: Send, section: 'wallet' as ControlRoomSection },
     { id: 'receive', label: 'Receive', icon: QrCode, section: 'wallet' as ControlRoomSection },
@@ -40,14 +46,19 @@ export default function ControlRoomHomeSection({
       {/* Hero balance card */}
       <div className="neon-panel">
         <p className="text-xs text-cyber-muted mb-1">Balance</p>
-        {loading && !xrpBalance && <p className="text-cyber-muted">Loading…</p>}
-        {error && <p className="text-cyber-red text-sm">{error}</p>}
-        {!loading && xrpBalance != null && (
+        {loading && !xrpBalance && !error && <p className="text-cyber-muted">Loading…</p>}
+        {error && !isAccountNotFound && <p className="text-cyber-red text-sm">{error}</p>}
+        {isAccountNotFound && (
+          <p className="text-cyber-muted text-sm mb-2">
+            Address not activated on this network. Fund it with XRP to see balance, or switch network.
+          </p>
+        )}
+        {(isAccountNotFound || (!loading && xrpBalance != null)) && (
           <>
             <p className="text-3xl font-mono font-cyber text-[var(--cyber-glow)] neon-glow">
-              {xrpBalance} <span className="text-lg text-cyber-text">XRP</span>
+              {isAccountNotFound ? '0' : xrpBalance} <span className="text-lg text-cyber-text">XRP</span>
             </p>
-            {tokens.length > 0 && (
+            {!isAccountNotFound && tokens.length > 0 && (
               <div className="mt-3 pt-3 border-t border-[var(--cyber-border)]">
                 <p className="text-xs text-cyber-muted mb-2">Tokens</p>
                 <div className="grid grid-cols-2 gap-2">

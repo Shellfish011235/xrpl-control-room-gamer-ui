@@ -38,7 +38,6 @@ const PayAgentsPage = lazyWithRetry(() => import('./pages/PayPage').then((m) => 
 const PayAgentsRedirect = lazyWithRetry(() => import('./pages/PayPage').then((m) => ({ default: m.PayAgentsRedirect })))
 const PayCARVRedirect = lazyWithRetry(() => import('./pages/PayPage').then((m) => ({ default: m.PayCARVRedirect })))
 const Tools = lazyWithRetry(() => import('./pages/Tools'))
-const NFTs = lazyWithRetry(() => import('./pages/NFTs'))
 const Bridges = lazyWithRetry(() => import('./pages/Bridges'))
 const Agents = lazyWithRetry(() => import('./pages/Agents'))
 const Optimizer = lazyWithRetry(() => import('./pages/Optimizer'))
@@ -143,6 +142,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Character />} />
                   <Route path="/character" element={<Navigate to="/" replace />} />
+                  <Route path="/portfolio" element={<Navigate to="/" replace state={{ section: 'portfolio' }} />} />
                   <Route path="/clinic" element={<Navigate to="/" replace />} />
                   <Route path="/network" element={<Network />} />
                   <Route path="/world" element={<Navigate to="/network" replace />} />
@@ -160,10 +160,10 @@ function App() {
                   <Route path="/radar" element={<Navigate to="/network" replace />} />
                   <Route path="/learn" element={<Learn />} />
                   <Route path="/tools" element={<Tools />}>
-                    <Route index element={<Navigate to="/tools/optimizer" replace />} />
+                    <Route index element={<Navigate to="/tools/control-room" replace />} />
                     <Route path="ledger-impact" element={<LedgerImpactPage />} />
                     <Route path="optimizer" element={<Optimizer />} />
-                    <Route path="nfts" element={<NFTs />} />
+                    <Route path="nfts" element={<Navigate to="/tools" replace />} />
                     <Route path="bridges" element={<Bridges />} />
                     <Route path="agents" element={<Agents />} />
                     <Route path="control-room" element={<ControlRoomPage />} />
@@ -171,11 +171,11 @@ function App() {
                     <Route path="wallet" element={<MvpWalletPage />} />
                     <Route path="dex-order" element={<DexOrderPage />} />
                   </Route>
-                  <Route path="/optimizer" element={<Navigate to="/tools/optimizer" replace />} />
-                  <Route path="/nfts" element={<Navigate to="/tools/nfts" replace />} />
+                  <Route path="/optimizer" element={<Navigate to="/tools" replace />} />
+                  <Route path="/nfts" element={<Navigate to="/tools" replace />} />
                   <Route path="/bridges" element={<Navigate to="/tools/bridges" replace />} />
                   <Route path="/agents" element={<Navigate to="/tools/agents" replace />} />
-                  <Route path="/liquidity-crush" element={<Navigate to="/tools/optimizer" replace />} />
+                  <Route path="/liquidity-crush" element={<Navigate to="/tools" replace />} />
                   <Route path="/amendment/:amendmentId" element={<AmendmentDetail />} />
                   <Route path="/governance-guide" element={<GovernanceGuide />} />
                   <Route path="/wallet" element={<MvpWalletPage />} />

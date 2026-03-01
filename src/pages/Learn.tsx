@@ -22,7 +22,7 @@ const SECTIONS = [
   { id: 'adoption', label: 'Adoption' },
   { id: 'web', label: 'Web pay' },
   { id: 'agents', label: 'AI agents' },
-  { id: 'openclaw', label: 'OpenClaw' },
+  { id: 'openclaw', label: 'Streams' },
 ] as const;
 
 export default function Learn() {

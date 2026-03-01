@@ -381,45 +381,5 @@ export async function executeCode(code: string, language: string): Promise<strin
   return `Output: Code executed successfully`;
 }
 
-// =============================================================================
-// USAGE EXAMPLE
-// =============================================================================
-
-export async function exampleUsage() {
-  // Initialize
-  const payments = new OpenClawXRPLPayments('testnet');
-  await payments.initializeAgentWallet();
-  await payments.fundWallet();
-
-  // Wrap skills with payment requirements (no platform fees; 2% to creator when set)
-  const paidSearch = payments.paidSkill(
-    premiumWebSearch,
-    0.001, // $0.001 per search
-    'premium-search',
-    'rYourCreatorWallet123' // YOUR wallet - you get 2% of every search
-  );
-
-  const paidImageGen = payments.paidSkill(
-    generateImage,
-    0.01, // $0.01 per image
-    'image-generation',
-    'rYourCreatorWallet123' // YOUR wallet - you get 2% of every image
-  );
-
-  // Agent uses skills (automatically pays)
-  const searchResults = await paidSearch('XRPL micropayments');
-  console.log('Search results:', searchResults);
-
-  const imageUrl = await paidImageGen('cyberpunk city at night');
-  console.log('Generated image:', imageUrl);
-
-  // Check revenue
-  const stats = payments.getRevenueStats();
-  console.log('\n=== REVENUE BREAKDOWN ===');
-  console.log(`Transactions: ${stats.totalTransactions}`);
-  console.log(`Total Volume: ${stats.totalVolume} XRP`);
-  console.log(`Creator Fees (2%): ${stats.creatorFeesCollected} XRP`);
-}
-
-// Run example
-// exampleUsage();
+// Production use: do not create or store agent-held seeds in this app (compliance).
+// Integrate OpenClawXRPLPayments with your own backend/agent infra; sign via user wallet (e.g. Xaman) only.

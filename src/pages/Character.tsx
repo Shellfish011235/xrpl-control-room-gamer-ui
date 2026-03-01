@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   User, Trophy, Zap, Github, Twitter, Globe, 
@@ -469,14 +469,21 @@ function NftDetailModal({
 export default function Character() {
   const { displayName, xHandle, memberSinceYear, level, xp, setDisplayName, setXHandle, setMemberSinceYear, profileImage, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
   const { wallets, refreshAllWallets } = useWalletStore()
-  const { nfts, memeTokens, isLoading, fetchAllAssets, lastUpdated } = useAssetsStore()
+  const { nfts, memeTokens, isLoading, lastUpdated } = useAssetsStore()
   const nextLevel = 10000
 
   const [selectedNFT, setSelectedNFT] = useState<NFTAsset | null>(null)
   const [selectedMeme, setSelectedMeme] = useState<MemeToken | null>(null)
   const [activeTab, setActiveTab] = useState<'nfts' | 'memes'>('nfts')
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null)
-  const [section, setSection] = useState<'profile' | 'portfolio'>('profile')
+  const location = useLocation()
+  const stateSection = (location.state as { section?: 'profile' | 'portfolio' } | null)?.section
+  const [section, setSection] = useState<'profile' | 'portfolio'>(stateSection === 'portfolio' ? 'portfolio' : 'profile')
+
+  // Open Portfolio when navigated via /portfolio (redirect sets state.section)
+  useEffect(() => {
+    if (stateSection === 'portfolio') setSection('portfolio')
+  }, [stateSection])
 
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false)
@@ -501,12 +508,12 @@ export default function Character() {
     setIsEditingProfile(false)
   }
 
-  // Fetch assets on mount and when wallets change
+  // Fetch assets on mount and when wallets change (use getState to avoid effect re-running on store updates)
   useEffect(() => {
     if (wallets.length > 0) {
-      fetchAllAssets()
+      useAssetsStore.getState().fetchAllAssets()
     }
-  }, [wallets.length, fetchAllAssets])
+  }, [wallets.length])
 
   // Sync wallet data: refresh balances when Character loads so "last updated" and USD stay in sync
   useEffect(() => {
@@ -547,7 +554,7 @@ export default function Character() {
             <h1 className="font-cyber text-2xl text-cyber-text tracking-wider">PROFILE</h1>
           </div>
           <p className="text-cyber-muted">Account, portfolio, achievements & community</p>
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap items-center gap-2 mt-3">
             <button
               type="button"
               onClick={() => setSection('profile')}
@@ -572,6 +579,12 @@ export default function Character() {
               <PieChartIcon size={14} className="inline mr-2" />
               Portfolio
             </button>
+            <Link
+              to="/portfolio"
+              className="text-xs text-cyber-muted hover:text-cyber-glow border border-cyber-border hover:border-cyber-glow/50 rounded-lg px-3 py-2 transition-colors"
+            >
+              ETFs &amp; RLUSD →
+            </Link>
           </div>
         </motion.div>
 
@@ -929,7 +942,7 @@ export default function Character() {
                   </button>
                 </div>
                 <button
-                  onClick={() => fetchAllAssets()}
+                  onClick={() => useAssetsStore.getState().fetchAllAssets()}
                   disabled={isLoading}
                   className="p-2 hover:bg-cyber-glow/10 rounded-lg transition-colors border border-cyber-border hover:border-cyber-glow/50"
                   title="Refresh"

@@ -3,7 +3,7 @@
  * Phase 1: Testnet-first; BETA badge.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useNFTStore, type NFTViewTab } from '../store/nftStore';
 import { useWalletStore } from '../store/walletStore';
+import { useAssetsStore } from '../store/assetsStore';
 import { fetchAccountNFTs, filterNFTs } from '../services/nftService';
 import { NFTCard, NFTMintForm } from '../components/nfts';
 import { xamanService } from '../services/xaman';
@@ -48,26 +49,47 @@ export default function NFTs() {
   const location = useLocation();
   const inToolsHub = location.pathname.startsWith('/tools');
 
+  const connectedWallets = useWalletStore((s) => s.wallets.filter((w) => w.provider !== 'demo'));
   const activeWallet = useWalletStore((s) => {
     const id = s.activeWalletId;
-    return id ? s.wallets.find((w) => w.id === id) : null;
+    const list = s.wallets.filter((w) => w.provider !== 'demo');
+    return id ? s.wallets.find((w) => w.id === id) ?? list[0] ?? null : list[0] ?? null;
   });
   const portfolioAddress = activeWallet?.address ?? '';
+
+  const portfolioNfts = useAssetsStore((s) => s.nfts);
+  const portfolioLoading = useAssetsStore((s) => s.isLoading);
+  const portfolioError = useAssetsStore((s) => s.error);
 
   const [mintSubmitting, setMintSubmitting] = useState(false);
   const [burnModalNft, setBurnModalNft] = useState<typeof selectedNFT>(null);
 
-  const addressToFetch = viewTab === 'gallery' ? browseAddress : viewTab === 'portfolio' ? portfolioAddress : '';
-  const { data: nfts = [], isLoading, refetch } = useQuery({
+  // Gallery: fetch by manual address
+  const addressToFetch = viewTab === 'gallery' ? browseAddress : '';
+  const { data: galleryNfts = [], isLoading: galleryLoading, isError: galleryError, error: galleryErrorDetail, refetch } = useQuery({
     queryKey: ['nfts', addressToFetch],
     queryFn: () => fetchAccountNFTs(addressToFetch),
     enabled: !!addressToFetch && addressToFetch.length >= 25,
   });
 
-  const filtered = filterNFTs(nfts, {
+  // Load portfolio from all connected wallets (same data as Home) when opening Portfolio tab
+  useEffect(() => {
+    if (viewTab === 'portfolio' && connectedWallets.length > 0) {
+      useAssetsStore.getState().fetchAllAssets();
+    }
+  }, [viewTab, connectedWallets.length]);
+
+  const galleryFiltered = filterNFTs(Array.isArray(galleryNfts) ? galleryNfts : [], {
     taxon: filterTaxon ?? undefined,
     issuer: filterIssuer ?? undefined,
   });
+  const portfolioList = Array.isArray(portfolioNfts) ? portfolioNfts : [];
+  const portfolioFiltered = filterNFTs(portfolioList as Parameters<typeof filterNFTs>[0], {
+    taxon: filterTaxon ?? undefined,
+    issuer: filterIssuer ?? undefined,
+  });
+  const isLoading = viewTab === 'gallery' ? galleryLoading : portfolioLoading;
+  const filtered = viewTab === 'gallery' ? galleryFiltered : portfolioFiltered;
 
   const handleBrowse = useCallback(() => {
     if (!browseAddress.trim()) {
@@ -183,12 +205,23 @@ export default function NFTs() {
                 {error}
               </div>
             )}
+            {viewTab === 'gallery' && galleryError && (
+              <div className="flex flex-col gap-2 p-3 rounded-lg bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-sm">
+                <span className="flex items-center gap-2">
+                  <AlertTriangle size={18} />
+                  {galleryErrorDetail instanceof Error ? galleryErrorDetail.message : 'Failed to load NFTs'}
+                </span>
+                <button type="button" onClick={() => refetch()} className="self-start px-3 py-1.5 rounded border border-cyber-red/50 hover:bg-cyber-red/20 text-xs">
+                  Retry
+                </button>
+              </div>
+            )}
             {isLoading && (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 text-cyber-glow animate-spin" />
               </div>
             )}
-            {!isLoading && addressToFetch && (
+            {!isLoading && addressToFetch && !galleryError && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {filtered.map((nft) => (
                   <NFTCard
@@ -200,7 +233,7 @@ export default function NFTs() {
                 ))}
               </div>
             )}
-            {!isLoading && addressToFetch && filtered.length === 0 && (
+            {!isLoading && addressToFetch && !galleryError && filtered.length === 0 && (
               <p className="text-center text-cyber-muted py-12">No NFTs found.</p>
             )}
           </motion.div>
@@ -241,8 +274,20 @@ export default function NFTs() {
             exit={{ opacity: 0 }}
             className="space-y-4"
           >
-            {portfolioAddress ? (
+            {connectedWallets.length > 0 ? (
               <>
+                <p className="text-xs text-cyber-muted">
+                  NFTs from all {connectedWallets.length} connected wallet{connectedWallets.length !== 1 ? 's' : ''} (same as Home).
+                </p>
+                {portfolioError && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-cyber-red/10 border border-cyber-red/30 text-cyber-red text-sm">
+                    <AlertTriangle size={18} />
+                    {portfolioError}
+                    <button type="button" onClick={() => useAssetsStore.getState().fetchAllAssets()} className="ml-2 px-2 py-1 rounded border border-cyber-red/50 hover:bg-cyber-red/20 text-xs">
+                      Retry
+                    </button>
+                  </div>
+                )}
                 {isLoading && (
                   <div className="flex items-center justify-center py-20">
                     <Loader2 className="w-8 h-8 text-cyber-glow animate-spin" />
@@ -256,18 +301,21 @@ export default function NFTs() {
                         nft={nft}
                         onSelect={() => setSelectedNFT(nft)}
                         onBurn={() => setBurnModalNft(nft)}
+                        walletLabel={connectedWallets.length > 1 && 'walletLabel' in nft && nft.walletLabel ? nft.walletLabel : undefined}
                       />
                     ))}
                   </div>
                 )}
                 {!isLoading && filtered.length === 0 && (
-                  <p className="text-center text-cyber-muted py-12">Your wallet has no NFTs.</p>
+                  <p className="text-center text-cyber-muted py-12">
+                    Your wallet{connectedWallets.length !== 1 ? 's have' : ' has'} no NFTs.
+                  </p>
                 )}
               </>
             ) : (
               <div className="cyber-panel p-8 text-center">
                 <Wallet className="w-12 h-12 text-cyber-muted mx-auto mb-3" />
-                <p className="text-cyber-muted">Connect a wallet to view your portfolio.</p>
+                <p className="text-cyber-muted">Connect a wallet on the home page to view your NFT portfolio here.</p>
               </div>
             )}
           </motion.div>

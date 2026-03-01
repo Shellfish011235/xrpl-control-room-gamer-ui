@@ -12,13 +12,16 @@ function truncate(str: string, len: number) {
 }
 
 interface NFTCardProps {
-  nft: NFTRecord;
+  nft: NFTRecord & { walletLabel?: string };
   onSelect?: () => void;
   onBurn?: () => void;
   showActions?: boolean;
+  /** When set, show which wallet holds this NFT (e.g. when portfolio has multiple wallets). */
+  walletLabel?: string;
 }
 
-export function NFTCard({ nft, onSelect, onBurn, showActions = true }: NFTCardProps) {
+export function NFTCard({ nft, onSelect, onBurn, showActions = true, walletLabel: walletLabelProp }: NFTCardProps) {
+  const walletLabel = walletLabelProp ?? nft.walletLabel;
   const imgUrl = nft.image || (nft.uri?.startsWith('http') ? nft.uri : undefined);
   const [imgState, setImgState] = useState<'loading' | 'ok' | 'error'>('loading');
 
@@ -60,8 +63,15 @@ export function NFTCard({ nft, onSelect, onBurn, showActions = true }: NFTCardPr
               <ImageIcon size={48} />
             </div>
           )}
-          <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-cyber-darker/90 text-[10px] text-cyber-cyan font-mono">
-            #{nft.serial}
+          <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+            <span className="px-1.5 py-0.5 rounded bg-cyber-darker/90 text-[10px] text-cyber-cyan font-mono">
+              #{nft.serial}
+            </span>
+            {walletLabel && (
+              <span className="px-1.5 py-0.5 rounded bg-cyber-darker/90 text-[9px] text-cyber-muted max-w-full truncate" title={walletLabel}>
+                {truncate(walletLabel, 10)}
+              </span>
+            )}
           </div>
         </div>
         <div className="p-3">

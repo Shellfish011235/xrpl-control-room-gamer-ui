@@ -453,8 +453,14 @@ export async function getAccountNFTs(address: string): Promise<Array<{
 
       const result = await xrplRequest<AccountNFTsResult & { marker?: unknown }>('account_nfts', [params]);
 
+      const rawList = result?.account_nfts;
+      if (!Array.isArray(rawList)) {
+        console.warn('[XRPL] account_nfts response missing or invalid account_nfts array', result);
+        break;
+      }
+
       // Map and add NFTs from this page
-      const pageNFTs = result.account_nfts.map((nft) => ({
+      const pageNFTs = rawList.map((nft) => ({
         tokenId: nft.NFTokenID,
         issuer: nft.Issuer,
         taxon: nft.NFTokenTaxon,

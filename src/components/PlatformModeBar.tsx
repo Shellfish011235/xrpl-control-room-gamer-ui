@@ -1,15 +1,21 @@
 /**
  * Platform: live only. Network (Testnet/Mainnet) + Premium gate.
+ * Hidden on Control Room page so that page’s top bar is the single source for network.
  */
 
+import { useLocation } from 'react-router-dom';
 import { useSettingsStore } from '../store/settingsStore';
 
 export function PlatformModeBar() {
+  const location = useLocation();
+  const isControlRoom = location.pathname.startsWith('/tools/control-room');
   const network = useSettingsStore((s) => s.network);
   const setNetwork = useSettingsStore((s) => s.setNetwork);
   const premium = useSettingsStore((s) => s.premium);
 
   const isMainnet = network === 'mainnet';
+
+  if (isControlRoom) return null;
 
   return (
     <div className="sticky top-0 z-40 w-full border-b border-cyber-border/50 bg-cyber-darker/95 backdrop-blur-sm">

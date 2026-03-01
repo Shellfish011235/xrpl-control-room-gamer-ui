@@ -62,7 +62,7 @@ const pageCards = [
 export default function Home() {
   const { displayName, xHandle, memberSinceYear, reputation, socialScore, skillPoints, setDisplayName, setXHandle } = useProfileStore()
   const { wallets } = useWalletStore()
-  const { nfts, memeTokens, isLoading: assetsLoading, fetchAllAssets } = useAssetsStore()
+  const { nfts, memeTokens, isLoading: assetsLoading } = useAssetsStore()
 
   // Profile editing state
   const [isEditingProfile, setIsEditingProfile] = useState(false)
@@ -94,12 +94,12 @@ export default function Home() {
     setIsEditingProfile(false)
   }
 
-  // Fetch assets when wallets change
+  // Fetch assets when wallets change (use getState to avoid effect re-running on store updates)
   useEffect(() => {
     if (wallets.length > 0) {
-      fetchAllAssets()
+      useAssetsStore.getState().fetchAllAssets()
     }
-  }, [wallets.length, fetchAllAssets])
+  }, [wallets.length])
 
   return (
     <div className="min-h-screen pt-20 pb-8 px-4 lg:px-8">

@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cpu, ListTodo, Receipt, Shield, Zap, ExternalLink, Loader2, CheckCircle,
-  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, DollarSign, ChevronRight, Trophy, Pause, Play
+  Lock, Unlock, Clock, Wallet, AlertCircle, Bot, ChevronRight, Trophy, Pause, Play
 } from 'lucide-react';
 import { BountyBoard } from '../components/agentEconomy';
 import { useWalletStore } from '../store/walletStore';
@@ -413,16 +413,13 @@ export default function AgentEconomy() {
             <p className="text-[10px] text-cyber-muted uppercase tracking-wider font-medium">In this app</p>
             <div className="flex flex-wrap gap-2">
               <Link to="/pay" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-glow/10 border border-cyber-glow/30 text-cyber-glow hover:bg-cyber-glow/20 text-xs font-cyber transition-colors">
-                <Zap size={14} /> Micropayments · Streams
-              </Link>
-              <Link to="/pay" state={{ tab: 'openclaw' }} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-green/10 border border-cyber-green/30 text-cyber-green hover:bg-cyber-green/20 text-xs font-cyber transition-colors">
-                <DollarSign size={14} /> OpenClaw
+                <Zap size={14} /> Pay · Streams
               </Link>
               <Link to="/pay/carv" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-cyber-purple/10 border border-cyber-purple/30 text-cyber-purple hover:bg-cyber-purple/20 text-xs font-cyber transition-colors">
                 <Bot size={14} /> Chat pay (CARV)
               </Link>
             </div>
-            <p className="text-[10px] text-cyber-muted">Receipts, caps, paid actions here. OpenClaw = no platform fees. CARV = pay in chat.</p>
+            <p className="text-[10px] text-cyber-muted">Receipts, caps, paid actions. No platform fees. CARV = pay in chat.</p>
             <p className="text-[9px] text-cyber-muted border-t border-cyber-border/50 pt-3">We do not transmit money or hold your funds. You sign in your own wallet. Comply with applicable laws. Not legal or financial advice.</p>
           </div>
         </motion.div>
