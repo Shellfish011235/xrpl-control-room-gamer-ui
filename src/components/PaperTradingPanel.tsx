@@ -31,7 +31,7 @@ import { buildOfferCreate } from '../services/paperTradingLiveExecute';
 import * as localWalletService from '../services/localWalletService';
 
 // Auto-trade icons
-import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink } from 'lucide-react';
+import { Bot, Settings2, Gauge, Shield, Flame, Pause, PlayCircle, Clock, CheckCircle2, XCircle, AlertCircle, List, ExternalLink, Link2, Unlink, Flag } from 'lucide-react';
 
 // ==================== ALERTS SYSTEM ====================
 
@@ -329,6 +329,8 @@ function PaperTradingPanelInner({
   const pendingOrders = store?.pendingOrders ?? [];
   const addTwapOrder = store?.addTwapOrder;
   const addIcebergOrder = store?.addIcebergOrder;
+  const addLimitOrder = store?.addLimitOrder;
+  const addStopLimitOrder = store?.addStopLimitOrder;
   const cancelPendingOrder = store?.cancelPendingOrder;
   const executeIcebergOrder = store?.executeIcebergOrder;
 
@@ -378,7 +380,7 @@ function PaperTradingPanelInner({
   const [backtestRunning, setBacktestRunning] = useState(false);
   const [backtestResult, setBacktestResult] = useState<ReturnType<typeof runBacktest> | null>(null);
 
-  // Advanced orders (TWAP / Iceberg)
+  // Advanced orders (TWAP / Iceberg / Limit / Stop-Limit)
   const [twapAsset, setTwapAsset] = useState('XRP');
   const [twapSide, setTwapSide] = useState<'buy' | 'sell'>('buy');
   const [twapAmount, setTwapAmount] = useState('');
@@ -388,6 +390,15 @@ function PaperTradingPanelInner({
   const [icebergSide, setIcebergSide] = useState<'buy' | 'sell'>('buy');
   const [icebergAmount, setIcebergAmount] = useState('');
   const [icebergVisiblePct, setIcebergVisiblePct] = useState(10);
+  const [limitAsset, setLimitAsset] = useState('XRP');
+  const [limitSide, setLimitSide] = useState<'buy' | 'sell'>('buy');
+  const [limitAmount, setLimitAmount] = useState('');
+  const [limitPrice, setLimitPrice] = useState('');
+  const [stopLimitAsset, setStopLimitAsset] = useState('XRP');
+  const [stopLimitSide, setStopLimitSide] = useState<'buy' | 'sell'>('buy');
+  const [stopLimitAmount, setStopLimitAmount] = useState('');
+  const [stopLimitStopPrice, setStopLimitStopPrice] = useState('');
+  const [stopLimitLimitPrice, setStopLimitLimitPrice] = useState('');
   
   // Simulation Boost - generates realistic trading activity to build history
   const runSimulationBoost = useCallback(async (numTrades: number = 20) => {
@@ -730,6 +741,7 @@ function PaperTradingPanelInner({
           try {
             store?.updatePrices?.(merged);
             store?.processTwapSlices?.(merged);
+            store?.processLimitOrders?.(merged);
           } catch (e) {
             console.warn('[PaperTrading] Store update failed:', e);
           }
@@ -739,7 +751,7 @@ function PaperTradingPanelInner({
     } catch (e) {
       console.warn('[PaperTrading] WS price merge failed:', e);
     }
-  }, [useLiveFeeds, wsPrices, store?.updatePrices, store?.processTwapSlices]);
+  }, [useLiveFeeds, wsPrices, store?.updatePrices, store?.processTwapSlices, store?.processLimitOrders]);
 
   // CoinGecko polling: keeps asset dropdown accurate. Parent currentPrices (e.g. Terminal XRP) override.
   useEffect(() => {
@@ -753,7 +765,10 @@ function PaperTradingPanelInner({
             : { ...DEFAULT_PRICES, ...update.prices, ...fromParent };
           setPrices(merged);
           store?.updatePrices?.(merged);
-          if (useLiveFeeds) store?.processTwapSlices?.(merged);
+          if (useLiveFeeds) {
+            store?.processTwapSlices?.(merged);
+            store?.processLimitOrders?.(merged);
+          }
           setLiveFeedStatus(update.source);
         } catch (e) {
           console.warn('[PaperTrading] Price update failed:', e);
@@ -764,7 +779,7 @@ function PaperTradingPanelInner({
       console.warn('[PaperTrading] Price subscription failed:', e);
       return () => {};
     }
-  }, [useLiveFeeds, store?.updatePrices, store?.processTwapSlices]);
+  }, [useLiveFeeds, store?.updatePrices, store?.processTwapSlices, store?.processLimitOrders]);
   
   // Check price alerts when prices change
   useEffect(() => {
@@ -1715,41 +1730,117 @@ function PaperTradingPanelInner({
                       </button>
                     </div>
                   </div>
+                  {/* Limit form */}
+                  <div className="p-2.5 rounded bg-cyber-darker/70 border border-cyber-border/50">
+                    <p className="text-[9px] text-cyber-muted mb-2">Limit — fill when price reaches level</p>
+                    <div className="space-y-1.5">
+                      <select value={limitAsset} onChange={(e) => setLimitAsset(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text">
+                        {Object.keys(prices).slice(0, 12).map((a) => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setLimitSide('buy')} className={`flex-1 py-1 text-[9px] rounded ${limitSide === 'buy' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-darker text-cyber-muted'}`}>Buy</button>
+                        <button type="button" onClick={() => setLimitSide('sell')} className={`flex-1 py-1 text-[9px] rounded ${limitSide === 'sell' ? 'bg-cyber-red/20 text-cyber-red' : 'bg-cyber-darker text-cyber-muted'}`}>Sell</button>
+                      </div>
+                      <input type="number" placeholder="Amount" value={limitAmount} onChange={(e) => setLimitAmount(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text" />
+                      <input type="number" step="any" placeholder="Limit price" value={limitPrice} onChange={(e) => setLimitPrice(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const amt = parseFloat(limitAmount);
+                          const lim = parseFloat(limitPrice);
+                          if (addLimitOrder && amt > 0 && lim > 0) {
+                            addLimitOrder({ type: 'limit', asset: limitAsset, side: limitSide, amount: amt, limitPrice: lim });
+                            setLimitAmount('');
+                            setLimitPrice('');
+                          }
+                        }}
+                        disabled={!addLimitOrder || !limitAmount || !limitPrice || parseFloat(limitAmount) <= 0 || parseFloat(limitPrice) <= 0}
+                        className="w-full py-1.5 rounded bg-cyber-yellow/20 text-cyber-yellow border border-cyber-yellow/50 text-[10px] font-cyber hover:bg-cyber-yellow/30 disabled:opacity-50"
+                      >
+                        Add Limit
+                      </button>
+                    </div>
+                  </div>
+                  {/* Stop-Limit form */}
+                  <div className="p-2.5 rounded bg-cyber-darker/70 border border-cyber-border/50">
+                    <p className="text-[9px] text-cyber-muted mb-2">Stop-Limit — trigger at stop, fill at limit</p>
+                    <div className="space-y-1.5">
+                      <select value={stopLimitAsset} onChange={(e) => setStopLimitAsset(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text">
+                        {Object.keys(prices).slice(0, 12).map((a) => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                      <div className="flex gap-1">
+                        <button type="button" onClick={() => setStopLimitSide('buy')} className={`flex-1 py-1 text-[9px] rounded ${stopLimitSide === 'buy' ? 'bg-cyber-green/20 text-cyber-green' : 'bg-cyber-darker text-cyber-muted'}`}>Buy</button>
+                        <button type="button" onClick={() => setStopLimitSide('sell')} className={`flex-1 py-1 text-[9px] rounded ${stopLimitSide === 'sell' ? 'bg-cyber-red/20 text-cyber-red' : 'bg-cyber-darker text-cyber-muted'}`}>Sell</button>
+                      </div>
+                      <input type="number" placeholder="Amount" value={stopLimitAmount} onChange={(e) => setStopLimitAmount(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text" />
+                      <input type="number" step="any" placeholder="Stop price" value={stopLimitStopPrice} onChange={(e) => setStopLimitStopPrice(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text" />
+                      <input type="number" step="any" placeholder="Limit price" value={stopLimitLimitPrice} onChange={(e) => setStopLimitLimitPrice(e.target.value)} className="w-full px-2 py-1 rounded bg-cyber-dark border border-cyber-border text-[10px] text-cyber-text" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const amt = parseFloat(stopLimitAmount);
+                          const stop = parseFloat(stopLimitStopPrice);
+                          const lim = parseFloat(stopLimitLimitPrice);
+                          if (addStopLimitOrder && amt > 0 && stop > 0 && lim > 0) {
+                            addStopLimitOrder({ type: 'stop_limit', asset: stopLimitAsset, side: stopLimitSide, amount: amt, stopPrice: stop, limitPrice: lim });
+                            setStopLimitAmount('');
+                            setStopLimitStopPrice('');
+                            setStopLimitLimitPrice('');
+                          }
+                        }}
+                        disabled={!addStopLimitOrder || !stopLimitAmount || !stopLimitStopPrice || !stopLimitLimitPrice || parseFloat(stopLimitAmount) <= 0 || parseFloat(stopLimitStopPrice) <= 0 || parseFloat(stopLimitLimitPrice) <= 0}
+                        className="w-full py-1.5 rounded bg-cyber-red/20 text-cyber-red border border-cyber-red/50 text-[10px] font-cyber hover:bg-cyber-red/30 disabled:opacity-50"
+                      >
+                        Add Stop-Limit
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 {/* Pending orders list */}
                 {pendingOrders.length > 0 && (
                   <div className="space-y-1.5">
                     <p className="text-[9px] text-cyber-muted">Pending</p>
-                    {pendingOrders.map((o) => (
-                      <div key={o.id} className="flex items-center justify-between p-2 rounded bg-cyber-darker/50 border border-cyber-border/30 text-[10px]">
-                        <div className="flex items-center gap-2">
-                          {o.type === 'twap' ? <Timer size={10} className="text-cyber-cyan" /> : <Layers size={10} className="text-cyber-purple" />}
-                          <span className="text-cyber-text font-cyber">{o.type.toUpperCase()}</span>
-                          <span className={o.side === 'buy' ? 'text-cyber-green' : 'text-cyber-red'}>{o.side}</span>
-                          <span>{o.totalAmount.toLocaleString()} {o.asset}</span>
-                          {o.type === 'twap' && o.status === 'active' && (
-                            <span className="text-cyber-muted">({o.filledSlices}/{o.numSlices})</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {o.type === 'iceberg' && o.status === 'pending' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const price = prices[o.asset];
-                                if (price != null && executeIcebergOrder) executeIcebergOrder(o.id, price);
-                              }}
-                              className="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[9px] hover:bg-cyber-green/30"
-                            >
-                              Execute
+                    {pendingOrders.map((o) => {
+                      const amount = o.type === 'twap' || o.type === 'iceberg' ? o.totalAmount : o.amount;
+                      const icon = o.type === 'twap' ? <Timer size={10} className="text-cyber-cyan" /> : o.type === 'iceberg' ? <Layers size={10} className="text-cyber-purple" /> : o.type === 'limit' ? <Target size={10} className="text-cyber-yellow" /> : <Flag size={10} className="text-cyber-red" />;
+                      const label = o.type === 'stop_limit' ? 'STOP-LIMIT' : o.type.toUpperCase();
+                      return (
+                        <div key={o.id} className="flex items-center justify-between p-2 rounded bg-cyber-darker/50 border border-cyber-border/30 text-[10px]">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {icon}
+                            <span className="text-cyber-text font-cyber">{label}</span>
+                            <span className={o.side === 'buy' ? 'text-cyber-green' : 'text-cyber-red'}>{o.side}</span>
+                            <span>{amount.toLocaleString()} {o.asset}</span>
+                            {o.type === 'twap' && o.status === 'active' && (
+                              <span className="text-cyber-muted">({o.filledSlices}/{o.numSlices})</span>
+                            )}
+                            {o.type === 'limit' && (
+                              <span className="text-cyber-muted">@ {o.limitPrice.toLocaleString()}</span>
+                            )}
+                            {o.type === 'stop_limit' && (
+                              <span className="text-cyber-muted">stop {o.stopPrice.toLocaleString()} → limit {o.limitPrice.toLocaleString()}{o.status === 'triggered' ? ' (triggered)' : ''}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {o.type === 'iceberg' && o.status === 'pending' && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const price = prices[o.asset];
+                                  if (price != null && executeIcebergOrder) executeIcebergOrder(o.id, price);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-cyber-green/20 text-cyber-green text-[9px] hover:bg-cyber-green/30"
+                              >
+                                Execute
+                              </button>
+                            )}
+                            <button type="button" onClick={() => cancelPendingOrder?.(o.id)} className="p-0.5 rounded text-cyber-muted hover:text-cyber-red hover:bg-cyber-red/10" title="Cancel">
+                              <XCircle size={12} />
                             </button>
-                          )}
-                          <button type="button" onClick={() => cancelPendingOrder?.(o.id)} className="p-0.5 rounded text-cyber-muted hover:text-cyber-red hover:bg-cyber-red/10" title="Cancel">
-                            <XCircle size={12} />
-                          </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

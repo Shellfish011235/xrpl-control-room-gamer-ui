@@ -40,6 +40,7 @@ import { useSimulationResults, useSetSimulationResults } from '../store/ilpStore
 import { PaperTradingPanel } from '../components/PaperTradingPanel'
 import { Link } from 'react-router-dom'
 import { LOOPJAM_SENTINEL_NAME, LOOPJAM_PHASES, LOOPJAM_JAMMING } from '../agents/loopjamSentinel'
+import { QuantFormulasCard } from '../components/QuantFormulasCard'
 
 // ==================== GAME THEORY DATA ====================
 
@@ -1547,6 +1548,30 @@ export default function MemeticLab() {
                       </div>
                     </div>
                   </div>
+
+                  <QuantFormulasCard />
+
+                  <a
+                    href="https://github.com/Shellfish011235/xrpl-control-room-gamer-ui/blob/main/docs/POLYMARKET-CLAWDBOT-GUIDE.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-xl border border-cyber-border bg-cyber-dark/80 p-4 hover:border-cyber-cyan/50 hover:bg-cyber-dark transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-cyber-cyan/20 border border-cyber-cyan/30">
+                        <Bot size={20} className="text-cyber-cyan" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-cyber text-sm text-cyber-cyan uppercase tracking-wider">
+                          Polymarket Clawdbot — $1K/day strategy
+                        </p>
+                        <p className="text-xs text-cyber-muted mt-0.5">
+                          A–Z OpenClaw + Simmer setup, VPS, Telegram, skills (Weather, Fast Loop). Bookmark the guide in repo docs.
+                        </p>
+                      </div>
+                      <ExternalLink size={16} className="text-cyber-muted shrink-0" />
+                    </div>
+                  </a>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {/* Nash Equilibrium Solver */}

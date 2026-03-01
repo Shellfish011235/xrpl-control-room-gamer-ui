@@ -43,7 +43,9 @@ const Bridges = lazyWithRetry(() => import('./pages/Bridges'))
 const Agents = lazyWithRetry(() => import('./pages/Agents'))
 const Optimizer = lazyWithRetry(() => import('./pages/Optimizer'))
 const LedgerImpactPage = lazyWithRetry(() => import('./pages/LedgerImpactPage'))
+const Builder = lazyWithRetry(() => import('./pages/Builder'))
 const AmendmentDetail = lazyWithRetry(() => import('./pages/AmendmentDetail'))
+const GovernanceGuide = lazyWithRetry(() => import('./pages/GovernanceGuide'))
 
 function PageLoader() {
   return (
@@ -161,6 +163,7 @@ function App() {
                     <Route path="nfts" element={<NFTs />} />
                     <Route path="bridges" element={<Bridges />} />
                     <Route path="agents" element={<Agents />} />
+                    <Route path="builder" element={<Builder />} />
                   </Route>
                   <Route path="/optimizer" element={<Navigate to="/tools/optimizer" replace />} />
                   <Route path="/nfts" element={<Navigate to="/tools/nfts" replace />} />
@@ -168,6 +171,7 @@ function App() {
                   <Route path="/agents" element={<Navigate to="/tools/agents" replace />} />
                   <Route path="/liquidity-crush" element={<Navigate to="/tools/optimizer" replace />} />
                   <Route path="/amendment/:amendmentId" element={<AmendmentDetail />} />
+                  <Route path="/governance-guide" element={<GovernanceGuide />} />
                   <Route path="/innovation" element={<Navigate to="/network" replace />} />
                 </Routes>
               </AnimatePresence>

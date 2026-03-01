@@ -8,8 +8,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { fetchAmendmentByName } from '../components/LedgerImpactTool';
 import {
-  Clock, Zap, User, X, ExternalLink, ChevronRight, Cpu, HardDrive, Wifi, DollarSign, MemoryStick,
+  Clock, Zap, User, X, ExternalLink, ChevronRight, Cpu, HardDrive, Wifi, DollarSign, MemoryStick, CheckCircle2, Timer,
 } from 'lucide-react';
+import { useGovernanceStore } from '../store/governanceStore';
 import { CountdownTimer } from '../components/LedgerImpactTool';
 
 type Tier = 'A' | 'B' | 'C';
@@ -41,6 +42,8 @@ interface AmendmentState {
   enabledOn?: string | null;
   author?: string;
   github?: string;
+  whoBenefits?: string;
+  estimatedReviewMinutes?: number;
 }
 
 const tierStyles: Record<Tier, { bg: string; border: string; text: string }> = {
@@ -69,6 +72,7 @@ export default function AmendmentDetail() {
   const [amendment, setAmendment] = useState<AmendmentState | null>((state as { amendment?: AmendmentState })?.amendment ?? null);
   const [loading, setLoading] = useState(!amendment && !!amendmentId);
   const [loadError, setLoadError] = useState(false);
+  const { isReviewed, markReviewed, unmarkReviewed } = useGovernanceStore();
 
   // When state was lost (e.g. X in-app browser), load by URL param
   useEffect(() => {
@@ -234,6 +238,30 @@ export default function AmendmentDetail() {
                 <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.5 }}>{amendment.ledgerImpact.rationale}</p>
               </div>
             </div>
+
+            {amendment.whoBenefits && (
+              <div style={{ padding: 10, borderRadius: 4, backgroundColor: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                <p style={{ margin: '0 0 6px', fontSize: 11, color: '#22c55e', fontWeight: 600 }}>Who this helps</p>
+                <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.5 }}>{amendment.whoBenefits}</p>
+              </div>
+            )}
+            {amendment.estimatedReviewMinutes != null && (
+              <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Timer size={12} /> Est. review time: {amendment.estimatedReviewMinutes} min
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={() => (isReviewed(amendment.name) ? unmarkReviewed : markReviewed)(amendment.name)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '10px 14px',
+                borderRadius: 4, border: '1px solid #334155', fontSize: 12, backgroundColor: isReviewed(amendment.name) ? 'rgba(34,197,94,0.2)' : '#1e293b', color: isReviewed(amendment.name) ? '#22c55e' : '#e2e8f0',
+              }}
+            >
+              {isReviewed(amendment.name) ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+              {isReviewed(amendment.name) ? 'Reviewed' : 'Mark as reviewed'}
+            </button>
 
             {amendment.ledgerImpact.evidenceLinks && amendment.ledgerImpact.evidenceLinks.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

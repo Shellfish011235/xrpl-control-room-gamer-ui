@@ -84,7 +84,30 @@ export interface IcebergOrder {
   status: 'pending' | 'filled' | 'cancelled';
 }
 
-export type PendingOrder = TwapOrder | IcebergOrder;
+// Limit: fill when market reaches limit price (buy when price <= limit, sell when price >= limit)
+export interface LimitOrder {
+  id: string;
+  type: 'limit';
+  asset: string;
+  side: 'buy' | 'sell';
+  amount: number;
+  limitPrice: number;
+  status: 'pending' | 'filled' | 'cancelled';
+}
+
+// Stop-Limit: trigger when stop price is hit, then fill at limit price (sim: fill at limit when stop crossed)
+export interface StopLimitOrder {
+  id: string;
+  type: 'stop_limit';
+  asset: string;
+  side: 'buy' | 'sell';
+  amount: number;
+  stopPrice: number;
+  limitPrice: number;
+  status: 'pending' | 'triggered' | 'filled' | 'cancelled';
+}
+
+export type PendingOrder = TwapOrder | IcebergOrder | LimitOrder | StopLimitOrder;
 
 export interface PaperPosition {
   asset: string;
@@ -137,7 +160,7 @@ interface PaperTradingState {
   // Liquidation Warnings
   liquidationWarnings: LiquidationWarning[];
   
-  // Advanced orders (TWAP, Iceberg)
+  // Advanced orders (TWAP, Iceberg, Limit, Stop-Limit)
   pendingOrders: PendingOrder[];
   
   // Timestamps
@@ -178,6 +201,9 @@ interface PaperTradingState {
   addIcebergOrder: (order: Omit<IcebergOrder, 'id' | 'status'>) => string;
   processTwapSlices: (prices: { [asset: string]: number }) => void;
   executeIcebergOrder: (orderId: string, price: number) => boolean;
+  addLimitOrder: (order: Omit<LimitOrder, 'id' | 'status'>) => string;
+  addStopLimitOrder: (order: Omit<StopLimitOrder, 'id' | 'status'>) => string;
+  processLimitOrders: (prices: { [asset: string]: number }) => void;
   cancelPendingOrder: (orderId: string) => void;
 }
 
@@ -806,7 +832,100 @@ export const usePaperTradingStore = create<PaperTradingState>()(
         }
         return success;
       },
-      
+
+      addLimitOrder: (order) => {
+        const id = `limit_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const limit: LimitOrder = { ...order, id, status: 'pending' };
+        set((s) => ({ pendingOrders: [...(s.pendingOrders ?? []), limit] }));
+        return id;
+      },
+
+      addStopLimitOrder: (order) => {
+        const id = `stop_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        const stop: StopLimitOrder = { ...order, id, status: 'pending' };
+        set((s) => ({ pendingOrders: [...(s.pendingOrders ?? []), stop] }));
+        return id;
+      },
+
+      processLimitOrders: (prices) => {
+        const state = get();
+        const pending = state.pendingOrders ?? [];
+        if (pending.length === 0) return;
+        let didUpdate = false;
+        const updated = pending.map((o): PendingOrder => {
+          if (o.type === 'limit' && o.status === 'pending') {
+            const price = prices[o.asset] ?? state.priceCache[o.asset]?.price;
+            if (price == null || price <= 0) return o;
+            const fillBuy = o.side === 'buy' && price <= o.limitPrice;
+            const fillSell = o.side === 'sell' && price >= o.limitPrice;
+            if (fillBuy || fillSell) {
+              const success = state.executeTrade({
+                type: o.side,
+                asset: o.asset,
+                amount: o.amount,
+                price: o.limitPrice,
+                source: 'manual',
+                notes: 'Limit order filled',
+              });
+              if (success) {
+                didUpdate = true;
+                return { ...o, status: 'filled' as const };
+              }
+            }
+            return o;
+          }
+          if (o.type === 'stop_limit' && (o.status === 'pending' || o.status === 'triggered')) {
+            const price = prices[o.asset] ?? state.priceCache[o.asset]?.price;
+            if (price == null || price <= 0) return o;
+            const stopHitBuy = o.side === 'buy' && price >= o.stopPrice;
+            const stopHitSell = o.side === 'sell' && price <= o.stopPrice;
+            const triggered = o.status === 'triggered';
+            const limitFillBuy = o.side === 'buy' && price <= o.limitPrice;
+            const limitFillSell = o.side === 'sell' && price >= o.limitPrice;
+            if (!triggered && (stopHitBuy || stopHitSell)) {
+              if (limitFillBuy || limitFillSell) {
+                const success = state.executeTrade({
+                  type: o.side,
+                  asset: o.asset,
+                  amount: o.amount,
+                  price: o.limitPrice,
+                  source: 'manual',
+                  notes: 'Stop-limit order filled',
+                });
+                if (success) {
+                  didUpdate = true;
+                  return { ...o, status: 'filled' as const };
+                }
+              }
+              didUpdate = true;
+              return { ...o, status: 'triggered' as const };
+            }
+            if (triggered && (limitFillBuy || limitFillSell)) {
+              const success = state.executeTrade({
+                type: o.side,
+                asset: o.asset,
+                amount: o.amount,
+                price: o.limitPrice,
+                source: 'manual',
+                notes: 'Stop-limit order filled',
+              });
+              if (success) {
+                didUpdate = true;
+                return { ...o, status: 'filled' as const };
+              }
+            }
+            return o;
+          }
+          return o;
+        });
+        const filtered = updated.filter(
+          (o) => !((o.type === 'limit' || o.type === 'stop_limit') && o.status === 'filled')
+        );
+        if (didUpdate || filtered.length !== pending.length) {
+          set({ pendingOrders: filtered });
+        }
+      },
+
       cancelPendingOrder: (orderId) => {
         set((s) => ({
           pendingOrders: (s.pendingOrders ?? []).filter((o) => o.id !== orderId),

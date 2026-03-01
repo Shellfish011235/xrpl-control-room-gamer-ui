@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Clock, Users, ExternalLink, ChevronRight,
   Cpu, HardDrive, Wifi, DollarSign, MemoryStick, RefreshCw,
-  X, FileText, AlertTriangle, Loader2, Timer, Github, User
+  X, FileText, AlertTriangle, Loader2, Timer, Github, User, CheckCircle2, KeyRound
 } from 'lucide-react';
 import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFeeds';
 import { useIsInAppBrowser } from '../hooks/useIsInAppBrowser';
+import { useGovernanceStore } from '../store/governanceStore';
 
 // ==================== RESPONSIVE LAYOUT HOOK ====================
 // Detects window size for responsive component behavior
@@ -241,9 +242,12 @@ interface Amendment {
   activationDate?: Date;  // Calculated activation date (majority + 14 days)
   majorityDate?: string | null; // Date when majority was reached
   enabledOn?: string | null; // Date when amendment was enabled
-  // Author information
-  author?: string;  // Developer who proposed the amendment
-  github?: string;  // GitHub PR/spec link
+  author?: string;
+  github?: string;
+  /** Who benefits (Governance Companion style) */
+  whoBenefits?: string;
+  /** Estimated review time in minutes */
+  estimatedReviewMinutes?: number;
 }
 
 // Amendment metadata (performance impact assessments)
@@ -255,19 +259,23 @@ const amendmentMetadata: Record<string, {
   impact: PerformanceImpact;
   areas: AffectedArea[];
   rationale: string;
-  author?: string;  // Developer who proposed the amendment
-  github?: string;  // GitHub PR/spec link
+  author?: string;
+  github?: string;
+  /** Who benefits (Governance Companion style) — plain-English */
+  whoBenefits?: string;
+  /** Estimated review time in minutes */
+  estimatedReviewMinutes?: number;
 }> = {
   // ==================== CURRENTLY AT MAJORITY ====================
   // Note: Only linking to official XLS specs or verified XRPL-Standards discussions
-  'fixPriceOracleOrder': { summary: 'Fixes ordering issues in Price Oracle calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for price oracle ordering. Minimal performance impact, improves oracle reliability.', author: 'Ripple Engineering' },
+  'fixPriceOracleOrder': { summary: 'Fixes ordering issues in Price Oracle calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for price oracle ordering. Minimal performance impact, improves oracle reliability.', author: 'Ripple Engineering', whoBenefits: 'Applications using native price oracles; DeFi protocols.', estimatedReviewMinutes: 5 },
   'fixMPTDeliveredAmount': { summary: 'Fixes delivered amount calculation for Multi-Purpose Tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for MPT amount calculations. Ensures accurate delivery amounts.', author: 'Ripple Engineering' },
   'fixIncludeKeyletFields': { summary: 'Fixes keylet field inclusion in ledger entries', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Internal fix for keylet field handling. No user-facing impact.', author: 'Ripple Engineering' },
   'fixAMMClawbackRounding': { summary: 'Fixes rounding issues in AMM clawback operations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Corrects edge-case rounding in AMM+Clawback interactions.', author: 'Ripple Engineering' },
   'fixTokenEscrowV1': { summary: 'Fixes edge cases in token escrow functionality', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for token escrow. Improves escrow reliability for issued tokens.', author: 'Ripple Engineering' },
   
   // ==================== AT MAJORITY ====================
-  'PermissionedDomains': { summary: 'Enables permissioned domains for institutional use cases (XLS-80)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'New ledger object type for domain permissions. Enables compliant institutional deployments.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-80d-permissioned-domains' },
+  'PermissionedDomains': { summary: 'Enables permissioned domains for institutional use cases (XLS-80)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'New ledger object type for domain permissions. Enables compliant institutional deployments.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-80d-permissioned-domains', whoBenefits: 'Institutional validators and enterprises requiring compliant domain controls.', estimatedReviewMinutes: 15 },
   
   // ==================== CURRENTLY VOTING ====================
   'PermissionedDEX': { summary: 'Enables permissioned DEX trading for compliant assets (XLS-81)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory'], rationale: 'Adds permission checks to DEX operations. Moderate overhead for compliant trading.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-81d-permissioned-dexes' },
@@ -276,7 +284,7 @@ const amendmentMetadata: Record<string, {
   'fixXChainRewardRounding': { summary: 'Fixes reward rounding in cross-chain bridge', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for XChain reward calculations. Minor validation overhead.', author: 'Ripple Engineering' },
   
   // ==================== ENABLED (for reference) ====================
-  'AMM': { summary: 'Native automated market maker functionality (XLS-30)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.', author: 'Aanchal Malhotra & David Schwartz', github: 'https://opensource.ripple.com/docs/xls-30d-amm' },
+  'AMM': { summary: 'Native automated market maker functionality (XLS-30)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.', author: 'Aanchal Malhotra & David Schwartz', github: 'https://opensource.ripple.com/docs/xls-30d-amm', whoBenefits: 'DEX operators, liquidity providers, and applications using on-chain AMM.', estimatedReviewMinutes: 25 },
   'Clawback': { summary: 'Enables token issuers to reclaim tokens from holders (XLS-39)', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds flag check during token transfers. Only affects tokens with clawback enabled.', author: 'Shawn Xie', github: 'https://github.com/XRPLF/XRPL-Standards/tree/master/XLS-0039d-clawback' },
   'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds (XLS-47)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-47d-price-oracles' },
   'DID': { summary: 'Decentralized Identifier support on XRPL (XLS-40)', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-40d-decentralized-identity' },
@@ -352,9 +360,10 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     activationDate: xrpAmendment.activationDate,  // Calculated from Ripple epoch majority timestamp
     majorityDate: xrpAmendment.majority ? String(xrpAmendment.majority) : null,
     enabledOn: xrpAmendment.enabled_on || null,
-    // Author information
     author: metadata.author,
-    github: metadata.github
+    github: metadata.github,
+    whoBenefits: metadata.whoBenefits,
+    estimatedReviewMinutes: metadata.estimatedReviewMinutes,
   };
 }
 
@@ -420,8 +429,13 @@ function getStaticAmendmentByName(name: string): Amendment | null {
     status: 'pending',
     author: meta.author,
     github: meta.github,
+    whoBenefits: meta.whoBenefits,
+    estimatedReviewMinutes: meta.estimatedReviewMinutes,
   };
 }
+
+// Re-export for AmendmentDetail
+export type { Amendment };
 
 /** Fetch a single amendment by name (for AmendmentDetail when location.state is lost, e.g. X in-app browser). */
 export async function fetchAmendmentByName(name: string): Promise<Amendment | null> {
@@ -462,18 +476,23 @@ function getStaticAmendments(): Amendment[] {
       status: 'pending',
       author: meta.author,
       github: meta.github,
+      whoBenefits: meta.whoBenefits,
+      estimatedReviewMinutes: meta.estimatedReviewMinutes,
     };
   });
 }
+
+type FilterMode = 'all' | 'pending' | 'enabled' | 'needs_review';
 
 export function LedgerImpactTool() {
   const [amendments, setAmendments] = useState<Amendment[]>(() => getStaticAmendments());
   const [selectedAmendment, setSelectedAmendment] = useState<Amendment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'enabled'>('pending');
+  const [filter, setFilter] = useState<FilterMode>('pending');
   const [dataSource, setDataSource] = useState<'live' | 'fallback'>('fallback');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const isInAppBrowser = useIsInAppBrowser();
+  const { reviewedAmendmentIds, isReviewed, markReviewed, unmarkReviewed, validatorPublicKey, setValidatorPublicKey } = useGovernanceStore();
   
   // Responsive layout detection
   const { isSmallHeight, isTinyHeight, isMinimized } = useResponsiveLayout();
@@ -520,8 +539,11 @@ export function LedgerImpactTool() {
   const filteredAmendments = amendments.filter(a => {
     if (filter === 'pending') return !a.enabled;
     if (filter === 'enabled') return a.enabled;
+    if (filter === 'needs_review') return !a.enabled && !isReviewed(a.name);
     return true;
   });
+
+  const needsAttentionCount = amendments.filter(a => !a.enabled && !isReviewed(a.name)).length;
 
   const handleRefresh = async () => {
     await fetchAmendments();
@@ -574,6 +596,21 @@ export function LedgerImpactTool() {
             Refresh
           </button>
         </div>
+      )}
+
+      {/* Needs attention (Governance Companion style) */}
+      {needsAttentionCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setFilter('needs_review')}
+          className="mb-3 w-full p-2 rounded bg-cyber-glow/10 border border-cyber-glow/30 flex items-center gap-2 text-left hover:bg-cyber-glow/20 transition-colors"
+        >
+          <FileText size={14} className="text-cyber-glow shrink-0" />
+          <span className="text-[10px] text-cyber-glow">
+            <span className="font-cyber">{needsAttentionCount}</span> amendment{needsAttentionCount !== 1 ? 's' : ''} need your review
+          </span>
+          <ChevronRight size={12} className="ml-auto text-cyber-glow" />
+        </button>
       )}
 
       {/* Majority Alert Banner */}
@@ -630,8 +667,8 @@ export function LedgerImpactTool() {
       )}
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 mb-3">
-        {(['pending', 'enabled', 'all'] as const).map(f => (
+      <div className="flex flex-wrap items-center gap-1 mb-3">
+        {(['pending', 'needs_review', 'enabled', 'all'] as FilterMode[]).map(f => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -641,7 +678,7 @@ export function LedgerImpactTool() {
                 : 'text-cyber-muted hover:text-cyber-text'
             }`}
           >
-            {f.toUpperCase()}
+            {f === 'needs_review' ? 'NEEDS REVIEW' : f.toUpperCase()}
           </button>
         ))}
       </div>
@@ -709,6 +746,19 @@ export function LedgerImpactTool() {
                     </span>
                     <Users size={10} className="text-cyber-muted" />
                   </div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); (isReviewed(amendment.name) ? unmarkReviewed : markReviewed)(amendment.name); }}
+                    className="p-1 rounded hover:bg-cyber-glow/20 transition-colors"
+                    title={isReviewed(amendment.name) ? 'Unmark as reviewed' : 'Mark as reviewed'}
+                    aria-label={isReviewed(amendment.name) ? 'Unmark as reviewed' : 'Mark as reviewed'}
+                  >
+                    {isReviewed(amendment.name) ? (
+                      <CheckCircle2 size={14} className="text-cyber-green" />
+                    ) : (
+                      <Clock size={14} className="text-cyber-muted hover:text-cyber-glow" />
+                    )}
+                  </button>
                 </div>
               </>
             );
@@ -747,6 +797,31 @@ export function LedgerImpactTool() {
         </div>
       )}
 
+      {/* Validator context (optional) — Governance Companion style */}
+      <div className="mt-3 pt-2 border-t border-cyber-border space-y-1.5">
+        <p className="text-[9px] text-cyber-muted flex items-center gap-1">
+          <KeyRound size={10} /> Validator context (optional)
+        </p>
+        <input
+          type="text"
+          value={validatorPublicKey ?? ''}
+          onChange={(e) => setValidatorPublicKey(e.target.value.trim() || null)}
+          placeholder="Validator public key"
+          className="w-full px-2 py-1.5 text-[10px] font-mono bg-cyber-darker border border-cyber-border rounded text-cyber-text placeholder:text-cyber-muted focus:border-cyber-glow/50 focus:outline-none"
+        />
+        {validatorPublicKey && (
+          <a
+            href={`https://xrpscan.com/validator/${encodeURIComponent(validatorPublicKey)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/30 text-[10px] text-cyber-text"
+          >
+            View validator on XRPScan
+            <ExternalLink size={10} />
+          </a>
+        )}
+      </div>
+
       {/* Quick Links + Data source */}
       <div className="mt-4 pt-3 border-t border-cyber-border space-y-1.5">
         <p className="text-[9px] text-cyber-muted text-right" aria-label="Ledger impact data source">
@@ -762,6 +837,14 @@ export function LedgerImpactTool() {
           <span>XRPL Amendments Docs</span>
           <ExternalLink size={12} className="ml-auto text-cyber-muted group-hover:text-cyber-glow" />
         </a>
+        <Link
+          to="/governance-guide"
+          className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/30 transition-all text-xs text-cyber-text group"
+        >
+          <FileText size={14} className="text-cyber-glow" />
+          <span>Governance Guide (FAQ)</span>
+          <ChevronRight size={12} className="ml-auto text-cyber-muted group-hover:text-cyber-glow" />
+        </Link>
       </div>
 
       {/* Amendment Detail Modal - Portaled to body for X in-app browser / iOS WebView */}
@@ -959,6 +1042,30 @@ export function LedgerImpactTool() {
                     <p style={{ margin: 0, fontSize: 10, color: '#e2e8f0', lineHeight: 1.4 }}>{selectedAmendment.ledgerImpact.rationale}</p>
                   </div>
                 </div>
+
+                {selectedAmendment.whoBenefits && (
+                  <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)' }}>
+                    <p style={{ margin: '0 0 4px', fontSize: 10, color: '#22c55e', fontWeight: 600 }}>Who this helps</p>
+                    <p style={{ margin: 0, fontSize: 11, color: '#e2e8f0', lineHeight: 1.4 }}>{selectedAmendment.whoBenefits}</p>
+                  </div>
+                )}
+                {selectedAmendment.estimatedReviewMinutes != null && (
+                  <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Timer size={12} /> Est. review time: {selectedAmendment.estimatedReviewMinutes} min
+                  </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); (isReviewed(selectedAmendment.name) ? unmarkReviewed : markReviewed)(selectedAmendment.name); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 12px',
+                    borderRadius: 4, border: '1px solid #334155', fontSize: 11, backgroundColor: isReviewed(selectedAmendment.name) ? 'rgba(34,197,94,0.2)' : '#1e293b', color: isReviewed(selectedAmendment.name) ? '#22c55e' : '#e2e8f0',
+                  }}
+                >
+                  {isReviewed(selectedAmendment.name) ? <CheckCircle2 size={14} /> : <Clock size={14} />}
+                  {isReviewed(selectedAmendment.name) ? 'Reviewed' : 'Mark as reviewed'}
+                </button>
 
                 {selectedAmendment.ledgerImpact.evidenceLinks && selectedAmendment.ledgerImpact.evidenceLinks.length > 0 && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

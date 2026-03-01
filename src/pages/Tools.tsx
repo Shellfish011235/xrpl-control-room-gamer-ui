@@ -4,7 +4,7 @@
  */
 
 import { NavLink, Outlet } from 'react-router-dom';
-import { Zap, LayoutGrid, ArrowRightLeft, Sparkles, BarChart3 } from 'lucide-react';
+import { Zap, LayoutGrid, ArrowRightLeft, Sparkles, BarChart3, Wrench } from 'lucide-react';
 
 const TABS = [
   { path: '/tools/ledger-impact', label: 'Ledger Impact', labelShort: 'Impact', icon: BarChart3 },
@@ -12,6 +12,7 @@ const TABS = [
   { path: '/tools/nfts', label: 'NFT Arena', labelShort: 'NFT', icon: LayoutGrid },
   { path: '/tools/bridges', label: 'Bridges', labelShort: 'Bridge', icon: ArrowRightLeft },
   { path: '/tools/agents', label: 'Agents', labelShort: 'Agents', icon: Sparkles },
+  { path: '/tools/builder', label: 'Builder', labelShort: 'Build', icon: Wrench },
 ] as const;
 
 export default function Tools() {

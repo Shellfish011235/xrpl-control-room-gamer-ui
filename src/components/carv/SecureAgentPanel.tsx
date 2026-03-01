@@ -9,10 +9,13 @@ import {
   Loader, Shield, Zap, Clock, ArrowRight, ArrowDown,
   Settings, Eye, Sparkles, Wallet, RefreshCw,
   ChevronDown, ChevronUp, Lock, Unlock, History,
-  QrCode, Smartphone, DollarSign, TrendingUp, Copy
+  QrCode, Smartphone, DollarSign, TrendingUp, Copy,
+  Volume2, VolumeX, MessageCircle
 } from 'lucide-react';
 
 import { securePaymentAgent, PaymentPlan, AuditLogEntry, SecurityConfig } from '../../services/securePaymentAgent';
+import { speakAgentMessage, stopAgentVoice, sendAgentMessageToTelegram } from '../../services/agentVoiceAndTelegram';
+import { useAlertStore } from '../../services/alertNotifications';
 import { xamanService } from '../../services/xaman';
 import { getXamanMode, initializeXaman } from '../../config/xaman';
 import { useWalletStore } from '../../store/walletStore';
@@ -49,6 +52,18 @@ export function SecureAgentPanel() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiSecretInput, setApiSecretInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastSpokenMessageIdRef = useRef<string | null>(null);
+  const lastTelegramSentIdRef = useRef<string | null>(null);
+
+  // Voice (TTS) and Telegram: talk to us with audio + forward to Telegram OpenClaw
+  const [voiceEnabled, setVoiceEnabled] = useState(() => {
+    try { return localStorage.getItem('agent-voice-enabled') !== 'false'; } catch { return true; }
+  });
+  const [telegramForwardEnabled, setTelegramForwardEnabled] = useState(() => {
+    try { return localStorage.getItem('agent-telegram-forward') === 'true'; } catch { return false; }
+  });
+  const channelConfig = useAlertStore((s) => s.channelConfig);
+  const telegramConfigured = Boolean(channelConfig?.telegram?.botToken?.trim() && channelConfig?.telegram?.chatId?.trim());
 
   const SIGNING_REQUEST_TIMEOUT_MS = 20000;
 
@@ -115,6 +130,31 @@ export function SecureAgentPanel() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Voice (TTS): when a new agent or system message appears, speak it
+  useEffect(() => {
+    if (messages.length === 0 || !voiceEnabled) return;
+    const last = messages[messages.length - 1];
+    if (last.type !== 'agent' && last.type !== 'system') return;
+    if (!last.content?.trim()) return;
+    if (lastSpokenMessageIdRef.current === last.id) return;
+    lastSpokenMessageIdRef.current = last.id;
+    const t = setTimeout(() => speakAgentMessage(last.content), 300);
+    return () => clearTimeout(t);
+  }, [messages, voiceEnabled]);
+
+  // Telegram: forward new agent/system messages to Telegram (OpenClaw) when enabled
+  useEffect(() => {
+    if (messages.length === 0 || !telegramForwardEnabled || !telegramConfigured) return;
+    const last = messages[messages.length - 1];
+    if (last.type !== 'agent' && last.type !== 'system') return;
+    if (!last.content?.trim()) return;
+    if (lastTelegramSentIdRef.current === last.id) return;
+    lastTelegramSentIdRef.current = last.id;
+    const config = channelConfig?.telegram;
+    if (!config?.botToken || !config?.chatId) return;
+    sendAgentMessageToTelegram(last.content, { botToken: config.botToken, chatId: config.chatId }).catch(() => {});
+  }, [messages, telegramForwardEnabled, telegramConfigured, channelConfig?.telegram]);
 
   // Connect wallet
   const connectWallet = async () => {
@@ -525,6 +565,39 @@ export function SecureAgentPanel() {
             <History size={16} />
           </button>
           <button
+            onClick={() => {
+              setVoiceEnabled((v) => {
+                const next = !v;
+                try { localStorage.setItem('agent-voice-enabled', String(next)); } catch {}
+                if (!next) stopAgentVoice();
+                return next;
+              });
+            }}
+            className={`p-2 rounded-lg border transition-colors ${
+              voiceEnabled ? 'bg-cyber-cyan/20 border-cyber-cyan/50 text-cyber-cyan' : 'border-cyber-border text-cyber-muted hover:text-cyber-text'
+            }`}
+            title={voiceEnabled ? 'Voice on (agent speaks)' : 'Voice off'}
+          >
+            {voiceEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          </button>
+          {telegramConfigured && (
+            <button
+              onClick={() => {
+                setTelegramForwardEnabled((v) => {
+                  const next = !v;
+                  try { localStorage.setItem('agent-telegram-forward', String(next)); } catch {}
+                  return next;
+                });
+              }}
+              className={`p-2 rounded-lg border transition-colors ${
+                telegramForwardEnabled ? 'bg-cyber-cyan/20 border-cyber-cyan/50 text-cyber-cyan' : 'border-cyber-border text-cyber-muted hover:text-cyber-text'
+              }`}
+              title={telegramForwardEnabled ? 'Forwarding agent replies to Telegram' : 'Forward agent replies to Telegram'}
+            >
+              <MessageCircle size={16} />
+            </button>
+          )}
+          <button
             onClick={() => setShowSettings(!showSettings)}
             className={`p-2 rounded-lg border transition-colors ${
               showSettings
@@ -677,6 +750,9 @@ export function SecureAgentPanel() {
             className="border-b border-cyber-border overflow-hidden"
           >
             <div className="p-4 bg-cyber-dark/50 space-y-4">
+              <p className="text-[10px] text-cyber-muted flex items-center gap-2">
+                <Volume2 size={12} /> Voice: agent replies are read aloud. <MessageCircle size={12} /> Telegram: forward replies to your Telegram (configure in Terminal → Alerts → Settings).
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-cyber-muted block mb-1">Daily Limit (XRP)</label>
