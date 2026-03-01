@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { Bot, Brain, ChevronRight } from 'lucide-react';
 import { AgentHub } from '../components/AgentHub';
+import WalletActionsPanel from '../components/WalletActionsPanel';
 
 export default function Agents() {
   const location = useLocation();
@@ -49,7 +50,9 @@ export default function Agents() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
+        className="space-y-6"
       >
+        <WalletActionsPanel />
         <AgentHub />
       </motion.div>
     </div>

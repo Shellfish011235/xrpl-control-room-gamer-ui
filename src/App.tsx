@@ -48,6 +48,7 @@ const AmendmentDetail = lazyWithRetry(() => import('./pages/AmendmentDetail'))
 const GovernanceGuide = lazyWithRetry(() => import('./pages/GovernanceGuide'))
 const MvpWalletPage = lazyWithRetry(() => import('./pages/MvpWalletPage'))
 const DexOrderPage = lazyWithRetry(() => import('./pages/DexOrderPage'))
+const ControlRoomPage = lazyWithRetry(() => import('./pages/ControlRoomPage'))
 
 function PageLoader() {
   return (
@@ -165,6 +166,7 @@ function App() {
                     <Route path="nfts" element={<NFTs />} />
                     <Route path="bridges" element={<Bridges />} />
                     <Route path="agents" element={<Agents />} />
+                    <Route path="control-room" element={<ControlRoomPage />} />
                     <Route path="builder" element={<Builder />} />
                     <Route path="wallet" element={<MvpWalletPage />} />
                     <Route path="dex-order" element={<DexOrderPage />} />

@@ -4,11 +4,12 @@
  */
 
 import { NavLink, Outlet } from 'react-router-dom';
-import { Zap, LayoutGrid, ArrowRightLeft, Sparkles, BarChart3, Wrench, Wallet, ArrowDownUp } from 'lucide-react';
+import { Zap, LayoutGrid, ArrowRightLeft, Sparkles, BarChart3, Wrench, Wallet, ArrowDownUp, LayoutDashboard } from 'lucide-react';
 
 const TABS = [
   { path: '/tools/ledger-impact', label: 'Ledger Impact', labelShort: 'Impact', icon: BarChart3 },
   { path: '/tools/optimizer', label: 'Optimizer', labelShort: 'Optim', icon: Zap },
+  { path: '/tools/control-room', label: 'Control Room', labelShort: 'Control', icon: LayoutDashboard },
   { path: '/tools/wallet', label: 'MVP Wallet', labelShort: 'Wallet', icon: Wallet },
   { path: '/tools/dex-order', label: 'DEX Order', labelShort: 'DEX', icon: ArrowDownUp },
   { path: '/tools/nfts', label: 'NFT Arena', labelShort: 'NFT', icon: LayoutGrid },

@@ -335,13 +335,23 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg fill='%2300d4ff' fill-opacity='0.03'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
-/* CSS Variables for NFT Theme System */
+/* CSS Variables for NFT Theme System + Control Room neon palette */
 :root {
   /* Default cyber theme colors */
   --cyber-glow: #00d4ff;
   --cyber-purple: #a855f7;
   --cyber-cyan: #00ffff;
   --cyber-blue: #00aaff;
+  
+  /* Control Room neon palette (spec) */
+  --cyber-dark: #0a0e17;
+  --cyber-darker: #05070f;
+  --cyber-magenta: #ff00aa;
+  --cyber-green: #00ff9d;
+  --cyber-red: #ff3366;
+  --cyber-yellow: #ffd700;
+  --cyber-muted: #64748b;
+  --cyber-border: rgba(34, 211, 238, 0.2);
   
   /* Theme overridable colors */
   --theme-primary: var(--cyber-glow);
@@ -355,6 +365,32 @@ body {
   --color-danger: #ff4444;
   --color-warning: #ffd700;
   --color-confirm: #00ff88;
+}
+
+/* Control Room neon panel/button/glow (apply across Control Room) */
+.neon-panel {
+  background: color-mix(in srgb, var(--cyber-darker) 70%, transparent);
+  border: 1px solid var(--cyber-border);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.15);
+}
+
+.neon-button {
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--cyber-cyan);
+  color: var(--cyber-cyan);
+  background: transparent;
+  transition: all 0.3s;
+}
+.neon-button:hover {
+  background: color-mix(in srgb, var(--cyber-cyan) 10%, transparent);
+  box-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
+}
+
+.neon-glow {
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.7));
 }
 
 /* Custom utility classes for dynamic colors */
