@@ -59,7 +59,7 @@ export function QuantFormulasCard() {
           <span className="font-cyber text-sm text-cyber-cyan uppercase tracking-wider">
             4 Quant Formulas (Prediction Markets)
           </span>
-          <Info size={14} className="text-cyber-muted" title="Monte Carlo, SE, Brier, ESS" />
+          <span title="Monte Carlo, SE, Brier, ESS"><Info size={14} className="text-cyber-muted" /></span>
         </div>
         {expanded ? <ChevronUp size={18} className="text-cyber-muted" /> : <ChevronDown size={18} className="text-cyber-muted" />}
       </button>
