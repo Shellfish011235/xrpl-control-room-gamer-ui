@@ -84,7 +84,7 @@ export default function NFTs() {
     issuer: filterIssuer ?? undefined,
   });
   const portfolioList = Array.isArray(portfolioNfts) ? portfolioNfts : [];
-  const portfolioFiltered = filterNFTs(portfolioList as Parameters<typeof filterNFTs>[0], {
+  const portfolioFiltered = filterNFTs(portfolioList as unknown as Parameters<typeof filterNFTs>[0], {
     taxon: filterTaxon ?? undefined,
     issuer: filterIssuer ?? undefined,
   });
@@ -301,7 +301,7 @@ export default function NFTs() {
                         nft={nft}
                         onSelect={() => setSelectedNFT(nft)}
                         onBurn={() => setBurnModalNft(nft)}
-                        walletLabel={connectedWallets.length > 1 && 'walletLabel' in nft && nft.walletLabel ? nft.walletLabel : undefined}
+                        walletLabel={connectedWallets.length > 1 && 'walletLabel' in nft && nft.walletLabel != null ? String(nft.walletLabel) : undefined}
                       />
                     ))}
                   </div>
