@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { useAgentPanelStore } from '../store/agentPanelStore'
 import { useXRPPrice } from '../services/websocketPriceFeeds'
+import GlobalSearch from './GlobalSearch'
 
 function priceSourceLabel(source: string): string {
   if (source === 'binance-ws') return 'Binance (WebSocket)'
@@ -159,7 +160,7 @@ export default function Navigation() {
       <div className="h-0.5 bg-gradient-to-r from-transparent via-cyber-glow to-transparent" />
       
       <nav className="cyber-panel border-t-0 rounded-t-none px-4 lg:px-8">
-        <div className="max-w-7xl mx-auto flex items-center justify-between h-16 flex-nowrap">
+        <div className="max-w-7xl mx-auto flex items-center justify-between h-14 flex-nowrap">
           {/* Logo - XRPL Control Room logo (matches profile default) */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#00d4ff] flex items-center justify-center p-0 ring-1 ring-cyber-glow/40 profile-default-logo-wrap">
@@ -288,6 +289,11 @@ export default function Navigation() {
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
+        </div>
+
+        {/* Global search bar — consistent on all pages */}
+        <div className="max-w-7xl mx-auto py-2 border-t border-cyber-border/50">
+          <GlobalSearch />
         </div>
 
         {/* Mobile Menu */}

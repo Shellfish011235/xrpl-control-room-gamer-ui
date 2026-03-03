@@ -94,15 +94,37 @@ export default function InnovationRadar() {
     return `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=updated&order=desc&per_page=20`;
   }, [query, days, minStars]);
 
+  const ghHeaders = useMemo(() => {
+    const token =
+      typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      (import.meta.env as Record<string, string>).VITE_GITHUB_TOKEN;
+    const headers: HeadersInit = { Accept: "application/vnd.github.v3+json" };
+    if (typeof token === "string" && token.trim()) {
+      (headers as Record<string, string>).Authorization = `Bearer ${token.trim()}`;
+    }
+    return headers;
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
 
-    fetch(ghQuery)
+    fetch(ghQuery, { headers: ghHeaders })
       .then(async (r) => {
-        if (!r.ok) throw new Error(`GitHub API error: ${r.status}`);
-        return (await r.json()) as GitHubSearchResponse;
+        if (!r.ok) {
+          const body = await r.text();
+          if (r.status === 403) {
+            const rateLimitMsg =
+              body && body.includes("rate limit")
+                ? " GitHub rate limit reached (60/hr without token). Add VITE_GITHUB_TOKEN in .env for higher limits."
+                : "";
+            throw new Error(`GitHub API error: 403.${rateLimitMsg}`);
+          }
+          throw new Error(`GitHub API error: ${r.status}`);
+        }
+        return JSON.parse(body) as GitHubSearchResponse;
       })
       .then((data) => {
         if (cancelled) return;

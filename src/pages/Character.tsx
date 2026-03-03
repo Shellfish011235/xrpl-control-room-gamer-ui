@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  User, Trophy, Zap, Github, Twitter, Globe, 
+  User, Trophy, Zap, Github, Twitter, Linkedin, Globe, 
   ChevronRight, Code, Users,
   Calendar, MessageSquare, ExternalLink,
   Image as ImageIcon, Loader2, X as XIcon, RefreshCw, Coins, Copy, Check, Edit2,
@@ -467,10 +467,9 @@ function NftDetailModal({
 }
 
 export default function Character() {
-  const { displayName, xHandle, memberSinceYear, level, xp, setDisplayName, setXHandle, setMemberSinceYear, profileImage, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
+  const { displayName, xHandle, memberSinceYear, githubUrl, linkedinUrl, websiteUrl, setDisplayName, setXHandle, setMemberSinceYear, setGithubUrl, setLinkedinUrl, setWebsiteUrl, profileImage, backgroundStyle, backgroundIntensity, setBackgroundStyle, setBackgroundIntensity } = useProfileStore()
   const { wallets, refreshAllWallets } = useWalletStore()
   const { nfts, memeTokens, isLoading, lastUpdated } = useAssetsStore()
-  const nextLevel = 10000
 
   const [selectedNFT, setSelectedNFT] = useState<NFTAsset | null>(null)
   const [selectedMeme, setSelectedMeme] = useState<MemeToken | null>(null)
@@ -489,22 +488,34 @@ export default function Character() {
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [editName, setEditName] = useState(displayName)
   const [editXHandle, setEditXHandle] = useState(xHandle)
+  const [editGithubUrl, setEditGithubUrl] = useState(githubUrl)
+  const [editLinkedinUrl, setEditLinkedinUrl] = useState(linkedinUrl)
+  const [editWebsiteUrl, setEditWebsiteUrl] = useState(websiteUrl)
 
   // Sync edit fields when store changes
   useEffect(() => {
     setEditName(displayName)
     setEditXHandle(xHandle)
-  }, [displayName, xHandle])
+    setEditGithubUrl(githubUrl)
+    setEditLinkedinUrl(linkedinUrl)
+    setEditWebsiteUrl(websiteUrl)
+  }, [displayName, xHandle, githubUrl, linkedinUrl, websiteUrl])
 
   const handleSaveProfile = () => {
     setDisplayName(editName)
     setXHandle(editXHandle)
+    setGithubUrl(editGithubUrl)
+    setLinkedinUrl(editLinkedinUrl)
+    setWebsiteUrl(editWebsiteUrl)
     setIsEditingProfile(false)
   }
 
   const handleCancelEdit = () => {
     setEditName(displayName)
     setEditXHandle(xHandle)
+    setEditGithubUrl(githubUrl)
+    setEditLinkedinUrl(linkedinUrl)
+    setEditWebsiteUrl(websiteUrl)
     setIsEditingProfile(false)
   }
 
@@ -579,12 +590,6 @@ export default function Character() {
               <PieChartIcon size={14} className="inline mr-2" />
               Portfolio
             </button>
-            <Link
-              to="/portfolio"
-              className="text-xs text-cyber-muted hover:text-cyber-glow border border-cyber-border hover:border-cyber-glow/50 rounded-lg px-3 py-2 transition-colors"
-            >
-              ETFs &amp; RLUSD →
-            </Link>
           </div>
         </motion.div>
 
@@ -637,10 +642,6 @@ export default function Character() {
                   <div className="w-full h-full rounded-full bg-gradient-to-br from-cyber-glow via-cyber-purple to-cyber-cyan p-1">
                     <ProfilePictureUpload size="md" className="!w-full !h-full !max-w-none !rounded-full" />
                   </div>
-                  {/* Level Badge */}
-                  <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-cyber-purple flex items-center justify-center border-2 border-cyber-darker">
-                    <span className="font-cyber text-xs text-white">{level}</span>
-                  </div>
                 </div>
                 
                 {isEditingProfile ? (
@@ -668,6 +669,36 @@ export default function Character() {
                         />
                       </div>
                     </div>
+                    <div>
+                      <label className="text-[10px] text-cyber-muted block mb-1">GitHub URL</label>
+                      <input
+                        type="url"
+                        value={editGithubUrl}
+                        onChange={(e) => setEditGithubUrl(e.target.value)}
+                        placeholder="https://github.com/username"
+                        className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-sm text-cyber-text text-center placeholder:text-cyber-muted/50 focus:border-cyber-glow focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-cyber-muted block mb-1">LinkedIn URL</label>
+                      <input
+                        type="url"
+                        value={editLinkedinUrl}
+                        onChange={(e) => setEditLinkedinUrl(e.target.value)}
+                        placeholder="https://linkedin.com/in/username"
+                        className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-sm text-cyber-text text-center placeholder:text-cyber-muted/50 focus:border-cyber-glow focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-cyber-muted block mb-1">Website URL</label>
+                      <input
+                        type="url"
+                        value={editWebsiteUrl}
+                        onChange={(e) => setEditWebsiteUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full bg-cyber-darker border border-cyber-border rounded px-3 py-1.5 text-sm text-cyber-text text-center placeholder:text-cyber-muted/50 focus:border-cyber-glow focus:outline-none"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -689,22 +720,6 @@ export default function Character() {
                     </p>
                   </>
                 )}
-              </div>
-              
-              {/* XP Bar */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-cyber-muted">Level {level}</span>
-                  <span className="text-cyber-glow">{xp.toLocaleString()} / {nextLevel.toLocaleString()} XP</span>
-                </div>
-                <div className="cyber-progress h-2">
-                  <motion.div 
-                    className="cyber-progress-bar"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(xp / nextLevel) * 100}%` }}
-                    transition={{ delay: 0.3, duration: 1 }}
-                  />
-                </div>
               </div>
 
               {/* Background — only visible inside Edit (pencil) */}
@@ -751,17 +766,28 @@ export default function Character() {
                 </div>
               )}
               
-              {/* Social Links */}
-              <div className="flex items-center justify-center gap-3">
-                {[
-                  { icon: Github, color: 'text-cyber-text hover:text-cyber-glow' },
-                  { icon: Twitter, color: 'text-cyber-text hover:text-cyber-blue' },
-                  { icon: Globe, color: 'text-cyber-text hover:text-cyber-purple' },
-                ].map((link, idx) => (
-                  <button key={idx} className={`p-2 rounded bg-cyber-darker border border-cyber-border hover:border-cyber-glow/50 transition-colors ${link.color}`}>
-                    <link.icon size={18} />
-                  </button>
-                ))}
+              {/* Social Links — GitHub, Twitter (X), LinkedIn, Website */}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                {githubUrl && (
+                  <a href={githubUrl.startsWith('http') ? githubUrl : `https://github.com/${githubUrl}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded bg-cyber-darker border border-cyber-border hover:border-cyber-glow/50 text-cyber-text hover:text-cyber-glow transition-colors" title="GitHub">
+                    <Github size={18} />
+                  </a>
+                )}
+                {xHandle && (
+                  <a href={`https://x.com/${xHandle}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded bg-cyber-darker border border-cyber-border hover:border-cyber-glow/50 text-cyber-text hover:text-cyber-blue transition-colors" title="X (Twitter)">
+                    <Twitter size={18} />
+                  </a>
+                )}
+                {linkedinUrl && (
+                  <a href={linkedinUrl.startsWith('http') ? linkedinUrl : `https://linkedin.com/in/${linkedinUrl}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded bg-cyber-darker border border-cyber-border hover:border-cyber-glow/50 text-cyber-text hover:text-cyber-cyan transition-colors" title="LinkedIn">
+                    <Linkedin size={18} />
+                  </a>
+                )}
+                {websiteUrl && (
+                  <a href={websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded bg-cyber-darker border border-cyber-border hover:border-cyber-glow/50 text-cyber-text hover:text-cyber-purple transition-colors" title="Website">
+                    <Globe size={18} />
+                  </a>
+                )}
               </div>
             </div>
             
@@ -1112,62 +1138,6 @@ export default function Character() {
                     )
                   })
                 })()}
-              </div>
-            </div>
-            
-            {/* Community Links */}
-            <div className="cyber-panel p-4">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <MessageSquare size={16} className="text-cyber-cyan" />
-                <span className="font-cyber text-sm text-cyber-cyan">COMMUNITY</span>
-              </div>
-              
-              <div className="space-y-2">
-                {[
-                  { name: 'r/XRP', icon: MessageSquare, members: '1.2M', color: 'cyber-orange' },
-                  { name: 'Discord', icon: Users, members: '85K', color: 'cyber-purple' },
-                  { name: 'XRPL Commons', icon: Globe, members: '12K', color: 'cyber-green' },
-                  { name: 'Dev Forum', icon: Code, members: '8K', color: 'cyber-glow' },
-                ].map((community) => (
-                  <button
-                    key={community.name}
-                    className="w-full flex items-center gap-3 p-3 rounded bg-cyber-darker/50 border border-cyber-border hover:border-cyber-glow/30 transition-all group"
-                  >
-                    <community.icon size={16} className={`text-${community.color}`} />
-                    <span className="text-sm text-cyber-text flex-1 text-left">{community.name}</span>
-                    <span className="text-xs text-cyber-muted">{community.members}</span>
-                    <ChevronRight size={14} className="text-cyber-muted group-hover:text-cyber-glow transition-colors" />
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Milestones */}
-            <div className="cyber-panel p-4">
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-cyber-border">
-                <Trophy size={16} className="text-cyber-yellow" />
-                <span className="font-cyber text-sm text-cyber-yellow">MILESTONES</span>
-              </div>
-              
-              <div className="space-y-3">
-                {[
-                  { label: '10 Years of XRPL', progress: 100 },
-                  { label: '100M Accounts', progress: 87 },
-                  { label: '1B Transactions', progress: 92 },
-                ].map((milestone) => (
-                  <div key={milestone.label}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-cyber-text">{milestone.label}</span>
-                      <span className="text-cyber-yellow">{milestone.progress}%</span>
-                    </div>
-                    <div className="cyber-progress h-1.5">
-                      <div 
-                        className="cyber-progress-bar bg-cyber-yellow"
-                        style={{ width: `${milestone.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           </motion.div>

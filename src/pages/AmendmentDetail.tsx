@@ -222,6 +222,14 @@ export default function AmendmentDetail() {
               <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }} title="Validators supporting (reviewing / voting)">
                 <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Validators</p>
                 <p style={{ margin: 0, fontSize: 14, color: '#e2e8f0', fontWeight: 600 }}>{amendment.validatorSupport.current}/{amendment.validatorSupport.required}</p>
+                <a
+                  href="https://xrpscan.com/validators"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ marginTop: 6, display: 'inline-block', fontSize: 10, color: '#00d4ff', textDecoration: 'none' }}
+                >
+                  Look up validator addresses
+                </a>
               </div>
               <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
                 <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Impact</p>

@@ -9,11 +9,13 @@ interface ProfileState {
   xHandle: string;
   username: string; // Legacy - keeping for compatibility
   memberSinceYear: number | null;
+  /** Social / profile links (optional) */
+  githubUrl: string;
+  linkedinUrl: string;
+  websiteUrl: string;
   reputation: number;
   socialScore: number;
   skillPoints: number;
-  level: number;
-  xp: number;
   /** Background style: auto = profile colors when custom pic, else cyber; gradient/mesh/bubbles = use profile colors; cyber = always default */
   backgroundStyle: BackgroundStyle;
   /** 0.2–1: how strong the profile-colored orbs/gradient are */
@@ -23,7 +25,10 @@ interface ProfileState {
   setXHandle: (handle: string) => void;
   setUsername: (name: string) => void;
   setMemberSinceYear: (year: number | null) => void;
-  updateStats: (stats: Partial<Pick<ProfileState, 'reputation' | 'socialScore' | 'skillPoints' | 'level' | 'xp'>>) => void;
+  setGithubUrl: (url: string) => void;
+  setLinkedinUrl: (url: string) => void;
+  setWebsiteUrl: (url: string) => void;
+  updateStats: (stats: Partial<Pick<ProfileState, 'reputation' | 'socialScore' | 'skillPoints'>>) => void;
   setBackgroundStyle: (style: BackgroundStyle) => void;
   setBackgroundIntensity: (intensity: number) => void;
 }
@@ -39,11 +44,12 @@ export const useProfileStore = create<ProfileState>()(
       xHandle: '',
       username: 'XRPL_Explorer', // Legacy
       memberSinceYear: null,
+      githubUrl: '',
+      linkedinUrl: '',
+      websiteUrl: '',
       reputation: 820,
       socialScore: 1250,
       skillPoints: 42,
-      level: 15,
-      xp: 7850,
       backgroundStyle: 'auto',
       backgroundIntensity: 0.5,
 
@@ -52,6 +58,9 @@ export const useProfileStore = create<ProfileState>()(
       setXHandle: (handle) => set({ xHandle: handle.replace(/^@/, '') }), // Remove @ if included
       setUsername: (name) => set({ username: name }),
       setMemberSinceYear: (year) => set({ memberSinceYear: year }),
+      setGithubUrl: (url) => set({ githubUrl: url.trim() }),
+      setLinkedinUrl: (url) => set({ linkedinUrl: url.trim() }),
+      setWebsiteUrl: (url) => set({ websiteUrl: url.trim() }),
       updateStats: (stats) => set((state) => ({ ...state, ...stats })),
       setBackgroundStyle: (style) => set({ backgroundStyle: style }),
       setBackgroundIntensity: (intensity) => set({ backgroundIntensity: Math.max(0.2, Math.min(1, intensity)) }),

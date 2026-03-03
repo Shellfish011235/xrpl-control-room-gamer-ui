@@ -134,7 +134,7 @@ function App() {
           <Navigation />
           <DisclaimerBanner />
 
-          <main className="relative z-10 pt-16 pt-[calc(4rem+env(safe-area-inset-top,0px))]">
+          <main className="relative z-10 pt-[7rem] pt-[calc(7rem+env(safe-area-inset-top,0px))]">
             <PlatformModeBar />
             <GlobalAgentPanel />
             <Suspense fallback={<PageLoader />}>
