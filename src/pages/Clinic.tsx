@@ -13,6 +13,8 @@ import {
 } from 'recharts'
 import { useXRPPrice } from '../services/websocketPriceFeeds'
 import { useXRPPriceHistory, type ChartPeriod } from '../hooks/useXRPPriceHistory'
+import { useXRPPriceVolumeHistory } from '../hooks/useXRPPriceVolumeHistory'
+import VolumePriceScatterChart from '../components/VolumePriceScatterChart'
 import { useXRPETF } from '../hooks/useXRPETF'
 import { useStablecoinComparison } from '../hooks/useStablecoinComparison'
 import { useWalletStore } from '../store/walletStore'
@@ -138,6 +140,7 @@ export function PortfolioContent() {
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('1M')
   const { price: xrpPrice, change24h: xrpChange24h, loading: xrpLoading, source: xrpSource } = useXRPPrice()
   const { data: priceHistoryData, isLoading: priceHistoryLoading, dataUpdatedAt, refetch: refetchPriceHistory } = useXRPPriceHistory(chartPeriod)
+  const { data: priceVolumeData, isLoading: priceVolumeLoading, refetch: refetchPriceVolume } = useXRPPriceVolumeHistory(chartPeriod)
   const { inflows24h, flowHistory: etfFlowHistoryLive, perEtfFlow, loading: etfLoading, source: etfSource, refetch: refetchETF, dataUpdatedAt: etfUpdatedAt } = useXRPETF()
   const { rows: stablecoinRows, loading: stablecoinLoading, dataUpdatedAt: stablecoinUpdatedAt } = useStablecoinComparison()
   const { wallets, activeWalletId, refreshAllWallets } = useWalletStore()
@@ -434,6 +437,20 @@ export function PortfolioContent() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+            </div>
+
+            {/* Volume vs Price scatter – key indicators for outliers */}
+            <div className="cyber-panel p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Activity size={16} className="text-cyber-cyan" />
+                <span className="font-cyber text-sm text-cyber-cyan">VOLUME vs PRICE (BY DAY)</span>
+              </div>
+              <VolumePriceScatterChart
+                data={priceVolumeData ?? []}
+                period={chartPeriod}
+                loading={priceVolumeLoading}
+                onRefresh={() => refetchPriceVolume()}
+              />
             </div>
             
             {/* XRP ETF Flows Chart – live when CoinGlass API key set */}

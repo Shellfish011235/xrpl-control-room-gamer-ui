@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Send, QrCode, ArrowLeftRight, List, Building2, ExternalLink } from 'lucide-react';
 import { useXrplAccount } from '../hooks/useXrplAccount';
 import type { ControlRoomSection } from './ControlRoomSidebar';
-import { getPartnersByCategory, RIPPLE_PARTNER_CATEGORIES, type PartnerCategory } from '../data/ripplePartners';
+import { getPartnersByCategory, RIPPLE_PARTNER_CATEGORIES, type PartnerCategory, type RipplePartner } from '../data/ripplePartners';
 
 interface ControlRoomHomeSectionProps {
   address: string | null;
@@ -115,7 +115,7 @@ export default function ControlRoomHomeSection({
           Companies partnering with Ripple or using Ripple/XRP/XRPL (payments, RLUSD, treasury). Illustrative; see ripple.com for official list.
         </p>
         <div className="max-h-64 overflow-y-auto space-y-4 pr-1">
-          {(Object.entries(getPartnersByCategory()) as [PartnerCategory, typeof RIPPLE_PARTNERS][])
+          {(Object.entries(getPartnersByCategory()) as [PartnerCategory, RipplePartner[]][])
             .filter(([, list]) => list.length > 0)
             .map(([cat, list]) => (
               <div key={cat}>

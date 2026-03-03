@@ -113,8 +113,8 @@ export default function InnovationRadar() {
 
     fetch(ghQuery, { headers: ghHeaders })
       .then(async (r) => {
+        const body = await r.text();
         if (!r.ok) {
-          const body = await r.text();
           if (r.status === 403) {
             const rateLimitMsg =
               body && body.includes("rate limit")
