@@ -8,7 +8,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { fetchAmendmentByName } from '../components/LedgerImpactTool';
 import {
-  Clock, Zap, User, X, ExternalLink, ChevronRight, Cpu, HardDrive, Wifi, DollarSign, MemoryStick, CheckCircle2, Timer,
+  Clock, Zap, User, X, ExternalLink, ChevronRight, Cpu, HardDrive, Wifi, DollarSign, MemoryStick, CheckCircle2, Timer, Github, Users, Info,
 } from 'lucide-react';
 import { useGovernanceStore } from '../store/governanceStore';
 import { CountdownTimer } from '../components/LedgerImpactTool';
@@ -43,6 +43,8 @@ interface AmendmentState {
   author?: string;
   github?: string;
   whoBenefits?: string;
+  whoBenefitsCategories?: string[];
+  whoBenefitsExamples?: string[];
   estimatedReviewMinutes?: number;
 }
 
@@ -160,13 +162,21 @@ export default function AmendmentDetail() {
                 <span style={{ padding: '2px 6px', borderRadius: 4, fontSize: 10, backgroundColor: 'rgba(34,197,94,0.2)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.5)' }}>✓</span>
               )}
             </div>
-            {amendment.author && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <User size={12} style={{ color: '#a855f7' }} />
-                <span style={{ fontSize: 12, color: '#a855f7' }}>{amendment.author}</span>
-                {amendment.github && (
-                  <a href={amendment.github} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: '#c4b5fd' }}>View Spec</a>
-                )}
+            {(amendment.author || amendment.github) && (
+              <div style={{ marginTop: 8 }}>
+                <p style={{ margin: 0, fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Proposal credit</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                  {amendment.author && (
+                    <span style={{ fontSize: 12, color: '#a855f7', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <User size={12} /> {amendment.author}
+                    </span>
+                  )}
+                  {amendment.github && (
+                    <a href={amendment.github} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: '#c4b5fd', padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.5)', display: 'inline-flex', alignItems: 'center', gap: 4 }} title="View proposal on GitHub (source)">
+                      <Github size={10} /> View proposal on GitHub
+                    </a>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -177,8 +187,8 @@ export default function AmendmentDetail() {
             {amendment.status === 'majority' && (
               <div style={{ padding: 12, borderRadius: 8, backgroundColor: 'rgba(88,28,135,0.3)', border: '1px solid rgba(168,85,247,0.4)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-                  <Clock size={12} style={{ color: '#c4b5fd' }} />
-                  <span style={{ fontSize: 11, color: '#c4b5fd', fontWeight: 600 }}>TIME UNTIL ACTIVATION</span>
+                  <Timer size={12} style={{ color: '#c4b5fd' }} />
+                  <span style={{ fontSize: 11, color: '#c4b5fd', fontWeight: 600 }}>2-week activation countdown</span>
                 </div>
                 <CountdownTimer
                   majorityDate={amendment.majorityDate ?? null}
@@ -209,8 +219,8 @@ export default function AmendmentDetail() {
                 <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Waiting</p>
                 <p style={{ margin: 0, fontSize: 14, color: '#e2e8f0', fontWeight: 600 }}>{amendment.waitingDays}d</p>
               </div>
-              <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
-                <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Support</p>
+              <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }} title="Validators supporting (reviewing / voting)">
+                <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>Validators</p>
                 <p style={{ margin: 0, fontSize: 14, color: '#e2e8f0', fontWeight: 600 }}>{amendment.validatorSupport.current}/{amendment.validatorSupport.required}</p>
               </div>
               <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
@@ -239,12 +249,41 @@ export default function AmendmentDetail() {
               </div>
             </div>
 
-            {amendment.whoBenefits && (
-              <div style={{ padding: 10, borderRadius: 4, backgroundColor: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                <p style={{ margin: '0 0 6px', fontSize: 11, color: '#22c55e', fontWeight: 600 }}>Who this helps</p>
-                <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', lineHeight: 1.5 }}>{amendment.whoBenefits}</p>
+            {/* Who this helps — always visible, same styling as modal (Governance Companion reference) */}
+            <div style={{ padding: '12px 14px', borderRadius: 10, backgroundColor: '#1e3a5f', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Users size={18} style={{ color: '#fff' }} />
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Who this helps</span>
+                </div>
+                <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.15)' }}>informational</span>
               </div>
-            )}
+              {amendment.whoBenefitsCategories && amendment.whoBenefitsCategories.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                  {amendment.whoBenefitsCategories.map((cat, i) => (
+                    <span key={i} style={{ padding: '5px 12px', borderRadius: 999, fontSize: 11, background: 'rgba(59, 130, 246, 0.35)', color: '#fff', border: '1px solid rgba(59, 130, 246, 0.4)' }}>{cat}</span>
+                  ))}
+                </div>
+              )}
+              {(amendment.whoBenefits && amendment.whoBenefits.trim()) ? (
+                <p style={{ margin: 0, fontSize: 12, color: '#fff', lineHeight: 1.5 }}>{amendment.whoBenefits}</p>
+              ) : (
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>No beneficiary summary for this amendment yet.</p>
+              )}
+              {amendment.whoBenefitsExamples && amendment.whoBenefitsExamples.length > 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <span style={{ fontSize: 12, color: '#fff', fontWeight: 500 }}>Examples: </span>
+                  {amendment.whoBenefitsExamples.map((ex, i) => (
+                    <span key={i} style={{ display: 'inline-block', margin: '2px 6px 2px 0', padding: '4px 10px', borderRadius: 6, fontSize: 11, background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}>{ex}</span>
+                  ))}
+                </div>
+              )}
+              <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <Info size={12} /> Examples are illustrative, not endorsements.
+                </p>
+              </div>
+            </div>
             {amendment.estimatedReviewMinutes != null && (
               <p style={{ margin: 0, fontSize: 11, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Timer size={12} /> Est. review time: {amendment.estimatedReviewMinutes} min

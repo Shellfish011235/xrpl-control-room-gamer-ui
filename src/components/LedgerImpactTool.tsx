@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Zap, Clock, Users, ExternalLink, ChevronRight,
   Cpu, HardDrive, Wifi, DollarSign, MemoryStick, RefreshCw,
-  X, FileText, AlertTriangle, Loader2, Timer, Github, User, CheckCircle2, KeyRound
+  X, FileText, AlertTriangle, Loader2, Timer, Github, User, CheckCircle2, KeyRound, Info
 } from 'lucide-react';
 import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFeeds';
 import { useIsInAppBrowser } from '../hooks/useIsInAppBrowser';
@@ -244,8 +244,16 @@ interface Amendment {
   enabledOn?: string | null; // Date when amendment was enabled
   author?: string;
   github?: string;
+  /** Alias for companion: proposer name */
+  proposerName?: string;
+  /** Alias for companion: primary GitHub proposal URL */
+  githubProposalUrl?: string;
   /** Who benefits (Governance Companion style) */
   whoBenefits?: string;
+  /** Stakeholder categories */
+  whoBenefitsCategories?: string[];
+  /** Example use cases (illustrative) */
+  whoBenefitsExamples?: string[];
   /** Estimated review time in minutes */
   estimatedReviewMinutes?: number;
 }
@@ -263,51 +271,58 @@ const amendmentMetadata: Record<string, {
   github?: string;
   /** Who benefits (Governance Companion style) — plain-English */
   whoBenefits?: string;
+  /** Stakeholder categories (e.g. Enterprise, Builders) */
+  whoBenefitsCategories?: string[];
+  /** Example use cases (illustrative) */
+  whoBenefitsExamples?: string[];
   /** Estimated review time in minutes */
   estimatedReviewMinutes?: number;
 }> = {
   // ==================== CURRENTLY AT MAJORITY ====================
   // Note: Only linking to official XLS specs or verified XRPL-Standards discussions
-  'fixPriceOracleOrder': { summary: 'Fixes ordering issues in Price Oracle calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for price oracle ordering. Minimal performance impact, improves oracle reliability.', author: 'Ripple Engineering', whoBenefits: 'Applications using native price oracles; DeFi protocols.', estimatedReviewMinutes: 5 },
-  'fixMPTDeliveredAmount': { summary: 'Fixes delivered amount calculation for Multi-Purpose Tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for MPT amount calculations. Ensures accurate delivery amounts.', author: 'Ripple Engineering' },
-  'fixIncludeKeyletFields': { summary: 'Fixes keylet field inclusion in ledger entries', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Internal fix for keylet field handling. No user-facing impact.', author: 'Ripple Engineering' },
-  'fixAMMClawbackRounding': { summary: 'Fixes rounding issues in AMM clawback operations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Corrects edge-case rounding in AMM+Clawback interactions.', author: 'Ripple Engineering' },
-  'fixTokenEscrowV1': { summary: 'Fixes edge cases in token escrow functionality', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for token escrow. Improves escrow reliability for issued tokens.', author: 'Ripple Engineering' },
+  // Who-this-helps synopses aligned with XRPL Governance Companion style (categories, explanation, examples)
+  'fixPriceOracleOrder': { summary: 'Fixes ordering issues in Price Oracle calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for price oracle ordering. Minimal performance impact, improves oracle reliability.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves reliability for applications using native price oracles and DeFi protocols.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Enterprise'], whoBenefitsExamples: ['DeFi protocols', 'Oracle consumers', 'Price-feed applications'], estimatedReviewMinutes: 5 },
+  'fixMPTDeliveredAmount': { summary: 'Fixes delivered amount calculation for Multi-Purpose Tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for MPT amount calculations. Ensures accurate delivery amounts.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Ensures accurate token delivery for MPT issuers and exchanges.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Builders', 'Enterprise'], whoBenefitsExamples: ['Token issuers', 'DEXs', 'Settlement systems'], estimatedReviewMinutes: 5 },
+  'fixIncludeKeyletFields': { summary: 'Fixes keylet field inclusion in ledger entries', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Internal fix for keylet field handling. No user-facing impact.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves ledger consistency and reliability for all node operators and builders.', whoBenefitsCategories: ['Public Infrastructure', 'Builders'], whoBenefitsExamples: ['Node operators', 'Indexing services', 'Wallet providers'], estimatedReviewMinutes: 5 },
+  'fixAMMClawbackRounding': { summary: 'Fixes rounding issues in AMM clawback operations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Corrects edge-case rounding in AMM+Clawback interactions.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Ensures correct accounting when AMM LP tokens use clawback; benefits compliant DeFi.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Enterprise', 'Builders'], whoBenefitsExamples: ['AMM liquidity providers', 'Regulated token issuers', 'Compliance-focused DEXs'], estimatedReviewMinutes: 5 },
+  'fixTokenEscrowV1': { summary: 'Fixes edge cases in token escrow functionality', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for token escrow. Improves escrow reliability for issued tokens.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves reliability of token escrow for issuers and applications using conditional releases.', whoBenefitsCategories: ['Enterprise', 'Builders', 'Exchanges/Liquidity'], whoBenefitsExamples: ['Escrow services', 'Token issuers', 'Conditional payment apps'], estimatedReviewMinutes: 5 },
   
   // ==================== AT MAJORITY ====================
-  'PermissionedDomains': { summary: 'Enables permissioned domains for institutional use cases (XLS-80)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'New ledger object type for domain permissions. Enables compliant institutional deployments.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-80d-permissioned-domains', whoBenefits: 'Institutional validators and enterprises requiring compliant domain controls.', estimatedReviewMinutes: 15 },
+  'PermissionedDomains': { summary: 'Enables permissioned domains for institutional use cases (XLS-80)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'New ledger object type for domain permissions. Enables compliant institutional deployments.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-80d-permissioned-domains', whoBenefits: 'Institutional validators and enterprises requiring compliant domain controls.', whoBenefitsCategories: ['Enterprise', 'Public Infrastructure'], whoBenefitsExamples: ['Institutional validators', 'Regulated enterprises'], estimatedReviewMinutes: 15 },
   
   // ==================== CURRENTLY VOTING ====================
-  'PermissionedDEX': { summary: 'Enables permissioned DEX trading for compliant assets (XLS-81)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory'], rationale: 'Adds permission checks to DEX operations. Moderate overhead for compliant trading.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-81d-permissioned-dexes' },
-  'TokenEscrow': { summary: 'Native escrow support for issued tokens (XLS-85)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Disk IO'], rationale: 'Extends escrow functionality to all tokens. New transaction types and ledger objects.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-85-token-escrow' },
-  'Batch': { summary: 'Enables batching multiple transactions atomically (XLS-56)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Fee pressure'], rationale: 'Allows atomic multi-transaction batches. Increases validation complexity but reduces fees.', author: 'RichardAH', github: 'https://opensource.ripple.com/docs/xls-56-batch-transactions' },
-  'fixXChainRewardRounding': { summary: 'Fixes reward rounding in cross-chain bridge', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for XChain reward calculations. Minor validation overhead.', author: 'Ripple Engineering' },
+  'PermissionedDEX': { summary: 'Enables permissioned DEX trading for compliant assets (XLS-81)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory'], rationale: 'Adds permission checks to DEX operations. Moderate overhead for compliant trading.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-81d-permissioned-dexes', whoBenefits: 'Enables compliant DEX trading and regulated asset markets.', whoBenefitsCategories: ['Enterprise', 'Exchanges/Liquidity', 'Security/Stability'], whoBenefitsExamples: ['Regulated exchanges', 'Security token platforms', 'Compliance-focused DEXs'], estimatedReviewMinutes: 15 },
+  'TokenEscrow': { summary: 'Native escrow support for issued tokens (XLS-85)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Disk IO'], rationale: 'Extends escrow functionality to all tokens. New transaction types and ledger objects.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-85-token-escrow', whoBenefits: 'Enables time-locked and conditional token releases for any issued asset.', whoBenefitsCategories: ['Enterprise', 'Builders', 'Exchanges/Liquidity'], whoBenefitsExamples: ['Escrow services', 'Token issuers', 'Conditional payments', 'Vesting'], estimatedReviewMinutes: 20 },
+  'Batch': { summary: 'Enables batching multiple transactions atomically (XLS-56)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Fee pressure'], rationale: 'Allows atomic multi-transaction batches. Increases validation complexity but reduces fees.', author: 'RichardAH', github: 'https://opensource.ripple.com/docs/xls-56-batch-transactions', whoBenefits: 'Reduces cost and complexity for applications that need to submit multiple operations atomically.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['DEX aggregators', 'Batch payment apps', 'Multi-step DeFi flows'], estimatedReviewMinutes: 25 },
+  'fixXChainRewardRounding': { summary: 'Fixes reward rounding in cross-chain bridge', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for XChain reward calculations. Minor validation overhead.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Ensures accurate bridge rewards for sidechain operators and cross-chain applications.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Public Infrastructure'], whoBenefitsExamples: ['Sidechain operators', 'Bridge providers', 'Cross-chain apps'], estimatedReviewMinutes: 5 },
   
   // ==================== ENABLED (for reference) ====================
-  'AMM': { summary: 'Native automated market maker functionality (XLS-30)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.', author: 'Aanchal Malhotra & David Schwartz', github: 'https://opensource.ripple.com/docs/xls-30d-amm', whoBenefits: 'DEX operators, liquidity providers, and applications using on-chain AMM.', estimatedReviewMinutes: 25 },
-  'Clawback': { summary: 'Enables token issuers to reclaim tokens from holders (XLS-39)', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds flag check during token transfers. Only affects tokens with clawback enabled.', author: 'Shawn Xie', github: 'https://github.com/XRPLF/XRPL-Standards/tree/master/XLS-0039d-clawback' },
-  'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds (XLS-47)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-47d-price-oracles' },
-  'DID': { summary: 'Decentralized Identifier support on XRPL (XLS-40)', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-40d-decentralized-identity' },
-  'XChainBridge': { summary: 'Cross-chain bridge functionality (XLS-38)', tier: 'C', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers. Low adoption so far.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-38d-cross-chain-bridge' },
-  'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.', author: 'Ripple Engineering' },
-  'fixReducedOffersV1': { summary: 'Corrects offer reduction calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Minor calculation fix in DEX operations.', author: 'Ripple Engineering' },
-  'fixReducedOffersV2': { summary: 'Additional offer reduction calculation fixes', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up fix for DEX offer calculations.', author: 'Ripple Engineering' },
-  'fixAMMOverflowOffer': { summary: 'Fixes AMM overflow in offer calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Prevents integer overflow in AMM edge cases.', author: 'Ripple Engineering' },
-  'fixAMMv1_1': { summary: 'AMM improvements and bug fixes (v1.1)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fixes for AMM functionality.', author: 'Ripple Engineering' },
-  'fixAMMv1_2': { summary: 'AMM improvements and bug fixes (v1.2)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Additional bug fixes for AMM.', author: 'Ripple Engineering' },
-  'fixAMMv1_3': { summary: 'AMM improvements and bug fixes (v1.3)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Latest AMM bug fixes.', author: 'Ripple Engineering' },
-  'fixInnerObjTemplate2': { summary: 'Template fix for inner objects', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Internal template consistency fix.', author: 'Ripple Engineering' },
-  'MPTokensV1': { summary: 'Multi-Purpose Token support (XLS-33)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New token type with additional metadata support.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-33d-multi-purpose-tokens' },
-  'Credentials': { summary: 'On-chain credential verification (XLS-70)', tier: 'B', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger entry type for credential storage.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-70d-credentials' },
-  'DeepFreeze': { summary: 'Enhanced freeze functionality for compliance', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds deep freeze capability. Minimal overhead.', author: 'Ripple Engineering' },
-  'DynamicNFT': { summary: 'Mutable NFT metadata support (XLS-46)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'Allows NFT metadata updates. New transaction type.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-46d-dynamic-nfts' },
-  'AMMClawback': { summary: 'Clawback support for AMM LP tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Extends clawback to AMM LP tokens. Minor validation overhead.', author: 'Ripple Engineering' },
-  'NFTokenMintOffer': { summary: 'Combine NFT minting with sell offer (XLS-52)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Convenience feature. Reduces transaction count.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-52d-nftoken-mint-offer' },
-  'fixDirectoryLimit': { summary: 'Fixes directory pagination limits', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Bug fix for directory handling. Improves large account support.', author: 'Ripple Engineering' },
-  'fixEnforceNFTokenTrustline': { summary: 'Enforces NFToken trustline requirements', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Security fix for NFToken trustlines.', author: 'Ripple Engineering' },
-  'fixEnforceNFTokenTrustlineV2': { summary: 'Additional NFToken trustline enforcement', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up security fix.', author: 'Ripple Engineering' },
-  'fixPayChanCancelAfter': { summary: 'Fixes payment channel cancel timing', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for payment channel timing.', author: 'Ripple Engineering' },
-  'fixNFTokenPageLinks': { summary: 'Fixes NFToken page linking issues', tier: 'A', impact: 'Low', areas: ['Disk IO'], rationale: 'Bug fix for NFToken pagination.', author: 'Ripple Engineering' },
+  'AMM': { summary: 'Native automated market maker functionality (XLS-30)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New ledger object type and transaction types. Pathfinding complexity increases.', author: 'Aanchal Malhotra & David Schwartz', github: 'https://opensource.ripple.com/docs/xls-30d-amm', whoBenefits: 'Enables decentralized liquidity provision and more efficient token swaps.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Builders', 'Public Infrastructure'], whoBenefitsExamples: ['DEX aggregators', 'Liquidity providers', 'Token projects'], estimatedReviewMinutes: 25 },
+  'Clawback': { summary: 'Enables token issuers to reclaim tokens from holders (XLS-39)', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds flag check during token transfers. Only affects tokens with clawback enabled.', author: 'Shawn Xie', github: 'https://github.com/XRPLF/XRPL-Standards/tree/master/XLS-0039d-clawback', whoBenefits: 'Enables compliant stablecoin implementations and regulated asset tokenization.', whoBenefitsCategories: ['Enterprise', 'Security/Stability', 'Builders'], whoBenefitsExamples: ['Regulated stablecoins', 'Security tokens', 'Compliance-focused issuers'] },
+  'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds (XLS-47)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-47d-price-oracles', whoBenefits: 'Enables DeFi applications that require reliable on-chain price data.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Enterprise'], whoBenefitsExamples: ['Lending protocols', 'Derivatives', 'Stablecoin mechanisms'], estimatedReviewMinutes: 15 },
+  'DID': { summary: 'Decentralized Identifier support on XRPL (XLS-40)', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-40d-decentralized-identity', whoBenefits: 'Supports identity verification use cases and credential issuance.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Public Infrastructure'], whoBenefitsExamples: ['Identity providers', 'KYC services', 'Credential issuers'], estimatedReviewMinutes: 20 },
+  'XChainBridge': { summary: 'Cross-chain bridge functionality (XLS-38)', tier: 'C', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers. Low adoption so far.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-38d-cross-chain-bridge', whoBenefits: 'Enables new sidechain deployments and cross-chain asset transfers.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Public Infrastructure'], whoBenefitsExamples: ['Sidechain operators', 'Cross-chain applications', 'Enterprise deployments'], estimatedReviewMinutes: 45 },
+  'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment' },
+  'fixNFTokenDirV1': { summary: 'Corrects edge-case errors in NFToken directory pagination logic', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Adds a single validation check during NFToken operations. Benchmarks show negligible impact.', author: 'XRPLF', github: 'https://github.com/XRPLF/rippled/pull/4567', whoBenefits: 'Improves reliability for NFT marketplaces and applications that handle high-volume token operations.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['NFT marketplaces', 'Gaming platforms', 'Collectible services'], estimatedReviewMinutes: 5 },
+  'fixReducedOffersV1': { summary: 'Fixes rounding errors in offer crossing when dealing with very small amounts', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Replaces one rounding function with another. No measurable performance difference.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/pull/4591', whoBenefits: 'Ensures accurate accounting for all transactions, particularly micro-transactions.', whoBenefitsCategories: ['Security/Stability', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['High-frequency trading', 'Micro-payment systems'], estimatedReviewMinutes: 5 },
+  'fixReducedOffersV2': { summary: 'Additional offer reduction calculation fixes', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up fix for DEX offer calculations.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Ensures accurate accounting for DEX offers and micro-transactions (follow-up to fixReducedOffersV1).', whoBenefitsCategories: ['Security/Stability', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['DEXs', 'High-frequency trading', 'Micro-payments'], estimatedReviewMinutes: 5 },
+  'fixAMMOverflowOffer': { summary: 'Fixes AMM overflow in offer calculations', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Prevents integer overflow in AMM edge cases.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Prevents incorrect AMM behavior in edge cases; protects liquidity providers and DEX users.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Builders', 'Public Infrastructure'], whoBenefitsExamples: ['AMM pools', 'DEX aggregators', 'Liquidity providers'], estimatedReviewMinutes: 5 },
+  'fixAMMv1_1': { summary: 'AMM improvements and bug fixes (v1.1)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fixes for AMM functionality.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves AMM reliability and correctness for all liquidity and swap use cases.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Builders', 'Public Infrastructure'], whoBenefitsExamples: ['AMM pools', 'Liquidity providers', 'Token projects'], estimatedReviewMinutes: 5 },
+  'fixAMMv1_2': { summary: 'AMM improvements and bug fixes (v1.2)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Additional bug fixes for AMM.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Further AMM stability and correctness for DEX and liquidity applications.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Builders', 'Public Infrastructure'], whoBenefitsExamples: ['DEX aggregators', 'Liquidity providers', 'Token projects'], estimatedReviewMinutes: 5 },
+  'fixAMMv1_3': { summary: 'AMM improvements and bug fixes (v1.3)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Latest AMM bug fixes.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Latest AMM fixes improve safety and predictability for native liquidity.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Builders', 'Public Infrastructure'], whoBenefitsExamples: ['AMM pools', 'Liquidity providers', 'DEXs'], estimatedReviewMinutes: 5 },
+  'fixInnerObjTemplate2': { summary: 'Template fix for inner objects', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Internal template consistency fix.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves ledger and object consistency for node operators and infrastructure.', whoBenefitsCategories: ['Public Infrastructure', 'Builders'], whoBenefitsExamples: ['Node operators', 'Indexing services'], estimatedReviewMinutes: 5 },
+  'MPTokensV1': { summary: 'Multi-Purpose Token support (XLS-33)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'New token type with additional metadata support.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-33d-multi-purpose-tokens', whoBenefits: 'Enables richer token types and metadata for issuers and applications.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Exchanges/Liquidity'], whoBenefitsExamples: ['Token issuers', 'Asset platforms', 'Settlement systems'], estimatedReviewMinutes: 25 },
+  'Credentials': { summary: 'On-chain credential verification (XLS-70)', tier: 'B', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger entry type for credential storage.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-70d-credentials', whoBenefits: 'Supports verifiable credentials and identity use cases on the ledger.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Public Infrastructure'], whoBenefitsExamples: ['Identity providers', 'KYC services', 'Credential issuers'], estimatedReviewMinutes: 20 },
+  'DeepFreeze': { summary: 'Enhanced freeze functionality for compliance', tier: 'B', impact: 'Low', areas: ['CPU'], rationale: 'Adds deep freeze capability. Minimal overhead.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Enables stronger compliance controls for token issuers and regulated assets.', whoBenefitsCategories: ['Enterprise', 'Security/Stability', 'Builders'], whoBenefitsExamples: ['Regulated issuers', 'Compliance teams', 'Security tokens'], estimatedReviewMinutes: 10 },
+  'DynamicNFT': { summary: 'Mutable NFT metadata support (XLS-46)', tier: 'B', impact: 'Low', areas: ['Disk IO', 'CPU'], rationale: 'Allows NFT metadata updates. New transaction type.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-46d-dynamic-nfts', whoBenefits: 'Enables updatable NFT metadata for gaming, collectibles, and dynamic content.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['Gaming platforms', 'NFT marketplaces', 'Collectible services'], estimatedReviewMinutes: 15 },
+  'AMMClawback': { summary: 'Clawback support for AMM LP tokens', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Extends clawback to AMM LP tokens. Minor validation overhead.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Allows compliant AMM LP token issuance with optional clawback.', whoBenefitsCategories: ['Exchanges/Liquidity', 'Enterprise', 'Builders'], whoBenefitsExamples: ['Regulated AMMs', 'Compliance-focused DEXs', 'LP token issuers'], estimatedReviewMinutes: 5 },
+  'NFTokenMintOffer': { summary: 'Combine NFT minting with sell offer (XLS-52)', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Convenience feature. Reduces transaction count.', author: 'Denis Angell', github: 'https://opensource.ripple.com/docs/xls-52d-nftoken-mint-offer', whoBenefits: 'Simplifies NFT mint-and-sell flows; lower cost and fewer steps for creators and marketplaces.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['NFT marketplaces', 'Creators', 'Gaming platforms'], estimatedReviewMinutes: 5 },
+  'fixDirectoryLimit': { summary: 'Fixes directory pagination limits', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Bug fix for directory handling. Improves large account support.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves reliability for accounts with many ledger entries and directory users.', whoBenefitsCategories: ['Builders', 'Public Infrastructure'], whoBenefitsExamples: ['Wallet providers', 'Indexing services', 'Large account holders'], estimatedReviewMinutes: 5 },
+  'fixEnforceNFTokenTrustline': { summary: 'Enforces NFToken trustline requirements', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Security fix for NFToken trustlines.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Strengthens NFToken security and correct trustline behavior.', whoBenefitsCategories: ['Security/Stability', 'Builders', 'Exchanges/Liquidity'], whoBenefitsExamples: ['NFT marketplaces', 'Wallet providers', 'Gaming platforms'], estimatedReviewMinutes: 5 },
+  'fixEnforceNFTokenTrustlineV2': { summary: 'Additional NFToken trustline enforcement', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up security fix.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Further NFToken trustline security for marketplaces and applications.', whoBenefitsCategories: ['Security/Stability', 'Builders', 'Exchanges/Liquidity'], whoBenefitsExamples: ['NFT marketplaces', 'Wallet providers', 'Collectible services'], estimatedReviewMinutes: 5 },
+  'fixPayChanCancelAfter': { summary: 'Fixes payment channel cancel timing', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for payment channel timing.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Correct payment channel lifecycle for streaming and high-throughput payment apps.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['Payment channels', 'Streaming payments', 'Micropayment apps'], estimatedReviewMinutes: 5 },
+  'fixNFTokenPageLinks': { summary: 'Fixes NFToken page linking issues', tier: 'A', impact: 'Low', areas: ['Disk IO'], rationale: 'Bug fix for NFToken pagination.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves NFToken directory and pagination reliability for marketplaces and wallets.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['NFT marketplaces', 'Wallet providers', 'Indexing services'], estimatedReviewMinutes: 5 },
+  'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves NFToken burn-and-remint reliability for creators and marketplaces.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['NFT marketplaces', 'Gaming platforms', 'Collectible services'], estimatedReviewMinutes: 5 },
 };
 
 // Helper to convert XRPScan amendment to our Amendment type
@@ -362,7 +377,11 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     enabledOn: xrpAmendment.enabled_on || null,
     author: metadata.author,
     github: metadata.github,
+    proposerName: metadata.author,
+    githubProposalUrl: metadata.github,
     whoBenefits: metadata.whoBenefits,
+    whoBenefitsCategories: metadata.whoBenefitsCategories,
+    whoBenefitsExamples: metadata.whoBenefitsExamples,
     estimatedReviewMinutes: metadata.estimatedReviewMinutes,
   };
 }
@@ -430,6 +449,8 @@ function getStaticAmendmentByName(name: string): Amendment | null {
     author: meta.author,
     github: meta.github,
     whoBenefits: meta.whoBenefits,
+    whoBenefitsCategories: meta.whoBenefitsCategories,
+    whoBenefitsExamples: meta.whoBenefitsExamples,
     estimatedReviewMinutes: meta.estimatedReviewMinutes,
   };
 }
@@ -477,6 +498,8 @@ function getStaticAmendments(): Amendment[] {
       author: meta.author,
       github: meta.github,
       whoBenefits: meta.whoBenefits,
+      whoBenefitsCategories: meta.whoBenefitsCategories,
+      whoBenefitsExamples: meta.whoBenefitsExamples,
       estimatedReviewMinutes: meta.estimatedReviewMinutes,
     };
   });
@@ -488,7 +511,7 @@ export function LedgerImpactTool() {
   const [amendments, setAmendments] = useState<Amendment[]>(() => getStaticAmendments());
   const [selectedAmendment, setSelectedAmendment] = useState<Amendment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<FilterMode>('pending');
+  const [filter, setFilter] = useState<FilterMode>('needs_review');
   const [dataSource, setDataSource] = useState<'live' | 'fallback'>('fallback');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const isInAppBrowser = useIsInAppBrowser();
@@ -549,8 +572,21 @@ export function LedgerImpactTool() {
     await fetchAmendments();
   };
 
-  // Count amendments at majority (>80% support, not yet enabled)
+  // Count amendments in two-week activation period (at majority, not yet enabled)
   const atMajority = amendments.filter(a => !a.enabled && a.status === 'majority').length;
+  const showPendingTab = atMajority > 0;
+
+  // If user had PENDING selected but no amendments are in countdown, switch to needs_review
+  useEffect(() => {
+    if (filter === 'pending' && !showPendingTab) {
+      setFilter('needs_review');
+    }
+  }, [filter, showPendingTab]);
+
+  // Tab order: show PENDING only when there are amendments in the two-week activation period
+  const filterTabs: FilterMode[] = showPendingTab
+    ? ['pending', 'needs_review', 'enabled', 'all']
+    : ['needs_review', 'enabled', 'all'];
 
   // Calculate impact summary
   const impactSummary = {
@@ -666,16 +702,19 @@ export function LedgerImpactTool() {
         </div>
       )}
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-1 mb-3">
-        {(['pending', 'needs_review', 'enabled', 'all'] as FilterMode[]).map(f => (
+      {/* Filter Tabs — PENDING only when amendments are in two-week activation; default is NEEDS REVIEW */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-3">
+        {filterTabs.map(f => (
           <button
             key={f}
+            type="button"
             onClick={() => setFilter(f)}
-            className={`px-2 py-1 text-[10px] font-cyber rounded transition-all ${
-              filter === f 
-                ? 'bg-cyber-glow/20 text-cyber-glow border border-cyber-glow/30'
-                : 'text-cyber-muted hover:text-cyber-text'
+            aria-pressed={filter === f}
+            aria-label={`Filter: ${f === 'needs_review' ? 'Needs review' : f}`}
+            className={`px-3 py-1.5 text-[10px] font-semibold rounded-md transition-all ${
+              filter === f
+                ? 'bg-cyber-glow/30 text-cyber-glow border-2 border-cyber-glow/50 shadow-[0_0_12px_rgba(0,212,255,0.25)]'
+                : 'bg-cyber-darker/50 text-cyber-muted border border-cyber-border/50 hover:text-cyber-text hover:border-cyber-border'
             }`}
           >
             {f === 'needs_review' ? 'NEEDS REVIEW' : f.toUpperCase()}
@@ -740,9 +779,9 @@ export function LedgerImpactTool() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-[10px]">
+                  <div className="flex items-center gap-2 text-[10px]" title="Validators supporting (reviewing / voting)">
                     <span className={(amendment.percentSupport || 0) >= 80 ? 'text-cyber-green' : (amendment.percentSupport || 0) >= 50 ? 'text-cyber-yellow' : 'text-cyber-muted'}>
-                      {amendment.validatorSupport.current}/{amendment.validatorSupport.required}
+                      {amendment.validatorSupport.current}/{amendment.validatorSupport.required} validators
                     </span>
                     <Users size={10} className="text-cyber-muted" />
                   </div>
@@ -792,8 +831,8 @@ export function LedgerImpactTool() {
 
       {/* Last Update */}
       {lastUpdate && (
-        <div className="mt-2 text-[9px] text-cyber-muted text-right">
-          Updated: {lastUpdate.toLocaleTimeString()}
+        <div className="mt-2 text-[9px] text-cyber-muted text-right" title="Live amendment data last fetched">
+          Stats updated {lastUpdate.toLocaleString()}
         </div>
       )}
 
@@ -857,11 +896,13 @@ export function LedgerImpactTool() {
             right: 0,
             bottom: 0,
             zIndex: 2147483647,
-            backgroundColor: '#000000',
+            backgroundColor: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 8,
+            padding: 12,
             WebkitOverflowScrolling: 'touch',
             transform: 'translateZ(0)',
             WebkitBackfaceVisibility: 'hidden' as const,
@@ -875,22 +916,23 @@ export function LedgerImpactTool() {
           <div
             style={{
               width: '100%',
-              maxWidth: 512,
-              maxHeight: '90vh',
-              minHeight: 280,
+              maxWidth: 720,
+              maxHeight: '92vh',
+              minHeight: 360,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
               position: 'relative',
               backgroundColor: '#0f172a',
               border: '2px solid #334155',
-              borderRadius: 8,
+              borderRadius: 12,
               color: '#e2e8f0',
               transform: 'translateZ(0)',
               WebkitBackfaceVisibility: 'hidden' as const,
               backfaceVisibility: 'hidden',
               isolation: 'isolate',
               filter: 'none',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -920,21 +962,28 @@ export function LedgerImpactTool() {
                       </span>
                     )}
                   </div>
-                  {selectedAmendment.author && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                      <User size={12} style={{ color: '#a855f7' }} />
-                      <span style={{ fontSize: 12, color: '#a855f7' }}>{selectedAmendment.author}</span>
-                      {selectedAmendment.github && (
-                        <a
-                          href={selectedAmendment.github}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ fontSize: 10, color: '#c4b5fd', padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.5)' }}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          View Spec
-                        </a>
-                      )}
+                  {(selectedAmendment.author || selectedAmendment.github) && (
+                    <div style={{ marginTop: 6 }}>
+                      <p style={{ margin: 0, fontSize: 9, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Proposal credit</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                        {selectedAmendment.author && (
+                          <span style={{ fontSize: 12, color: '#a855f7', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <User size={12} /> {selectedAmendment.author}
+                          </span>
+                        )}
+                        {selectedAmendment.github && (
+                          <a
+                            href={selectedAmendment.github}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: 10, color: '#c4b5fd', padding: '2px 8px', borderRadius: 4, backgroundColor: 'rgba(168,85,247,0.2)', border: '1px solid rgba(168,85,247,0.5)', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            onClick={(e) => e.stopPropagation()}
+                            title="View proposal on GitHub (source)"
+                          >
+                            <Github size={10} /> View proposal on GitHub
+                          </a>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -952,10 +1001,10 @@ export function LedgerImpactTool() {
               <div
                 style={{
                   flex: '1 1 0',
-                  minHeight: 180,
+                  minHeight: 320,
                   overflowY: 'auto',
                   overflowX: 'hidden',
-                  padding: '8px 12px',
+                  padding: '12px 16px',
                   WebkitOverflowScrolling: 'touch',
                   display: 'flex',
                   flexDirection: 'column',
@@ -969,11 +1018,48 @@ export function LedgerImpactTool() {
                   {selectedAmendment.summary}
                 </p>
 
-                {selectedAmendment.status === 'majority' && (
-                  <div style={{ padding: 8, borderRadius: 8, backgroundColor: 'rgba(88,28,135,0.3)', border: '1px solid rgba(168,85,247,0.4)' }}>
+                {/* Who this helps — always visible, matching Governance Companion (dark blue panel, categories, examples, disclaimer) */}
+                <div style={{ padding: '12px 14px', borderRadius: 10, backgroundColor: '#1e3a5f', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Users size={18} style={{ color: '#fff' }} />
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>Who this helps</span>
+                    </div>
+                    <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, background: 'rgba(255,255,255,0.08)', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.15)' }}>informational</span>
+                  </div>
+                  {selectedAmendment.whoBenefitsCategories && selectedAmendment.whoBenefitsCategories.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                      {selectedAmendment.whoBenefitsCategories.map((cat, i) => (
+                        <span key={i} style={{ padding: '5px 12px', borderRadius: 999, fontSize: 11, background: 'rgba(59, 130, 246, 0.35)', color: '#fff', border: '1px solid rgba(59, 130, 246, 0.4)' }}>{cat}</span>
+                      ))}
+                    </div>
+                  )}
+                  {(selectedAmendment.whoBenefits && selectedAmendment.whoBenefits.trim()) ? (
+                    <p style={{ margin: 0, fontSize: 12, color: '#fff', lineHeight: 1.5 }}>{selectedAmendment.whoBenefits}</p>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>No beneficiary summary for this amendment yet.</p>
+                  )}
+                  {selectedAmendment.whoBenefitsExamples && selectedAmendment.whoBenefitsExamples.length > 0 && (
+                    <div style={{ marginTop: 10 }}>
+                      <span style={{ fontSize: 12, color: '#fff', fontWeight: 500 }}>Examples: </span>
+                      {selectedAmendment.whoBenefitsExamples.map((ex, i) => (
+                        <span key={i} style={{ display: 'inline-block', margin: '2px 6px 2px 0', padding: '4px 10px', borderRadius: 6, fontSize: 11, background: 'rgba(255,255,255,0.1)', color: '#fff', border: '1px solid rgba(255,255,255,0.15)' }}>{ex}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.2)' }}>
+                    <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.6)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <Info size={12} /> Examples are illustrative, not endorsements.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Countdown: show when amendment has reached majority (2-week wait) or we have countdown data */}
+                {(selectedAmendment.status === 'majority' || selectedAmendment.activationDate || (selectedAmendment.daysUntilEnabled != null && !selectedAmendment.enabled)) && (
+                  <div style={{ padding: 10, borderRadius: 8, backgroundColor: 'rgba(88,28,135,0.35)', border: '1px solid rgba(168,85,247,0.5)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
-                      <Clock size={12} style={{ color: '#c4b5fd' }} />
-                      <span style={{ fontSize: 11, color: '#c4b5fd', fontWeight: 600 }}>TIME UNTIL ACTIVATION</span>
+                      <Timer size={14} style={{ color: '#c4b5fd' }} />
+                      <span style={{ fontSize: 12, color: '#c4b5fd', fontWeight: 600 }}>2-week activation countdown</span>
                     </div>
                     <CountdownTimer
                       majorityDate={selectedAmendment.majorityDate}
@@ -984,7 +1070,7 @@ export function LedgerImpactTool() {
                       activationDate={selectedAmendment.activationDate}
                     />
                     {selectedAmendment.activationDate && (
-                      <p style={{ margin: '8px 0 0', fontSize: 10, color: 'rgba(196,181,253,0.8)', textAlign: 'center' }}>
+                      <p style={{ margin: '8px 0 0', fontSize: 11, color: 'rgba(196,181,253,0.9)', textAlign: 'center' }}>
                         Activates: {new Date(selectedAmendment.activationDate).toLocaleDateString()}
                       </p>
                     )}
@@ -1006,8 +1092,8 @@ export function LedgerImpactTool() {
                     <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Waiting</p>
                     <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>{selectedAmendment.waitingDays}d</p>
                   </div>
-                  <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
-                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Support</p>
+                  <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }} title="Validators supporting (reviewing / voting)">
+                    <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Validators</p>
                     <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>
                       {selectedAmendment.validatorSupport.current}/{selectedAmendment.validatorSupport.required}
                     </p>
@@ -1043,12 +1129,6 @@ export function LedgerImpactTool() {
                   </div>
                 </div>
 
-                {selectedAmendment.whoBenefits && (
-                  <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)' }}>
-                    <p style={{ margin: '0 0 4px', fontSize: 10, color: '#22c55e', fontWeight: 600 }}>Who this helps</p>
-                    <p style={{ margin: 0, fontSize: 11, color: '#e2e8f0', lineHeight: 1.4 }}>{selectedAmendment.whoBenefits}</p>
-                  </div>
-                )}
                 {selectedAmendment.estimatedReviewMinutes != null && (
                   <p style={{ margin: 0, fontSize: 10, color: '#94a3b8', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Timer size={12} /> Est. review time: {selectedAmendment.estimatedReviewMinutes} min
