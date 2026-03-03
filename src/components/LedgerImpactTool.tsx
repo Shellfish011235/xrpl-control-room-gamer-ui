@@ -302,7 +302,6 @@ const amendmentMetadata: Record<string, {
   'PriceOracle': { summary: 'Native price oracle infrastructure for on-chain feeds (XLS-47)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Network', 'Fee pressure'], rationale: 'New transaction type and ledger objects. Moderate impact on validation bandwidth.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-47d-price-oracles', whoBenefits: 'Enables DeFi applications that require reliable on-chain price data.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Enterprise'], whoBenefitsExamples: ['Lending protocols', 'Derivatives', 'Stablecoin mechanisms'], estimatedReviewMinutes: 15 },
   'DID': { summary: 'Decentralized Identifier support on XRPL (XLS-40)', tier: 'C', impact: 'Low', areas: ['Disk IO'], rationale: 'New ledger object type for DID documents. Minimal processing overhead.', author: 'Mayukha Vadari', github: 'https://opensource.ripple.com/docs/xls-40d-decentralized-identity', whoBenefits: 'Supports identity verification use cases and credential issuance.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Public Infrastructure'], whoBenefitsExamples: ['Identity providers', 'KYC services', 'Credential issuers'], estimatedReviewMinutes: 20 },
   'XChainBridge': { summary: 'Cross-chain bridge functionality (XLS-38)', tier: 'C', impact: 'Medium', areas: ['CPU', 'Network'], rationale: 'Enables atomic cross-chain transactions with witness servers. Low adoption so far.', author: 'Ripple Engineering', github: 'https://opensource.ripple.com/docs/xls-38d-cross-chain-bridge', whoBenefits: 'Enables new sidechain deployments and cross-chain asset transfers.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Public Infrastructure'], whoBenefitsExamples: ['Sidechain operators', 'Cross-chain applications', 'Enterprise deployments'], estimatedReviewMinutes: 45 },
-  'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment' },
   'fixNFTokenDirV1': { summary: 'Corrects edge-case errors in NFToken directory pagination logic', tier: 'A', impact: 'Low', areas: ['CPU', 'Disk IO'], rationale: 'Adds a single validation check during NFToken operations. Benchmarks show negligible impact.', author: 'XRPLF', github: 'https://github.com/XRPLF/rippled/pull/4567', whoBenefits: 'Improves reliability for NFT marketplaces and applications that handle high-volume token operations.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['NFT marketplaces', 'Gaming platforms', 'Collectible services'], estimatedReviewMinutes: 5 },
   'fixReducedOffersV1': { summary: 'Fixes rounding errors in offer crossing when dealing with very small amounts', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Replaces one rounding function with another. No measurable performance difference.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/pull/4591', whoBenefits: 'Ensures accurate accounting for all transactions, particularly micro-transactions.', whoBenefitsCategories: ['Security/Stability', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['High-frequency trading', 'Micro-payment systems'], estimatedReviewMinutes: 5 },
   'fixReducedOffersV2': { summary: 'Additional offer reduction calculation fixes', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Follow-up fix for DEX offer calculations.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Ensures accurate accounting for DEX offers and micro-transactions (follow-up to fixReducedOffersV1).', whoBenefitsCategories: ['Security/Stability', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['DEXs', 'High-frequency trading', 'Micro-payments'], estimatedReviewMinutes: 5 },
@@ -841,6 +840,16 @@ export function LedgerImpactTool() {
         <p className="text-[9px] text-cyber-muted flex items-center gap-1">
           <KeyRound size={10} /> Validator context (optional)
         </p>
+        <a
+          href="https://xrpscan.com/validators"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-glow/30 text-[10px] text-cyber-text"
+        >
+          <Users size={10} className="text-cyber-glow" />
+          Look up validator addresses on XRPScan
+          <ExternalLink size={10} />
+        </a>
         <input
           type="text"
           value={validatorPublicKey ?? ''}
@@ -1097,6 +1106,15 @@ export function LedgerImpactTool() {
                     <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>
                       {selectedAmendment.validatorSupport.current}/{selectedAmendment.validatorSupport.required}
                     </p>
+                    <a
+                      href="https://xrpscan.com/validators"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ marginTop: 4, display: 'inline-block', fontSize: 9, color: '#00d4ff', textDecoration: 'none' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Look up validators
+                    </a>
                   </div>
                   <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
                     <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Impact</p>
