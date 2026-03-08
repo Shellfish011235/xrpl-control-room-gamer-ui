@@ -63,7 +63,7 @@ export function mergeRouteProvenance(
 ): { source_ids: string[]; data_class: DataClass; confidence: number } {
   return {
     source_ids: [...new Set(sourceIds)],
-    data_class: data_class,
+    data_class: dataClass,
     confidence: Math.min(100, confidence),
   };
 }

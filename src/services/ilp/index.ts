@@ -5,8 +5,7 @@
 export * from './types';
 export * from './topology';
 
-// Mapping: canonical model, graph payload, confidence, normalization, mock
-export * from './mapping';
+// Mapping lives at ./mapping — import from 'services/ilp/mapping' to avoid name clash with types (Connector, Corridor, Ledger, Route)
 
 // CAR Pathfinding & Validation
 export * from './carPathfinding';
