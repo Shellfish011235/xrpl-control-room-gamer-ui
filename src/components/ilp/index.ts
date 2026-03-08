@@ -15,3 +15,6 @@ export { AmendmentDiffView } from './AmendmentDiffView';
 
 // CAR (Cryptographic Audit Record)
 export { CARDecisionPanel } from './CARDecisionPanel';
+
+// ILP Intelligence (Stage 1 + Stage 2: metadata, routing metrics, confidence badges)
+export { ILPIntelligencePanel } from './ILPIntelligencePanel';

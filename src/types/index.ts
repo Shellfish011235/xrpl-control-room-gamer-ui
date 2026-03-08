@@ -1,5 +1,63 @@
 // XRPL Control Room Type Definitions
 
+// Shared telemetry truth model (Validator, Connector, Payment Corridor maps)
+export type {
+  ObservationClass,
+  ConfidenceScore,
+  FreshnessState,
+  HealthState,
+  GeoConfidence,
+  DataProvenance,
+  TimeWindow,
+  ObservationSource,
+  AnomalySeverity,
+  AnomalyEvent,
+  BaseNode,
+  BaseEdge,
+  EdgeDirection,
+  RelationshipType,
+} from './telemetry-truth-model';
+export type {
+  MapKind,
+  ValidatorNode,
+  ValidatorEdge,
+  ValidatorAnomalyType,
+  ConnectorNode,
+  ConnectorEdge,
+  ConnectorAnomalyType,
+  PaymentCorridorNode,
+  PaymentCorridorEdge,
+  PaymentCorridorAnomalyType,
+  TelemetryNode,
+  TelemetryEdge,
+  UnifiedMapPayload,
+  ValidatorMapPayload,
+  ConnectorMapPayload,
+  PaymentCorridorMapPayload,
+  ProtocolHubNode,
+} from './telemetry-maps';
+export type {
+  InteropLayer,
+  NodeType,
+  EdgeType,
+  InteropNode,
+  InteropEdge,
+  InteropGraphPayload,
+} from './interop-graph';
+export type { ConfidenceLabel, TooltipSection } from './telemetry-visual-rules';
+export {
+  VISUAL_RULES,
+  getConfidenceLabel,
+  getObservationClassLabel,
+  shouldShowWarningBadge,
+  opacityFromConfidence,
+  lineStyleFromObservationClass,
+  glowFromHealth,
+  buildTooltipSections,
+  OVERCLAIM_RULES,
+  paymentCorridorEdgeLabel,
+} from './telemetry-visual-rules';
+
 // Agent Economy intent & batching types
 export type {
   IntentType,

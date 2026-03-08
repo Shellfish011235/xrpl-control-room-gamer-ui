@@ -15,6 +15,8 @@ import ControlRoomHomeSection from '../components/ControlRoomHomeSection';
 import WalletActionsPanel from '../components/WalletActionsPanel';
 import { AgentHub } from '../components/AgentHub';
 import { Wallet, User, DollarSign, BarChart3, ArrowDownUp, ArrowRightLeft, Sparkles, BookOpen } from 'lucide-react';
+import { ILPIntelligencePanel } from '../components/ilp/ILPIntelligencePanel';
+import { HiddenAnalyticsPanel } from '../components/analytics/HiddenAnalyticsPanel';
 
 const TOP_BAR_H = 56;
 const APP_NAV_H = 64;
@@ -162,6 +164,16 @@ export default function ControlRoomPage() {
               {section === 'agents' && (
                 <motion.div key="agents" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-4xl">
                   <AgentHub />
+                </motion.div>
+              )}
+              {section === 'ilp' && (
+                <motion.div key="ilp" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-2xl">
+                  <ILPIntelligencePanel />
+                </motion.div>
+              )}
+              {section === 'analytics' && (
+                <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-2xl">
+                  <HiddenAnalyticsPanel />
                 </motion.div>
               )}
               {section === 'settings' && (

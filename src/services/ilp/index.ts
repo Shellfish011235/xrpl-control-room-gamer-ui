@@ -5,6 +5,9 @@
 export * from './types';
 export * from './topology';
 
+// Mapping: canonical model, graph payload, confidence, normalization, mock
+export * from './mapping';
+
 // CAR Pathfinding & Validation
 export * from './carPathfinding';
 

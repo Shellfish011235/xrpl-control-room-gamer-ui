@@ -10,6 +10,13 @@ import {
 import { fetchXRPLAmendments, type XRPLAmendment } from '../services/freeDataFeeds';
 import { useIsInAppBrowser } from '../hooks/useIsInAppBrowser';
 import { useGovernanceStore } from '../store/governanceStore';
+import {
+  amendmentImpactData,
+  WHY_LEDGER_IMPACT_AFFECTS_RESOURCES,
+  WHAT_EACH_RESOURCE_REPRESENTS,
+  RESOURCE_HOVER_FOR_NON_TECHNICAL,
+  BLOCKED_OR_OBSOLETE_AMENDMENTS,
+} from '../data/amendmentImpactData';
 
 // ==================== RESPONSIVE LAYOUT HOOK ====================
 // Detects window size for responsive component behavior
@@ -393,6 +400,14 @@ const areaIcons: Record<AffectedArea, React.ReactNode> = {
   'Fee pressure': <DollarSign size={12} />
 };
 
+const RESOURCE_LABELS: Record<string, string> = {
+  cpu: 'CPU',
+  memory: 'Memory (RAM)',
+  diskIO: 'Disk I/O',
+  network: 'Network',
+  feePressure: 'Fee pressure ($)',
+};
+
 const impactColors: Record<PerformanceImpact, string> = {
   'Low': 'cyber-green',
   'Medium': 'cyber-yellow',
@@ -513,6 +528,8 @@ export function LedgerImpactTool() {
   const [filter, setFilter] = useState<FilterMode>('needs_review');
   const [dataSource, setDataSource] = useState<'live' | 'fallback'>('fallback');
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [showWhyLedgerImpact, setShowWhyLedgerImpact] = useState(false);
+  const [showWhatResourceMeans, setShowWhatResourceMeans] = useState(false);
   const isInAppBrowser = useIsInAppBrowser();
   const { reviewedAmendmentIds, isReviewed, markReviewed, unmarkReviewed, validatorPublicKey, setValidatorPublicKey } = useGovernanceStore();
   
@@ -1145,6 +1162,96 @@ export function LedgerImpactTool() {
                   <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155' }}>
                     <p style={{ margin: 0, fontSize: 10, color: '#e2e8f0', lineHeight: 1.4 }}>{selectedAmendment.ledgerImpact.rationale}</p>
                   </div>
+
+                  {/* Blocked/unsupported warning */}
+                  {(BLOCKED_OR_OBSOLETE_AMENDMENTS.includes(selectedAmendment.name) || amendmentImpactData[selectedAmendment.name]?.statusNote === 'blocked') && (amendmentImpactData[selectedAmendment.name]?.statusNoteText || BLOCKED_OR_OBSOLETE_AMENDMENTS.includes(selectedAmendment.name)) && (
+                    <div style={{ marginTop: 8, padding: 8, borderRadius: 4, backgroundColor: 'rgba(185,28,28,0.2)', border: '1px solid #b91c1c' }}>
+                      <p style={{ margin: 0, fontSize: 10, color: '#fecaca' }}>
+                        <strong>Blocked / unsupported:</strong>{' '}
+                        {amendmentImpactData[selectedAmendment.name]?.statusNoteText ?? 'This amendment is currently blocked. See links below for details.'}
+                      </p>
+                      {(amendmentImpactData[selectedAmendment.name]?.statusNoteLinks ?? amendmentImpactData['Batch']?.statusNoteLinks)?.length > 0 && (
+                        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {(amendmentImpactData[selectedAmendment.name]?.statusNoteLinks ?? amendmentImpactData['Batch']?.statusNoteLinks)?.map((link, i) => (
+                            <a
+                              key={i}
+                              href={link.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ fontSize: 10, color: '#93c5fd', textDecoration: 'underline' }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {link.label}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Why we connect ledger impact to CPU, memory, fee pressure, etc. */}
+                  <div style={{ marginTop: 10 }}>
+                    <button type="button" onClick={() => setShowWhyLedgerImpact((s) => !s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 0', fontSize: 10, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      {showWhyLedgerImpact ? '▼' : '▶'} {WHY_LEDGER_IMPACT_AFFECTS_RESOURCES.title}
+                    </button>
+                    {showWhyLedgerImpact && (
+                      <div style={{ marginTop: 4, padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155' }}>
+                        {WHY_LEDGER_IMPACT_AFFECTS_RESOURCES.paragraphs.map((p, i) => (
+                          <p key={i} style={{ margin: i === 0 ? 0 : '6px 0 0', fontSize: 10, color: '#cbd5e1', lineHeight: 1.45 }}>{p}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* What we mean by each resource */}
+                  <div style={{ marginTop: 8 }}>
+                    <button type="button" onClick={() => setShowWhatResourceMeans((s) => !s)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 0', fontSize: 10, color: '#94a3b8', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      {showWhatResourceMeans ? '▼' : '▶'} {WHAT_EACH_RESOURCE_REPRESENTS.title}
+                    </button>
+                    {showWhatResourceMeans && (
+                      <div style={{ marginTop: 4, padding: 8, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155' }}>
+                        <p style={{ margin: 0, fontSize: 10, color: '#94a3b8' }}>{WHAT_EACH_RESOURCE_REPRESENTS.intro}</p>
+                        {(['cpu', 'memory', 'diskIO', 'network', 'feePressure'] as const).map((rk) => {
+                          const r = WHAT_EACH_RESOURCE_REPRESENTS.resources[rk];
+                          if (!r) return null;
+                          return (
+                            <div key={rk} style={{ marginTop: 8 }}>
+                              <p style={{ margin: 0, fontSize: 10, color: '#93c5fd', fontWeight: 600 }}>{r.label}</p>
+                              <p style={{ margin: '2px 0 0', fontSize: 10, color: '#cbd5e1', lineHeight: 1.4 }}><strong>What it is:</strong> {r.whatItIs}</p>
+                              <p style={{ margin: '2px 0 0', fontSize: 10, color: '#cbd5e1', lineHeight: 1.4 }}><strong>Why it matters:</strong> {r.whyItMatters}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* How this amendment affects each resource (with hover tooltips) */}
+                  {(() => {
+                    const impactEntry = amendmentImpactData[selectedAmendment.name];
+                    const ri = impactEntry?.resourceImpact;
+                    if (!ri) return null;
+                    const keys = (['cpu', 'memory', 'diskIO', 'network', 'feePressure'] as const).filter((k) => ri[k] && String(ri[k]).trim().length > 0);
+                    if (keys.length === 0) return null;
+                    return (
+                      <div style={{ marginTop: 10 }}>
+                        <p style={{ margin: '0 0 6px', fontSize: 10, color: '#94a3b8' }}>How this amendment affects each resource (hover over a label for plain-language explanation):</p>
+                        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                          {keys.map((key) => (
+                            <li key={key} style={{ padding: '6px 0', borderBottom: '1px solid #334155', fontSize: 10 }}>
+                              <span
+                                title={RESOURCE_HOVER_FOR_NON_TECHNICAL[key] ?? ''}
+                                style={{ fontWeight: 600, color: '#93c5fd', cursor: 'help', textDecoration: 'underline', textDecorationStyle: 'dotted' }}
+                              >
+                                {RESOURCE_LABELS[key] ?? key}:
+                              </span>{' '}
+                              <span style={{ color: '#e2e8f0' }}>{ri[key]}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {selectedAmendment.estimatedReviewMinutes != null && (

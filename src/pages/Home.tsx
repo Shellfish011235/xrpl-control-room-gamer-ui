@@ -795,28 +795,6 @@ export default function Home() {
                         <Zap size={16} className="text-cyber-glow" />
                       </div>
                     </div>
-                    
-                    {/* Amendment Impact Forecast */}
-                    <div className="bg-cyber-darker/50 rounded-lg p-4 border border-cyber-glow/30">
-                      <p className="text-xs text-cyber-muted mb-3 tracking-wider">Proposed Amendment Forecast</p>
-                      <div className="flex items-center gap-6 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <TrendingUp size={20} className="text-cyber-green" />
-                          <span className="font-cyber text-lg text-cyber-green">+8.4%</span>
-                          <span className="text-xs text-cyber-muted">efficiency</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Database size={20} className="text-cyber-glow" />
-                          <span className="font-cyber text-lg text-cyber-glow">+115k</span>
-                          <span className="text-xs text-cyber-muted">TPS capacity</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Activity size={20} className="text-cyber-cyan" />
-                          <span className="font-cyber text-lg text-cyber-cyan">-12%</span>
-                          <span className="text-xs text-cyber-muted">latency</span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                   
                   {/* Expanded Impact Tool */}

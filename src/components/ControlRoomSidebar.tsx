@@ -3,7 +3,7 @@
  * Collapsible on mobile; one section visible at a time.
  */
 
-import { Home, Wallet, ArrowLeftRight, List, Bot, Settings } from 'lucide-react';
+import { Home, Wallet, ArrowLeftRight, List, Bot, Settings, Zap, Brain } from 'lucide-react';
 
 export type ControlRoomSection =
   | 'home'
@@ -11,6 +11,8 @@ export type ControlRoomSection =
   | 'trade'
   | 'offers'
   | 'agents'
+  | 'ilp'
+  | 'analytics'
   | 'settings';
 
 const NAV: { id: ControlRoomSection; label: string; icon: React.ReactNode }[] = [
@@ -19,6 +21,8 @@ const NAV: { id: ControlRoomSection; label: string; icon: React.ReactNode }[] = 
   { id: 'trade', label: 'Trade', icon: <ArrowLeftRight className="w-5 h-5" /> },
   { id: 'offers', label: 'Offers', icon: <List className="w-5 h-5" /> },
   { id: 'agents', label: 'Agents', icon: <Bot className="w-5 h-5" /> },
+  { id: 'ilp', label: 'ILP / Open Payments', icon: <Zap className="w-5 h-5" /> },
+  { id: 'analytics', label: 'Hidden Analytics', icon: <Brain className="w-5 h-5" /> },
   { id: 'settings', label: 'Settings', icon: <Settings className="w-5 h-5" /> },
 ];
 

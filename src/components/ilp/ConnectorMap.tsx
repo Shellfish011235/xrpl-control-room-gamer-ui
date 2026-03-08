@@ -1,10 +1,12 @@
 // ILP Connector Map Visualization - Full Featured Version
 // Supports all UI Lenses: Domain, Trust, Fog, Flow
-// Shows active routes when calculated
+// When "Style by certainty" is on, edges use telemetry: solid = observed, dashed = inferred, dotted = synthetic/probe
 
 import React, { useMemo, useState, useEffect } from 'react';
 import { useILPStore } from '../../store/ilpStore';
 import type { Ledger, Corridor, UILens } from '../../services/ilp/types';
+import { useILPMapTelemetry } from '../../hooks/useILPMapTelemetry';
+import { getObservationClassLabel, getConfidenceLabel } from '../../types/telemetry-visual-rules';
 
 interface ConnectorMapProps {
   onLedgerClick?: (ledger: Ledger) => void;
@@ -122,12 +124,24 @@ function getCorridorStyle(
   }
 }
 
+/** Map lineStyle (certainty) to SVG strokeDasharray */
+function certaintyToDashArray(lineStyle: 'solid' | 'dashed' | 'dotted'): string {
+  switch (lineStyle) {
+    case 'solid': return 'none';
+    case 'dashed': return '8,4';
+    case 'dotted': return '2,3';
+    default: return '2,3';
+  }
+}
+
 export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapProps) {
   const { 
     ledgers, connectors, corridors, activeLens, activeRoute, 
     showLabels, showRiskFog, showFlowParticles,
     selectedLedger, selectLedger
   } = useILPStore();
+  const { getCorridorTelemetry, getLedgerTelemetry } = useILPMapTelemetry();
+  const [styleByCertainty, setStyleByCertainty] = useState(true);
   
   const [hoveredLedger, setHoveredLedger] = useState<string | null>(null);
   const [hoveredCorridor, setHoveredCorridor] = useState<string | null>(null);
@@ -221,11 +235,22 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
             {ledgers.length} ledgers · {connectors.length} connectors · {corridors.length} corridors · {activeLens} lens
           </p>
         </div>
-        {activeRoute && (
-          <div className="px-3 py-1 rounded bg-cyber-green/20 border border-cyber-green/50 text-cyber-green text-xs">
-            Route Active: {activeRoute.hops.length} hops
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-[11px] text-cyber-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={styleByCertainty}
+              onChange={(e) => setStyleByCertainty(e.target.checked)}
+              className="rounded border-cyber-border"
+            />
+            Style by certainty
+          </label>
+          {activeRoute && (
+            <div className="px-3 py-1 rounded bg-cyber-green/20 border border-cyber-green/50 text-cyber-green text-xs">
+              Route Active: {activeRoute.hops.length} hops
+            </div>
+          )}
+        </div>
       </div>
 
       {/* SVG Map - viewBox with padding so all nodes (incl. FED, BANKS) and legends have clear space */}
@@ -322,6 +347,16 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
             }
             
             const style = getCorridorStyle(corridor, activeLens, connectors, ledgers);
+            const edgeTelemetry = getCorridorTelemetry(corridor.id, corridor.from_ledger, corridor.to_ledger);
+            const effectiveDashArray = styleByCertainty && edgeTelemetry
+              ? certaintyToDashArray(edgeTelemetry.lineStyle)
+              : style.dashArray;
+            const effectiveOpacity = styleByCertainty && edgeTelemetry
+              ? Math.max(0.4, edgeTelemetry.opacity)
+              : style.opacity;
+            const certaintyTitle = edgeTelemetry
+              ? `${getObservationClassLabel(edgeTelemetry.observation_class)} · ${getConfidenceLabel(edgeTelemetry.confidence, edgeTelemetry.observation_class)} (${edgeTelemetry.confidence}%)`
+              : 'Certainty unknown';
             const isOnRoute = routeCorridorIds.has(corridor.id);
             const isHovered = hoveredCorridor === corridor.id || 
               (hoveredLedger && (corridor.from_ledger === hoveredLedger || corridor.to_ledger === hoveredLedger));
@@ -354,6 +389,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
 
             return (
               <g key={corridor.id}>
+                <title>{certaintyTitle}</title>
                 {/* Main corridor line with gradient for Domain lens */}
                 {activeLens === 'domain' ? (
                   <line
@@ -363,8 +399,8 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                     y2={y2}
                     stroke={`url(#grad-${corridor.id})`}
                     strokeWidth={Math.max(2, isOnRoute ? style.width + 2 : isHovered || isSelected ? style.width + 1 : style.width)}
-                    strokeOpacity={Math.max(0.6, isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : style.opacity)}
-                    strokeDasharray={style.dashArray}
+                    strokeOpacity={Math.max(0.6, isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : effectiveOpacity)}
+                    strokeDasharray={isOnRoute ? '8,4' : effectiveDashArray}
                     filter={isOnRoute ? 'url(#glow-green)' : undefined}
                     style={{ cursor: 'pointer' }}
                     onClick={() => onCorridorClick?.(corridor)}
@@ -380,8 +416,8 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                     y2={y2}
                     stroke={isOnRoute ? '#00FF88' : style.color}
                     strokeWidth={Math.max(2, isOnRoute ? style.width + 2 : isHovered || isSelected ? style.width + 1 : style.width)}
-                    strokeOpacity={Math.max(0.6, isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : style.opacity)}
-                    strokeDasharray={isOnRoute ? '8,4' : style.dashArray}
+                    strokeOpacity={Math.max(0.6, isOnRoute ? 0.9 : isHovered || isSelected ? 0.9 : effectiveOpacity)}
+                    strokeDasharray={isOnRoute ? '8,4' : effectiveDashArray}
                     strokeDashoffset={isOnRoute ? -flowOffset : 0}
                     filter={isOnRoute ? 'url(#glow-green)' : undefined}
                     style={{ cursor: 'pointer' }}
@@ -476,6 +512,10 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
             const pos = positions[ledger.id];
             if (!pos) return null;
             const color = getLedgerColor(ledger, activeLens, connectors);
+            const ledgerTelemetry = getLedgerTelemetry(ledger.id);
+            const nodeOpacity = styleByCertainty && ledgerTelemetry
+              ? Math.max(0.5, ledgerTelemetry.opacity)
+              : (activeLens === 'fog' && ledger.risk_flags.length > 2 ? 0.5 : 0.9);
             const isXRPL = ledger.id === 'xrpl';
             const isHovered = hoveredLedger === ledger.id;
             const isSelected = selectedLedger === ledger.id;
@@ -484,6 +524,9 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
               activeRoute.to_ledger === ledger.id || 
               activeRoute.hops.some(h => h.from_ledger === ledger.id || h.to_ledger === ledger.id)
             );
+            const ledgerCertaintyTitle = ledgerTelemetry
+              ? `${getObservationClassLabel(ledgerTelemetry.observation_class)} · ${getConfidenceLabel(ledgerTelemetry.confidence, ledgerTelemetry.observation_class)} (${ledgerTelemetry.confidence}%)`
+              : null;
             
             const baseRadius = isXRPL ? 25 : 15;
             
@@ -496,6 +539,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                 onMouseEnter={() => setHoveredLedger(ledger.id)}
                 onMouseLeave={() => setHoveredLedger(null)}
               >
+                {ledgerCertaintyTitle && <title>{ledgerCertaintyTitle}</title>}
                 {/* Selection/hover ring */}
                 {(isSelected || isHovered || isOnRoute) && (
                   <>
@@ -523,7 +567,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
                 <circle 
                   r={baseRadius}
                   fill={color}
-                  opacity={activeLens === 'fog' && ledger.risk_flags.length > 2 ? 0.5 : 0.9}
+                  opacity={nodeOpacity}
                   stroke={isOnRoute ? '#00FF88' : isSelected ? '#FFFFFF' : 'none'}
                   strokeWidth={isOnRoute || isSelected ? 3 : 0}
                   filter={isXRPL ? 'url(#glow-cyan)' : undefined}
@@ -603,7 +647,7 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           )}
         </g>
         
-        {/* Direction Legend - bottom-right so it doesn't cover the graph */}
+        {/* Direction Legend - bottom-right */}
         <g transform="translate(620, 432)">
           <rect x="0" y="-10" width="170" height="45" fill="#0a0a1a" opacity="0.9" rx="4" />
           <text x="5" y="5" fill="#888" fontSize="9" fontFamily="monospace">DIRECTION</text>
@@ -614,6 +658,21 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           <text x="97" y="25" fill="#888" fontSize="7">→</text>
           <text x="110" y="25" fill="#888" fontSize="8">One-way</text>
         </g>
+
+        {/* Certainty legend - when style by certainty is on */}
+        {styleByCertainty && (
+          <g transform="translate(10, 380)">
+            <rect x="0" y="-10" width="200" height="42" fill="#0a0a1a" opacity="0.9" rx="4" />
+            <text x="5" y="5" fill="#888" fontSize="9" fontFamily="monospace">CERTAINTY</text>
+            <line x1="8" y1="14" x2="28" y2="14" stroke="#00FF88" strokeWidth="2" />
+            <text x="32" y="17" fill="#888" fontSize="8">Observed</text>
+            <line x1="95" y1="14" x2="115" y2="14" stroke="#FFD700" strokeWidth="2" strokeDasharray="4,3" />
+            <text x="119" y="17" fill="#888" fontSize="8">Inferred</text>
+            <line x1="168" y1="14" x2="182" y2="14" stroke="#888" strokeWidth="2" strokeDasharray="2,2" />
+            <text x="186" y="17" fill="#888" fontSize="8">Probe</text>
+            <text x="5" y="32" fill="#666" fontSize="7">Hover edge for confidence</text>
+          </g>
+        )}
       </svg>
 
       {/* Selected Ledger Details Panel */}
