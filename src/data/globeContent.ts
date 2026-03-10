@@ -4,6 +4,7 @@ import ilpBrief from '../content-packs/v1/ilp/brief.json';
 import corridorsBrief from '../content-packs/v1/corridors/brief.json';
 import communityBrief from '../content-packs/v1/community/brief.json';
 import regulationBrief from '../content-packs/v1/regulation/brief.json';
+import globalPaymentInfrastructureBrief from '../content-packs/v1/globalPaymentInfrastructure/brief.json';
 import projectsBrief from '../content-packs/v1/projects/brief.json';
 import hubsData from '../content-packs/v1/hubs/data.json';
 import sourcesData from '../content-packs/v1/meta/sources.json';
@@ -16,6 +17,7 @@ import ilpGuidedSteps from '../content-packs/v1/ilp/guided-steps.json';
 import corridorsGuidedSteps from '../content-packs/v1/corridors/guided-steps.json';
 import communityGuidedSteps from '../content-packs/v1/community/guided-steps.json';
 import regulationGuidedSteps from '../content-packs/v1/regulation/guided-steps.json';
+import globalPaymentInfrastructureGuidedSteps from '../content-packs/v1/globalPaymentInfrastructure/guided-steps.json';
 import projectsGuidedSteps from '../content-packs/v1/projects/guided-steps.json';
 
 import type { 
@@ -38,6 +40,7 @@ const briefsByLens: Record<GlobeLens, LensBrief> = {
   corridors: corridorsBrief as LensBrief,
   community: communityBrief as LensBrief,  // Combined Community/Projects
   regulation: regulationBrief as LensBrief,
+  globalPaymentInfrastructure: globalPaymentInfrastructureBrief as LensBrief,
 };
 
 // Guided steps by lens
@@ -47,6 +50,7 @@ const guidedStepsByLens: Record<GlobeLens, GuidedStepsData> = {
   corridors: corridorsGuidedSteps as GuidedStepsData,
   community: communityGuidedSteps as GuidedStepsData,  // Combined Community/Projects
   regulation: regulationGuidedSteps as GuidedStepsData,
+  globalPaymentInfrastructure: globalPaymentInfrastructureGuidedSteps as GuidedStepsData,
 };
 
 // Lens metadata - CYBERPUNK THEMED
@@ -85,6 +89,12 @@ export const lensMetadata: Record<GlobeLens, {
     description: 'Regulatory status and policy developments by jurisdiction',
     icon: 'scale',
     color: '#ff4444' // cyber-red
+  },
+  globalPaymentInfrastructure: {
+    label: 'Global Payment Infrastructure',
+    description: 'Routing hubs, settlement rails, and connected assets worldwide',
+    icon: 'route',
+    color: '#14b8a6' // teal
   },
 };
 

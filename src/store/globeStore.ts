@@ -50,7 +50,7 @@ interface GlobeStore extends GlobeState {
 }
 
 // Valid lens values (keep in sync with GlobeLens type)
-const validLenses: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation'];
+const validLenses: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation', 'globalPaymentInfrastructure'];
 
 const initialState: GlobeState = {
   activeLens: 'validators',

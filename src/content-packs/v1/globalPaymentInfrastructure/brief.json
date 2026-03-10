@@ -1,0 +1,10 @@
+{
+  "lens": "globalPaymentInfrastructure",
+  "asOf": "2026-03-10",
+  "globalSummary": "Global payment infrastructure: routing hubs, settlement rails, and connected assets. Data includes observed, inferred, and mock sources; certainty is labeled per node and edge.",
+  "items": [
+    {"id": "gpi-mojaloop","title": "Mojaloop interoperability","summary": "Open-source payment switch layer; does not require XRP.","tag": "Interop","date": "2026-03-10","sourceIds": ["lf-mojaloop"],"related": {"countryIso2": null,"hubId": null,"corridorId": null}},
+    {"id": "gpi-nexus","title": "Project Nexus (BIS)","summary": "Central bank IPS linking concept; no implied XRPL integration.","tag": "Infrastructure","date": "2026-03-10","sourceIds": ["bis-nexus"],"related": {"countryIso2": null,"hubId": null,"corridorId": null}},
+    {"id": "gpi-xrpl","title": "XRPL settlement rail","summary": "Public ledger for settlement and payments.","tag": "Settlement","date": "2026-03-10","sourceIds": ["xrpl-org"],"related": {"countryIso2": null,"hubId": null,"corridorId": null}}
+  ]
+}

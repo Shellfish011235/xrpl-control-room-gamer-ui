@@ -5,7 +5,8 @@ export type GlobeLens =
   | 'ilp'
   | 'corridors'
   | 'community'  // Combined Community/Projects lens
-  | 'regulation';
+  | 'regulation'
+  | 'globalPaymentInfrastructure';
 
 export interface GlobeHub {
   id: string;

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useMemo, useState, useEffect, lazy, Suspense } from 'react'
 import { 
   Globe, Server, Users, Link2,
-  Route, Scale, Building, Eye, X, RefreshCw, Wifi, WifiOff,
+  Route, Scale, Building, Building2, Eye, X, RefreshCw, Wifi, WifiOff,
   ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock, HelpCircle,
   Activity,
 } from 'lucide-react'
@@ -81,7 +81,13 @@ import {
   type XRPLProject,
 } from '../data/xrplExpandedData'
 import { ConnectorMap } from '../components/ilp'
-import { UnifiedNetworkTopology } from '../components/network'
+import {
+  UnifiedNetworkTopology,
+  GlobalPaymentInfrastructureMap,
+  PaymentInfrastructureSidebar,
+  PaymentInfrastructureLegend,
+} from '../components/network'
+import type { PaymentInfraNodeLayout } from '../types/payment-infrastructure'
 import { useILPStore } from '../store/ilpStore'
 import InnovationRadar from '../components/InnovationRadar'
 import LedgerHeartbeat from '../modules/visualization/LedgerHeartbeat'
@@ -99,9 +105,10 @@ const lensIcons: Record<GlobeLens, React.ReactNode> = {
   corridors: <Route size={14} />,
   community: <Users size={14} />,  // Combined Community/Projects
   regulation: <Scale size={14} />,
+  globalPaymentInfrastructure: <Building2 size={14} />,
 }
 
-const lensOrder: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation']
+const lensOrder: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation', 'globalPaymentInfrastructure']
 
 /** Map panel: proportional height so validators, ILP, corridors, community, and regulation maps match layout */
 
@@ -229,6 +236,12 @@ export default function Network() {
   const [communityFilter, setCommunityFilter] = useState<keyof typeof xrplCategories | 'all'>('all')
   const [selectedProject, setSelectedProject] = useState<XRPLProject | null>(null)
   const allProjects = useMemo(() => getAllProjects(), [])
+
+  // Global Payment Infrastructure map selection (only when lens is globalPaymentInfrastructure)
+  const [selectedPaymentNode, setSelectedPaymentNode] = useState<PaymentInfraNodeLayout | null>(null)
+  useEffect(() => {
+    if (activeLens !== 'globalPaymentInfrastructure') setSelectedPaymentNode(null)
+  }, [activeLens])
   
   // Filter community/projects items
   const filteredCommunityItems = useMemo(() => {
@@ -715,6 +728,13 @@ export default function Network() {
                 </div>
               )}
               
+              {/* Global Payment Infrastructure legend (show on Global Payment Infrastructure lens) */}
+              {activeLens === 'globalPaymentInfrastructure' && (
+                <div className="pt-4 border-t border-cyber-border/60">
+                  <PaymentInfrastructureLegend />
+                </div>
+              )}
+
               {/* Regulatory Legend & Filters (show on regulation lens) */}
               {activeLens === 'regulation' && (
                 <div className="mb-3 pt-3 border-t border-cyber-border">
@@ -813,14 +833,23 @@ export default function Network() {
           >
             <div className="map-inner">
               <div className="map-panel flex flex-col overflow-hidden min-h-[400px] w-full">
-                <WorldGlobe
-                  className="h-full w-full"
-                  livePulses={showLiveData ? livePulses : []}
-                  liveStreamConnected={showLiveData ? liveStreamConnected : false}
-                />
+                {activeLens === 'globalPaymentInfrastructure' ? (
+                  <GlobalPaymentInfrastructureMap
+                    onSelectNode={setSelectedPaymentNode}
+                    selectedNodeId={selectedPaymentNode?.id ?? null}
+                  />
+                ) : (
+                  <WorldGlobe
+                    className="h-full w-full"
+                    livePulses={showLiveData ? livePulses : []}
+                    liveStreamConnected={showLiveData ? liveStreamConnected : false}
+                  />
+                )}
               </div>
               <p className="text-xs text-cyber-muted text-center flex-shrink-0 py-2">
-                Click a country or hub for details · Drag when map is unlocked
+                {activeLens === 'globalPaymentInfrastructure'
+                  ? 'Click a node for details · Observed / inferred / mock labeled'
+                  : 'Click a country or hub for details · Drag when map is unlocked'}
               </p>
             </div>
           </motion.section>
@@ -833,8 +862,15 @@ export default function Network() {
             transition={{ delay: 0.4 }}
           >
             <div className="network-panel-card p-4 space-y-4">
-            {/* Selection Panel */}
-            {selectionContext && (
+            {/* Global Payment Infrastructure node detail */}
+            {activeLens === 'globalPaymentInfrastructure' && selectedPaymentNode && (
+              <PaymentInfrastructureSidebar
+                node={selectedPaymentNode}
+                onClose={() => setSelectedPaymentNode(null)}
+              />
+            )}
+            {/* Selection Panel (hub / corridor / country — other lenses) */}
+            {activeLens !== 'globalPaymentInfrastructure' && selectionContext && (
               <div className="cyber-panel p-5 border border-cyber-glow/25 rounded-2xl">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-cyber text-sm text-cyber-glow">SELECTED</span>

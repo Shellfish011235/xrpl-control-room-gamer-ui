@@ -1,0 +1,14 @@
+{
+  "lens": "globalPaymentInfrastructure",
+  "asOf": "2026-03-10",
+  "steps": [
+    {
+      "id": "gpi-step-observed-vs-inferred",
+      "title": "Distinguish observed vs inferred",
+      "prompt": "How does the map show observed vs inferred relationships?",
+      "exampleRefs": [{ "type": "brief-item", "id": "gpi-mojaloop" }],
+      "proofClaimIds": [],
+      "difficulty": "basic"
+    }
+  ]
+}

@@ -659,9 +659,9 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
           <text x="110" y="25" fill="#888" fontSize="8">One-way</text>
         </g>
 
-        {/* Certainty legend - when style by certainty is on */}
+        {/* Certainty legend - when style by certainty is on (top-left to avoid covering topology) */}
         {styleByCertainty && (
-          <g transform="translate(10, 380)">
+          <g transform="translate(10, 10)">
             <rect x="0" y="-10" width="200" height="42" fill="#0a0a1a" opacity="0.9" rx="4" />
             <text x="5" y="5" fill="#888" fontSize="9" fontFamily="monospace">CERTAINTY</text>
             <line x1="8" y1="14" x2="28" y2="14" stroke="#00FF88" strokeWidth="2" />
