@@ -741,14 +741,12 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
             </div>
           )}
           
-          {/* Special explanation for EVM Sidechain */}
+          {/* Special explanation for EVM Sidechain - accurate re: consensus, fraud proofs, trusted third parties */}
           {selectedLedger === 'xrpl_evm' && (
             <div className="mt-3 p-3 rounded bg-cyber-cyan/10 border border-cyber-cyan/30">
               <p className="text-xs text-cyber-cyan font-cyber mb-2">XRPL EVM SIDECHAIN:</p>
               <p className="text-[11px] text-cyber-text leading-relaxed">
-                The XRPL EVM Sidechain is an <strong>EVM-compatible blockchain</strong> that uses XRP as its native 
-                currency. It has a <strong>native bridge</strong> to XRPL mainnet - you can lock XRP on mainnet and mint it on the sidechain.
-                This enables XRPL to connect to the Ethereum/EVM ecosystem and run Solidity smart contracts.
+                The XRPL EVM Sidechain is an <strong>EVM-compatible blockchain</strong> with XRP as native currency and a bridge that locks XRP on mainnet and mints on the sidechain. It does <strong>not</strong> use XRP consensus to settle on the sidechain and does not yet validate fraud proofs (pending amendments e.g. ZKPs). You are reliant on <strong>trusted third parties</strong> that bridged assets are represented accurately on the sidechain. Alternatives such as Flare improve on this with slashing for custodians; blockchain-to-blockchain direct signing is the gold standard for cross-chain interop.
               </p>
             </div>
           )}
