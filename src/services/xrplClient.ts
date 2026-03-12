@@ -1,11 +1,13 @@
 /**
- * Singleton XRPL WebSocket client.
+ * Singleton XRPL WebSocket client (xrpl.js Client).
  * Supports network toggle (testnet/mainnet); used by MVP wallet (read-only) and WalletActionsPanel (signing).
+ * When VITE_XRPL_WS_URL is set, mainnet uses that URL; otherwise uses public endpoints.
  */
 
 import { Client } from 'xrpl';
+import { getWsUrl, isCustomNode } from '../config/xrplNode';
 
-const WS: Record<string, string> = {
+const WS_PUBLIC: Record<string, string> = {
   testnet: 'wss://s.altnet.rippletest.net:51233',
   mainnet: 'wss://xrplcluster.com',
 };
@@ -23,11 +25,16 @@ export function setNetwork(next: string): void {
   currentNetwork = next === 'mainnet' ? 'mainnet' : 'testnet';
 }
 
+function getClientUrl(): string {
+  if (currentNetwork === 'mainnet' && isCustomNode()) return getWsUrl();
+  return WS_PUBLIC[currentNetwork] ?? WS_PUBLIC.testnet;
+}
+
 export async function getXRPLClient(useTestnet?: boolean): Promise<Client> {
   if (useTestnet !== undefined) {
     currentNetwork = useTestnet ? 'testnet' : 'mainnet';
   }
-  const url = WS[currentNetwork] ?? WS.testnet;
+  const url = getClientUrl();
 
   if (clientInstance?.isConnected() && connectedUrl === url) return clientInstance;
   if (clientInstance) {

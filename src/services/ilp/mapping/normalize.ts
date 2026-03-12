@@ -61,11 +61,12 @@ export function mergeRouteProvenance(
   dataClass: DataClass,
   confidence: number
 ): { source_ids: string[]; data_class: DataClass; confidence: number } {
-  return {
+  const merged: { source_ids: string[]; data_class: DataClass; confidence: number } = {
     source_ids: [...new Set(sourceIds)],
     data_class: dataClass,
     confidence: Math.min(100, confidence),
   };
+  return merged;
 }
 
 /** Clock skew: cap observed_at to server_now ± maxSkewSeconds. */

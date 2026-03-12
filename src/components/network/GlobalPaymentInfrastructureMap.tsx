@@ -53,17 +53,17 @@ export function GlobalPaymentInfrastructureMap({
     <div className="rounded-xl border border-cyber-border/50 bg-cyber-darker/30 overflow-visible">
       <svg
         width="100%"
-        height="500"
+        height="480"
         viewBox={`0 0 ${viewBox.w} ${viewBox.h}`}
         preserveAspectRatio="xMidYMid meet"
         className="bg-cyber-darker/50 rounded overflow-visible"
       >
         <defs>
           <pattern id="gpi-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(0,212,255,0.08)" strokeWidth="0.5" />
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e3a5f" strokeWidth="0.5" />
           </pattern>
         </defs>
-        <rect width={viewBox.w} height={viewBox.h} fill="url(#gpi-grid)" opacity={0.5} />
+        <rect width={viewBox.w} height={viewBox.h} fill="url(#gpi-grid)" opacity="0.3" />
 
         {/* Edges */}
         <g aria-hidden>

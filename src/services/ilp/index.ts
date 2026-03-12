@@ -1,9 +1,17 @@
 // ILP Multi-Ledger Connector Map Engine
 // Main Service Index
 
-// Core Types & Topology
+// Core Types (single source for Connector, Corridor, Ledger, Route)
 export * from './types';
-export * from './topology';
+
+// Topology: explicit exports to avoid re-export ambiguity with ./types
+export {
+  TopologyService,
+  getTopology,
+  resetTopology,
+  INITIAL_LEDGERS,
+  INITIAL_CONNECTORS,
+} from './topology';
 
 // Mapping lives at ./mapping — import from 'services/ilp/mapping' to avoid name clash with types (Connector, Corridor, Ledger, Route)
 

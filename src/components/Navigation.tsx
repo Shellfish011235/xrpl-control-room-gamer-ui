@@ -1,11 +1,13 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Wallet, Bot, BookOpen, Wrench, DollarSign, LayoutDashboard } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { useAgentPanelStore } from '../store/agentPanelStore'
 import { useXRPPrice } from '../services/websocketPriceFeeds'
 import GlobalSearch from './GlobalSearch'
+import NodeStatusWidget from './NodeStatusWidget'
+import { connect, getLastLedgerIndex, onStateChange } from '../lib/xrplWebsocket'
 
 function priceSourceLabel(source: string): string {
   if (source === 'binance-ws') return 'Binance (WebSocket)'
@@ -15,120 +17,32 @@ function priceSourceLabel(source: string): string {
   return source
 }
 
-// Live Ledger Index Hook - fetches from XRPL
+// Live Ledger Index from shared XRPL WebSocket (configurable node via VITE_XRPL_WS_URL)
 function useLedgerIndex() {
-  const [ledgerIndex, setLedgerIndex] = useState<number | null>(null)
+  const [ledgerIndex, setLedgerIndex] = useState<number | null>(() => getLastLedgerIndex())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const refresh = useCallback(() => {
+    const idx = getLastLedgerIndex()
+    setLedgerIndex(idx)
+    if (idx != null) setLoading(false)
+  }, [])
 
   useEffect(() => {
-    const XRPL_WS_ENDPOINTS = [
-      'wss://xrplcluster.com',
-      'wss://s1.ripple.com',
-      'wss://s2.ripple.com',
-    ]
-    
-    let currentEndpointIndex = 0
-    let isConnected = false
-
-    const connect = () => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) return
-
-      const endpoint = XRPL_WS_ENDPOINTS[currentEndpointIndex]
-      console.log(`[Ledger] Connecting to ${endpoint}...`)
-      
-      try {
-        wsRef.current = new WebSocket(endpoint)
-
-        wsRef.current.onopen = () => {
-          console.log('[Ledger] WebSocket connected')
-          isConnected = true
-          setError(null)
-          
-          // Subscribe to ledger stream
-          wsRef.current?.send(JSON.stringify({
-            command: 'subscribe',
-            streams: ['ledger']
-          }))
-          
-          // Also request current ledger immediately
-          wsRef.current?.send(JSON.stringify({
-            command: 'ledger',
-            ledger_index: 'validated'
-          }))
-        }
-
-        wsRef.current.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data)
-            
-            // Handle ledger subscription updates
-            if (data.type === 'ledgerClosed' && data.ledger_index) {
-              setLedgerIndex(data.ledger_index)
-              setLoading(false)
-            }
-            
-            // Handle initial ledger response
-            if (data.result?.ledger_index) {
-              setLedgerIndex(data.result.ledger_index)
-              setLoading(false)
-            }
-            
-            // Handle ledger response with ledger object
-            if (data.result?.ledger?.ledger_index) {
-              setLedgerIndex(data.result.ledger.ledger_index)
-              setLoading(false)
-            }
-          } catch (err) {
-            console.error('[Ledger] Error parsing message:', err)
-          }
-        }
-
-        wsRef.current.onerror = (err) => {
-          console.error('[Ledger] WebSocket error:', err)
-          setError('Connection error')
-        }
-
-        wsRef.current.onclose = () => {
-          console.log('[Ledger] WebSocket closed')
-          isConnected = false
-          
-          // Try next endpoint and reconnect
-          currentEndpointIndex = (currentEndpointIndex + 1) % XRPL_WS_ENDPOINTS.length
-          
-          // Reconnect after 3 seconds
-          reconnectTimeoutRef.current = setTimeout(() => {
-            if (!isConnected) {
-              connect()
-            }
-          }, 3000)
-        }
-      } catch (err) {
-        console.error('[Ledger] Failed to create WebSocket:', err)
-        setError('Failed to connect')
-        setLoading(false)
-        
-        // Try reconnecting
-        reconnectTimeoutRef.current = setTimeout(() => {
-          currentEndpointIndex = (currentEndpointIndex + 1) % XRPL_WS_ENDPOINTS.length
-          connect()
-        }, 3000)
-      }
-    }
-
     connect()
+    const unsub = onStateChange(refresh)
+    return () => unsub()
+  }, [refresh])
 
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current)
-      }
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
-    }
-  }, [])
+  useEffect(() => {
+    const id = setInterval(refresh, 1500)
+    return () => clearInterval(id)
+  }, [refresh])
+
+  useEffect(() => {
+    if (ledgerIndex != null) setLoading(false)
+  }, [ledgerIndex])
 
   return { ledgerIndex, loading, error }
 }
@@ -263,6 +177,9 @@ export default function Navigation() {
               <div className="w-2 h-2 rounded-full bg-cyber-green animate-pulse" />
               <span className="text-xs font-cyber text-cyber-green">LIVE</span>
             </span>
+
+            {/* Node Status widget (connection, server_state, ledger, peers) */}
+            <NodeStatusWidget />
 
             {/* Ledger - Live Feed */}
             <div className="text-right">

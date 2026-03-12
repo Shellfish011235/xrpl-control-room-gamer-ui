@@ -2,6 +2,8 @@
 // Uses native XRPL pathfinding via free public servers
 // No external packages required - uses native WebSocket!
 
+import { getWsUrl, getPublicWsFallbacks, isCustomNode } from '../config/xrplNode';
+
 // ==================== TYPES ====================
 
 export interface PathfindingResult {
@@ -61,14 +63,14 @@ export interface PopularPair {
 
 // ==================== CONSTANTS ====================
 
-// ==================== XRPL PUBLIC SERVERS ====================
-// WebSocket endpoints - using public servers with full API access
-// Note: ripple_path_find requires admin access, so we use book_offers instead
-const WEBSOCKET_SERVERS = [
-  'wss://xrplcluster.com',        // XRPL Foundation cluster
-  'wss://s1.ripple.com',          // Ripple server
-  'wss://s2.ripple.com',          // Ripple server (backup)
-];
+// ==================== XRPL WEBSOCKET ====================
+// Uses VITE_XRPL_WS_URL when set (e.g. private node); otherwise public fallbacks.
+// Note: ripple_path_find requires admin access, so we use book_offers instead.
+
+function getPathfindingWsServers(): string[] {
+  if (isCustomNode()) return [getWsUrl()];
+  return getPublicWsFallbacks();
+}
 
 // Active WebSocket connection
 let activeSocket: WebSocket | null = null;
@@ -130,8 +132,9 @@ export const KNOWN_ISSUERS: Record<string, string> = {
 // ==================== WEBSOCKET CONNECTION ====================
 
 function getNextServer(): string {
-  const server = WEBSOCKET_SERVERS[currentServerIndex];
-  currentServerIndex = (currentServerIndex + 1) % WEBSOCKET_SERVERS.length;
+  const servers = getPathfindingWsServers();
+  const server = servers[currentServerIndex];
+  currentServerIndex = (currentServerIndex + 1) % servers.length;
   return server;
 }
 
@@ -154,7 +157,8 @@ async function ensureConnection(): Promise<WebSocket> {
   // Try each server
   const errors: string[] = [];
   
-  for (let i = 0; i < WEBSOCKET_SERVERS.length; i++) {
+  const servers = getPathfindingWsServers();
+  for (let i = 0; i < servers.length; i++) {
     const serverUrl = getNextServer();
     console.log(`[Pathfinding] Connecting to WebSocket: ${serverUrl}`);
     

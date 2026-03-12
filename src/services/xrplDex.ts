@@ -3,6 +3,7 @@
 // Supports order books, pathfinding, and cross-currency payments
 
 import { xrpToDrops, dropsToXRP } from './xrplService';
+import { getWsUrl, getPublicWsFallbacks, isCustomNode } from '../config/xrplNode';
 
 // ==================== TYPES ====================
 
@@ -81,12 +82,12 @@ export const KNOWN_STABLECOINS: Record<string, { currency: string; issuer: strin
 };
 
 // ==================== WEBSOCKET CONNECTION ====================
+// Uses VITE_XRPL_WS_URL when set (e.g. private node); otherwise public fallbacks.
 
-const XRPL_SERVERS = [
-  'wss://xrplcluster.com',
-  'wss://s1.ripple.com',
-  'wss://s2.ripple.com',
-];
+function getDexWsServers(): string[] {
+  if (isCustomNode()) return [getWsUrl()];
+  return getPublicWsFallbacks();
+}
 
 let socket: WebSocket | null = null;
 let currentServerIndex = 0;
@@ -98,12 +99,12 @@ async function ensureConnection(): Promise<WebSocket> {
     return socket;
   }
 
-  // Try each server
-  for (let i = 0; i < XRPL_SERVERS.length; i++) {
-    const serverUrl = XRPL_SERVERS[(currentServerIndex + i) % XRPL_SERVERS.length];
+  const servers = getDexWsServers();
+  for (let i = 0; i < servers.length; i++) {
+    const serverUrl = servers[(currentServerIndex + i) % servers.length];
     try {
       socket = await connectWebSocket(serverUrl);
-      currentServerIndex = (currentServerIndex + i) % XRPL_SERVERS.length;
+      currentServerIndex = (currentServerIndex + i) % servers.length;
       console.log(`[DEX] Connected to ${serverUrl}`);
       return socket;
     } catch (e) {

@@ -1,32 +1,7 @@
-// XRPL Service - Fetches real data from the XRP Ledger
-import { getXrplProxyBase } from '../lib/dataProxy';
+// XRPL Service - Fetches real data from the XRP Ledger (uses configurable node via lib/xrplClient)
+import { xrplRequest } from '../lib/xrplClient';
 
 const isProd = typeof import.meta !== 'undefined' && (import.meta as { env?: { PROD?: boolean } }).env?.PROD === true;
-
-// XRPL Public JSON-RPC Servers (with CORS support)
-// Ordered by reliability - xrplcluster.com is most reliable
-const XRPL_ENDPOINTS = [
-  'https://xrplcluster.com',
-  'https://s2.ripple.com:51234',
-  'https://s1.ripple.com:51234',
-];
-
-// Current endpoint index for fallback
-let currentEndpointIndex = 0;
-
-/** Base URL for XRPL JSON-RPC. When using proxy (VITE_XRPL_PROXY_URL), all requests go there; see docs/DATA-PROXY.md for trust requirements. */
-function getXRPLUrl(): string {
-  const proxyBase = getXrplProxyBase();
-  if (proxyBase) return proxyBase;
-  return XRPL_ENDPOINTS[currentEndpointIndex];
-}
-
-function switchToNextEndpoint(): void {
-  currentEndpointIndex = (currentEndpointIndex + 1) % XRPL_ENDPOINTS.length;
-  console.log(`[XRPL] Switching to endpoint: ${getXRPLUrl()}`);
-}
-
-// Response structure varies by endpoint, handled dynamically in xrplRequest
 
 interface AccountInfoResult {
   account_data: {
@@ -126,75 +101,6 @@ interface AccountTxResult {
     };
     validated: boolean;
   }>;
-}
-
-// Helper to make JSON-RPC calls to XRPL with timeout and retry
-async function xrplRequest<T>(method: string, params: Record<string, unknown>[] = [{}], retryCount = 0): Promise<T> {
-  const url = getXRPLUrl();
-  console.log(`[XRPL] Request: ${method} to ${url}`, params);
-  
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-  
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        method,
-        params,
-      }),
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`XRPL request failed: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log(`[XRPL] Raw response for ${method}:`, JSON.stringify(data, null, 2));
-    console.log(`[XRPL] Data keys:`, Object.keys(data));
-    
-    // Handle different response structures
-    // Some endpoints return { result: { ... } }, others might return differently
-    const result = data.result || data;
-    console.log(`[XRPL] Extracted result for ${method}:`, JSON.stringify(result, null, 2));
-    console.log(`[XRPL] Result keys:`, result ? Object.keys(result) : 'null');
-    
-    // Check for errors in the response
-    if (result.error || data.error) {
-      const errorMsg = result.error_message || result.error || data.error_message || data.error;
-      throw new Error(errorMsg);
-    }
-    
-    // Check for status errors
-    if (result.status === 'error') {
-      throw new Error(result.error_message || 'Unknown XRPL error');
-    }
-
-    return result as T;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    
-    console.error(`[XRPL] Error for ${method}:`, error);
-    
-    // If it's an abort error (timeout), try next endpoint
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.log(`[XRPL] Request timed out, trying next endpoint...`);
-    }
-    
-    // If we haven't tried all endpoints, switch and retry
-    if (retryCount < XRPL_ENDPOINTS.length - 1) {
-      switchToNextEndpoint();
-      return xrplRequest<T>(method, params, retryCount + 1);
-    }
-    
-    throw error;
-  }
 }
 
 // Convert drops to XRP (1 XRP = 1,000,000 drops)
