@@ -48,6 +48,7 @@ const GovernanceGuide = lazyWithRetry(() => import('./pages/GovernanceGuide'))
 const MvpWalletPage = lazyWithRetry(() => import('./pages/MvpWalletPage'))
 const DexOrderPage = lazyWithRetry(() => import('./pages/DexOrderPage'))
 const ControlRoomPage = lazyWithRetry(() => import('./pages/ControlRoomPage'))
+const IntelligencePage = lazyWithRetry(() => import('./pages/IntelligencePage'))
 
 function PageLoader() {
   return (
@@ -144,6 +145,7 @@ function App() {
                   <Route path="/character" element={<Navigate to="/" replace />} />
                   <Route path="/portfolio" element={<Navigate to="/" replace state={{ section: 'portfolio' }} />} />
                   <Route path="/clinic" element={<Navigate to="/" replace />} />
+                  <Route path="/intelligence" element={<IntelligencePage />} />
                   <Route path="/network" element={<Network />} />
                   <Route path="/world" element={<Navigate to="/network" replace />} />
                   <Route path="/ilp-map" element={<Navigate to="/network" replace />} />

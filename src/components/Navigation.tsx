@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Wallet, Bot, BookOpen, Wrench, DollarSign, LayoutDashboard } from 'lucide-react'
+import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Wallet, Bot, BookOpen, Wrench, DollarSign, LayoutDashboard, BarChart3 } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { useAgentPanelStore } from '../store/agentPanelStore'
@@ -53,6 +53,7 @@ const navItems = [
   { path: '/pay', label: 'Pay', icon: DollarSign },
   { path: '/tools/control-room', label: 'Control Room', icon: LayoutDashboard },
   { path: '/tools', label: 'Tools', icon: Wrench, matchPrefix: true },
+  { path: '/intelligence', label: 'Intelligence', icon: BarChart3 },
   { path: '/network', label: 'Network', icon: Globe },
   { path: '/terminal', label: 'Terminal', icon: Activity },
   { path: '/learn', label: 'Learn', icon: BookOpen },
