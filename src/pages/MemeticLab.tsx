@@ -41,6 +41,7 @@ import { PaperTradingPanel } from '../components/PaperTradingPanel'
 import { Link } from 'react-router-dom'
 import { LOOPJAM_SENTINEL_NAME, LOOPJAM_PHASES, LOOPJAM_JAMMING } from '../agents/loopjamSentinel'
 import { QuantFormulasCard } from '../components/QuantFormulasCard'
+import { TrendingIntelligenceDeck } from '../components/trending'
 
 // ==================== GAME THEORY DATA ====================
 
@@ -648,7 +649,9 @@ function ErrorBoundaryWrapper({ children }: { children: React.ReactNode }) {
 // ==================== COMPONENT ====================
 
 export default function MemeticLab() {
-  const [activeTab, setActiveTab] = useState<'gametheory' | 'quantum' | 'cognitive' | 'memetic' | 'defense' | 'bci' | 'simulator'>('gametheory')
+  const [activeTab, setActiveTab] = useState<
+    'intelligence' | 'gametheory' | 'quantum' | 'cognitive' | 'memetic' | 'defense' | 'bci' | 'simulator'
+  >('intelligence')
   const [selectedScenario, setSelectedScenario] = useState<GameTheoryScenario | null>(null)
   const [selectedThreat, setSelectedThreat] = useState<CognitiveThreats | null>(null)
   const [selectedBCI, setSelectedBCI] = useState<BCITechnology | null>(null)
@@ -1185,6 +1188,7 @@ export default function MemeticLab() {
   , [])
   
   const tabConfig = [
+    { id: 'intelligence', label: 'Intelligence Deck', icon: Sparkles },
     { id: 'gametheory', label: 'Game Theory', icon: Target },
     { id: 'quantum', label: 'AI/Quantum Lab', icon: Atom },
     { id: 'cognitive', label: 'Cognitive Security', icon: Brain },
@@ -1244,7 +1248,7 @@ export default function MemeticLab() {
             </div>
           </div>
           <p className="text-cyber-muted">
-            Game Theory • Cognitive Security • Memetic Warfare • Mind as Battlefield
+            Cognitive + financial intelligence — narrative pressure, coordination, infra signals, XRPL mapping
           </p>
           <p className="text-xs text-cyber-purple mt-1">
             Based on the work of Dr. James Giordano and cognitive warfare research
@@ -1286,14 +1290,16 @@ export default function MemeticLab() {
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded font-cyber text-xs tracking-wider transition-all ${
-                    isActive 
-                      ? 'bg-cyber-purple/20 border border-cyber-purple/50 text-cyber-purple' 
-                      : 'text-cyber-muted hover:text-cyber-text hover:bg-cyber-border/30'
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex items-center gap-2 px-4 py-2 rounded font-cyber text-xs tracking-wider transition-all cursor-pointer border ${
+                    isActive
+                      ? 'bg-violet-600 border-violet-300 text-white shadow-[0_0_12px_rgba(167,139,250,0.35)]'
+                      : 'border-transparent text-slate-400 hover:text-white hover:bg-white/5 hover:border-white/10'
                   }`}
                 >
-                  <Icon size={14} />
+                  <Icon size={14} className={isActive ? 'text-white' : undefined} aria-hidden />
                   <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               )
@@ -1424,6 +1430,18 @@ export default function MemeticLab() {
           >
             <AnimatePresence mode="wait">
               {/* Analytics Lab and Paper Trading tabs moved to Terminal page */}
+
+              {activeTab === 'intelligence' && (
+                <motion.div
+                  key="intelligence"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="space-y-4"
+                >
+                  <TrendingIntelligenceDeck />
+                </motion.div>
+              )}
               
               {/* Game Theory Tab */}
               {activeTab === 'gametheory' && (

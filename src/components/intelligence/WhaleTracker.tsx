@@ -3,14 +3,15 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { Whale, ArrowUpRight, ArrowDownLeft, AlertCircle } from 'lucide-react';
+import { Fish, ArrowUpRight, ArrowDownLeft, AlertCircle } from 'lucide-react';
 import {
   createWhaleState,
   processPaymentForWhales,
   type WhaleState,
   DEFAULT_WHALE_THRESHOLD_XRP,
 } from '../../lib/intelligence/whales';
-import { onMessage, normalizeTransactionToPayment, type TransactionStreamEvent } from '../../lib/xrpl/wsClient';
+import { onMessage, normalizeTransactionToPayment } from '../../lib/xrpl/wsClient';
+import type { TransactionStreamEvent } from '../../lib/xrpl/types';
 
 const THRESHOLD_OPTIONS = [100_000, 500_000, 1_000_000, 5_000_000, 10_000_000];
 
@@ -38,7 +39,7 @@ export default function WhaleTracker() {
     <div className="cyber-panel rounded-lg border border-cyber-border overflow-hidden">
       <div className="px-4 py-3 border-b border-cyber-border flex items-center justify-between flex-wrap gap-2">
         <h3 className="font-cyber text-sm uppercase tracking-wider text-cyber-glow flex items-center gap-2">
-          <Whale size={18} />
+          <Fish size={18} />
           Whale Tracker
         </h3>
         <select

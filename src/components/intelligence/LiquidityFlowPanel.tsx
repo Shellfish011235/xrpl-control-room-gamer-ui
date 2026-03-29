@@ -10,7 +10,8 @@ import {
   getDirectionalFlows,
   type LiquidityState,
 } from '../../lib/intelligence/liquidity';
-import { onMessage, normalizeTransactionToPayment, type TransactionStreamEvent } from '../../lib/xrpl/wsClient';
+import { onMessage, normalizeTransactionToPayment } from '../../lib/xrpl/wsClient';
+import type { TransactionStreamEvent } from '../../lib/xrpl/types';
 
 export default function LiquidityFlowPanel() {
   const [state, setState] = useState<LiquidityState>(createLiquidityState());

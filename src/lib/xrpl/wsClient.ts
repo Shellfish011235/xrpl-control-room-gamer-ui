@@ -6,7 +6,7 @@
 import * as ws from '../xrplWebsocket';
 import type { XRPLWsEvent, LedgerClosedEvent, TransactionStreamEvent, NormalizedLedgerClose, NormalizedPayment, ConnectionHealth } from './types';
 
-export type { ConnectionHealth };
+export type { ConnectionHealth, LedgerClosedEvent, TransactionStreamEvent } from './types';
 
 export function connect(): void {
   ws.connect();

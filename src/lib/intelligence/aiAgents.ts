@@ -14,6 +14,10 @@ export interface AgentWalletProfile {
   recurringDestinations: string[];
   txCount: number;
   lastActivityTs: number;
+  /** Rolling buffers for heuristics (not serialized to UI as primary fields). */
+  _intervals?: number[];
+  _dests?: string[];
+  _microCount?: number;
 }
 
 export interface AgentState {
@@ -56,27 +60,27 @@ export function processPaymentForAgents(state: AgentState, payment: NormalizedPa
   const prevTs = sender.lastActivityTs;
   sender.lastActivityTs = now;
   if (prevTs > 0) {
-    const intervals = (sender as { _intervals?: number[] })._intervals ?? [];
+    const intervals = sender._intervals ?? [];
     intervals.push(now - prevTs);
     if (intervals.length > 30) intervals.shift();
-    (sender as { _intervals: number[] })._intervals = intervals;
+    sender._intervals = intervals;
     const avg = intervals.reduce((s, i) => s + i, 0) / intervals.length;
     const variance = intervals.reduce((s, i) => s + (i - avg) ** 2, 0) / intervals.length;
     const cv = Math.sqrt(variance) / (avg || 1);
     sender.frequencyProfile = { avgIntervalMs: avg, regularity: Math.max(0, 1 - cv) };
   }
   if (payment.to) {
-    const dests = (sender as { _dests?: string[] })._dests ?? [];
+    const dests = sender._dests ?? [];
     dests.push(payment.to);
     if (dests.length > 50) dests.shift();
-    (sender as { _dests: string[] })._dests = dests;
+    sender._dests = dests;
     const counts = dests.reduce((acc, d) => ({ ...acc, [d]: (acc[d] ?? 0) + 1 }), {} as Record<string, number>);
     sender.recurringDestinations = Object.entries(counts)
       .filter(([, c]) => c >= RECURRING_MIN_COUNT)
       .map(([d]) => d);
   }
   if (amountXrp > 0 && amountXrp <= MICRO_TX_MAX_XRP) {
-    (sender as { _microCount?: number })._microCount = ((sender as { _microCount?: number })._microCount ?? 0) + 1;
+    sender._microCount = (sender._microCount ?? 0) + 1;
   }
   sender.probablePatternType = inferAgentPattern(sender);
   sender.agentLikelihoodScore = scoreAgentLikelihood(sender);
@@ -86,7 +90,7 @@ export function processPaymentForAgents(state: AgentState, payment: NormalizedPa
 }
 
 function inferAgentPattern(p: AgentWalletProfile): AgentWalletProfile['probablePatternType'] {
-  const microCount = (p as { _microCount?: number })._microCount ?? 0;
+  const microCount = p._microCount ?? 0;
   if (p.recurringDestinations.length >= 2 && p.frequencyProfile.regularity > REGULARITY_THRESHOLD) return 'recurring_settlement';
   if (microCount >= 5 && p.txCount <= 20) return 'micro_burst';
   if (p.recurringDestinations.length >= 3) return 'service_routing';
@@ -97,7 +101,7 @@ function scoreAgentLikelihood(p: AgentWalletProfile): number {
   let score = 0;
   if (p.frequencyProfile.regularity > REGULARITY_THRESHOLD) score += 25;
   if (p.recurringDestinations.length >= 2) score += 20;
-  if ((p as { _microCount?: number })._microCount >= 5) score += 15;
+  if ((p._microCount ?? 0) >= 5) score += 15;
   if (p.txCount >= 20 && p.frequencyProfile.avgIntervalMs > 0) score += 15;
   return Math.min(100, score);
 }

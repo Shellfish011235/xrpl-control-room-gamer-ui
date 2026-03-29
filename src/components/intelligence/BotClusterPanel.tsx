@@ -10,7 +10,8 @@ import {
   type BotState,
   type BotCluster,
 } from '../../lib/intelligence/bots';
-import { onMessage, normalizeTransactionToPayment, type TransactionStreamEvent } from '../../lib/xrpl/wsClient';
+import { onMessage, normalizeTransactionToPayment } from '../../lib/xrpl/wsClient';
+import type { TransactionStreamEvent } from '../../lib/xrpl/types';
 
 export default function BotClusterPanel() {
   const [state, setState] = useState<BotState>(createBotState());

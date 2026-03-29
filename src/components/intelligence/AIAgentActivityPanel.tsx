@@ -11,7 +11,8 @@ import {
   type AgentState,
   type AgentWalletProfile,
 } from '../../lib/intelligence/aiAgents';
-import { onMessage, normalizeTransactionToPayment, type TransactionStreamEvent } from '../../lib/xrpl/wsClient';
+import { onMessage, normalizeTransactionToPayment } from '../../lib/xrpl/wsClient';
+import type { TransactionStreamEvent } from '../../lib/xrpl/types';
 
 export default function AIAgentActivityPanel() {
   const [state, setState] = useState<AgentState>(createAgentState());
