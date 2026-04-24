@@ -21,6 +21,7 @@ import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/the
 import type { NFTAsset, MemeToken } from '../store/assetsStore'
 import { BackgroundPreview } from '../modules/theme/BackgroundPreview'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
+import { SettlementQueueWidget, CorridorExposurePanel } from '../components/ilp'
 
 // Strategy status card for Home: which strategies are on, exposure, PnL (sim), link to Terminal
 function StrategyStatusCard() {
@@ -862,6 +863,23 @@ export default function Character() {
 
             {/* Strategy status: which strategies on, exposure, PnL (sim) — link to Terminal */}
             <StrategyStatusCard />
+
+            {/* ILP / operator settlement layer (demo; see Network page ILP lens for full view) */}
+            <div>
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <h3 className="font-cyber text-xs text-cyber-muted uppercase tracking-wider">ILP control room (demo)</h3>
+                <Link
+                  to="/network"
+                  className="text-[10px] text-cyber-cyan hover:underline"
+                >
+                  Open Network → ILP lens
+                </Link>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <SettlementQueueWidget useDemoData />
+                <CorridorExposurePanel viewMode="flow" compact />
+              </div>
+            </div>
 
             {/* 3) Profile & Portfolio section boxes (switch to that tab) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

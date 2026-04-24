@@ -1,13 +1,14 @@
 /**
- * Phase 0: Prominent disclaimer on every page.
- * "Educational/sim tool only. Not financial advice. User signs via Xaman. Comply with US/FL laws. No custody."
+ * Phase 0: Prominent notice on every page.
+ * Framing: informational software & analytics — not investment advice; no custody; user approves in wallet.
  */
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X } from 'lucide-react';
 
-const TEXT = 'Educational / sim tool only. Not financial advice. All execution via Xaman (user signs). Comply with US/FL laws. No custody.';
+const TEXT =
+  'Informational software & public market data only — not investment, legal, or tax advice. No custody of keys or funds. You approve any transaction in your own wallet. Comply with applicable law (including U.S. / FL as relevant).';
 
 export function DisclaimerBanner() {
   const [dismissed, setDismissed] = useState(() => {

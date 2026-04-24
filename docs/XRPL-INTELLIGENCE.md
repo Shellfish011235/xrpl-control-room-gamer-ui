@@ -54,8 +54,8 @@ docs/
 
 Same as the existing node setup; no new secrets.
 
-- `VITE_XRPL_RPC_URL` – HTTP JSON-RPC (e.g. `http://192.168.5.43:5005`)
-- `VITE_XRPL_WS_URL` – WebSocket (e.g. `ws://192.168.5.43:6007`)
+- `VITE_XRPL_RPC_URL` – HTTP JSON-RPC (set in **local** `.env` only; never commit real hostnames)
+- `VITE_XRPL_WS_URL` – WebSocket to rippled
 - `VITE_XRPL_PROXY_URL` – Optional proxy for production (see XRPL-NODE-SETUP.md)
 
 ## Setup
@@ -73,7 +73,7 @@ Same as the existing node setup; no new secrets.
 
 ## Production Limitations (Private Node)
 
-- The app runs in the **browser**. If the dashboard is deployed (e.g. Vercel), users’ browsers cannot reach a private `192.168.x.x` node.
+- The app runs in the **browser**. If the dashboard is deployed (e.g. Vercel), users’ browsers cannot reach a **private (LAN) node** directly.
 - For a **public** deployment use `VITE_XRPL_PROXY_URL` to a server that forwards to your node, or leave RPC/WS unset so the app uses public XRPL endpoints.
 - Local use on the same LAN as the Mac Mini works with direct RPC/WS URLs.
 

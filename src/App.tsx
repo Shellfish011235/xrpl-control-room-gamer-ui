@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense, useRef } from 'react'
+import { startLatencyLoop } from './services/xrplEndpointManager'
 import { lazyWithRetry } from './lib/lazyWithRetry'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -7,8 +8,10 @@ import Navigation from './components/Navigation'
 import { GlobalAgentPanel } from './components/GlobalAgentPanel'
 import { PlatformModeBar } from './components/PlatformModeBar'
 import { DisclaimerBanner } from './components/DisclaimerBanner'
+import { SiteLegalFooter } from './components/SiteLegalFooter'
 import { ProfileBackground } from './components/ProfileBackground'
 import { RootErrorBoundary } from './components/RootErrorBoundary'
+import { OperatingModelSidebar, OperatingModelMobileDrawer } from './components/operating'
 
 /** Slower scroll speed site-wide so options in scrollable boxes are easier to see. */
 const SCROLL_SPEED_FACTOR = 0.4
@@ -49,6 +52,9 @@ const MvpWalletPage = lazyWithRetry(() => import('./pages/MvpWalletPage'))
 const DexOrderPage = lazyWithRetry(() => import('./pages/DexOrderPage'))
 const ControlRoomPage = lazyWithRetry(() => import('./pages/ControlRoomPage'))
 const IntelligencePage = lazyWithRetry(() => import('./pages/IntelligencePage'))
+const OperatingHandbookPage = lazyWithRetry(() => import('./pages/OperatingHandbookPage'))
+const FeatureFlagsPage = lazyWithRetry(() => import('./pages/FeatureFlagsPage'))
+const NodeSettingsPage = lazyWithRetry(() => import('./pages/NodeSettingsPage'))
 
 function PageLoader() {
   return (
@@ -111,6 +117,10 @@ function App() {
   }, [])
 
   useEffect(() => {
+    startLatencyLoop(20_000)
+  }, [])
+
+  useEffect(() => {
     function onWheel(e: WheelEvent) {
       const scrollable = getScrollableElement(e.target as HTMLElement)
       if (!scrollable) return
@@ -130,14 +140,20 @@ function App() {
     <RootErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <Router>
-          <div className="min-h-screen min-h-[100dvh] w-full max-w-full bg-cyber-darker relative overflow-x-hidden">
+          <div className="min-h-screen min-h-[100dvh] w-full max-w-full bg-cyber-darker relative overflow-x-hidden flex flex-col">
           <ProfileBackground />
           <Navigation />
           <DisclaimerBanner />
 
-          <main className="relative z-10 pt-[7rem] pt-[calc(7rem+env(safe-area-inset-top,0px))]">
+          <main className="relative z-10 flex-1 min-h-0 flex flex-col pt-[7rem] pt-[calc(7rem+env(safe-area-inset-top,0px))]">
+            <div className="flex flex-1 w-full min-h-0 min-w-0 max-w-full">
+              <div className="hidden lg:block shrink-0 w-[260px] self-stretch border-r border-cyber-border/30">
+                <OperatingModelSidebar />
+              </div>
+              <div className="flex-1 min-w-0 min-h-0 flex flex-col">
             <PlatformModeBar />
             <GlobalAgentPanel />
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
             <Suspense fallback={<PageLoader />}>
               <AnimatePresence mode="wait">
                 <Routes>
@@ -183,10 +199,18 @@ function App() {
                   <Route path="/wallet" element={<MvpWalletPage />} />
                   <Route path="/mvp-wallet" element={<Navigate to="/wallet" replace />} />
                   <Route path="/innovation" element={<Navigate to="/network" replace />} />
+                  <Route path="/system" element={<OperatingHandbookPage />} />
+                  <Route path="/system/flags" element={<FeatureFlagsPage />} />
+                  <Route path="/settings/node" element={<NodeSettingsPage />} />
                 </Routes>
               </AnimatePresence>
             </Suspense>
+            </div>
+            </div>
+            </div>
+            <OperatingModelMobileDrawer />
           </main>
+          <SiteLegalFooter />
           </div>
         </Router>
       </QueryClientProvider>

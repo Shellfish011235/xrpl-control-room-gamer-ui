@@ -2,6 +2,8 @@
 
 This doc describes how the dashboard connects to a configurable XRPL node (e.g. your private rippled on a Mac Mini) and how to run in local-LAN vs production (Vercel).
 
+**Privacy / GitHub:** Put real RPC, WebSocket, and proxy URLs only in a **local** `.env` (gitignored). Do not commit hostnames or IPs. The UI does not display full endpoint URLs. Note: any `VITE_*` value is still embedded in the **built client JavaScript**; treat it as public for a deployed site, and use a **server-side proxy** for a private node on the public internet.
+
 ## Architecture Summary
 
 - **Config** (`src/config/xrplNode.ts`): Reads `VITE_XRPL_RPC_URL`, `VITE_XRPL_WS_URL`, `VITE_XRPL_PROXY_URL`. Exposes `getRpcUrl()`, `getWsUrl()`, and public fallbacks when unset.
@@ -12,8 +14,8 @@ This doc describes how the dashboard connects to a configurable XRPL node (e.g. 
 
 **Modes**
 
-1. **Local LAN**: Set `VITE_XRPL_RPC_URL` and `VITE_XRPL_WS_URL` to your node (e.g. `http://192.168.5.43:5005`, `ws://192.168.5.43:6006`). Browser and node on same network; no CORS if rippled allows origin or you use a local proxy.
-2. **Production (Vercel)**: The Vercel-hosted app runs in users’ browsers. Those browsers cannot reach a private `192.168.x.x` node. Use **VITE_XRPL_PROXY_URL** pointing to a server that forwards JSON-RPC (and optionally WS) to your node, or leave unset to use public XRPL endpoints.
+1. **Local LAN**: In your **local** `.env` only, set `VITE_XRPL_RPC_URL` and `VITE_XRPL_WS_URL` to your node (HTTP JSON-RPC base and WSS/WS to rippled, **your** host:ports — not documented here to avoid copy-paste into the repo). Browser and node on same network; no CORS if rippled allows origin or you use a local proxy.
+2. **Production (Vercel)**: The Vercel-hosted app runs in users’ browsers. Those browsers cannot reach a private LAN node. Use **VITE_XRPL_PROXY_URL** on a **public** HTTPS base that forwards to your node, or leave client overrides unset to use the built-in public XRPL endpoints.
 
 ## Files Created or Changed
 
@@ -37,11 +39,11 @@ Place these in `.env` (and in Vercel Environment Variables for production if usi
 
 | Variable | Purpose |
 |---------|---------|
-| `VITE_XRPL_RPC_URL` | HTTP JSON-RPC base (e.g. `http://192.168.5.43:5005`). When set, used for all RPC. |
-| `VITE_XRPL_WS_URL` | WebSocket URL (e.g. `ws://192.168.5.43:6006`). When set, used for ledger stream and xrpl.js Client (mainnet). |
-| `VITE_XRPL_PROXY_URL` | Optional. When RPC URL is not set, this is used as RPC base (e.g. your server that forwards to the node). |
+| `VITE_XRPL_RPC_URL` | HTTP JSON-RPC base. When set, used for all RPC. Set only in local `.env` or a secret CI env — never a committed file. |
+| `VITE_XRPL_WS_URL` | WebSocket URL for ledger stream and xrpl.js Client (mainnet). Same rules as above. |
+| `VITE_XRPL_PROXY_URL` | Optional public HTTPS base that forwards JSON-RPC to your node. |
 
-- No secrets in these; URLs only.
+- Values are still compiled into the client bundle. Do not use for truly secret **LAN-only** nodes on a **public** deploy without a proxy.
 - Vite only exposes variables prefixed with `VITE_` to the client.
 
 ## Run and Test Locally
@@ -50,10 +52,10 @@ Place these in `.env` (and in Vercel Environment Variables for production if usi
    ```bash
    cp .env.example .env
    ```
-   Edit `.env`:
-   ```
-   VITE_XRPL_RPC_URL=http://192.168.5.43:5005
-   VITE_XRPL_WS_URL=ws://192.168.5.43:6006
+   Edit `.env` and add your own RPC and WebSocket base URLs (do not paste this doc into git):
+   ```bash
+   VITE_XRPL_RPC_URL=<https-or-http-url-to-json-rpc>
+   VITE_XRPL_WS_URL=<wss-or-ws-url>
    ```
 
 2. **Install and run:**
@@ -68,7 +70,7 @@ Place these in `.env` (and in Vercel Environment Variables for production if usi
    - Ledger ticker updates when new ledgers close.
    - Tools that use XRPL (Control Room, DEX, Pathfinding, etc.) use your node.
 
-4. **CORS:** If the browser blocks requests to `http://192.168.5.43:5005` or `ws://192.168.5.43:6006`, either:
+4. **CORS:** If the browser blocks requests to your node URL, either:
    - Configure rippled to allow your origin, or
    - Run a small local proxy (e.g. Node or Vite proxy) that forwards to the node and set `VITE_XRPL_RPC_URL` / `VITE_XRPL_WS_URL` to the proxy (e.g. `http://localhost:5006`).
 
@@ -85,9 +87,8 @@ Place these in `.env` (and in Vercel Environment Variables for production if usi
 ## Production Limitation (Vercel + Private Node)
 
 - **Vercel** serves a static/client app. Requests run in **each user’s browser**.
-- A **private node** at `192.168.5.43` is only reachable from your LAN. Users on the internet cannot connect to it.
-- So: **direct browser → private node** only works when the user is on the same network as the node (e.g. you at home). For a **public** Vercel deployment you have two options:
+- A **private LAN node** is only reachable from that LAN. For a **public** Vercel deployment you have two options:
   1. **Do not set** `VITE_XRPL_RPC_URL` / `VITE_XRPL_WS_URL` for production: app uses public XRPL endpoints for all users.
-  2. **Use a proxy**: Set `VITE_XRPL_PROXY_URL` (and optionally a WS proxy URL if you add one) to a **public** server you control that forwards to your private node. Then only that server needs to reach `192.168.5.43` (e.g. via VPN or running the proxy on the same LAN).
+  2. **Use a proxy**: Set `VITE_XRPL_PROXY_URL` to a **public** HTTPS base you control that forwards JSON-RPC to the node. Only that server should reach the private address.
 
-A thin server-side proxy would accept POST at e.g. `/api/xrpl` with body `{ method, params }`, forward to `http://192.168.5.43:5005`, and return the response. The client would set `VITE_XRPL_PROXY_URL=https://your-proxy.com` (or `https://your-vercel-app.vercel.app/api/xrpl` if you implement the route in Vercel serverless and that serverless function can reach your node, e.g. via a tunnel or VPN).
+A thin server-side proxy accepts e.g. POST with Ripple JSON-RPC body, forwards to your node, and returns the response. The **client** only ever sees the proxy’s public URL in `VITE_` config, not the internal host.

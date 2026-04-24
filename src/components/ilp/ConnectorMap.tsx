@@ -8,9 +8,13 @@ import type { Ledger, Corridor, UILens } from '../../services/ilp/types';
 import { useILPMapTelemetry } from '../../hooks/useILPMapTelemetry';
 import { getObservationClassLabel, getConfidenceLabel } from '../../types/telemetry-visual-rules';
 
+export type OperatorGlobeView = 'flow' | 'settlement' | 'exposure';
+
 interface ConnectorMapProps {
   onLedgerClick?: (ledger: Ledger) => void;
   onCorridorClick?: (corridor: Corridor) => void;
+  /** When the Network page uses the ILP globe lens, optional settlement/exposure operator overlay (demo; does not replace the map UI lens from the store). */
+  operatorGlobeView?: OperatorGlobeView;
 }
 
 // Color schemes for different lenses
@@ -134,7 +138,7 @@ function certaintyToDashArray(lineStyle: 'solid' | 'dashed' | 'dotted'): string 
   }
 }
 
-export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapProps) {
+export function ConnectorMap({ onLedgerClick, onCorridorClick, operatorGlobeView = 'flow' }: ConnectorMapProps) {
   const { 
     ledgers, connectors, corridors, activeLens, activeRoute, 
     showLabels, showRiskFog, showFlowParticles,
@@ -227,6 +231,24 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick }: ConnectorMapPro
 
   return (
     <div className="w-full min-h-[560px] bg-transparent rounded-xl overflow-visible">
+      {operatorGlobeView !== 'flow' && (
+        <div
+          className={
+            'mb-2 flex flex-wrap items-center justify-between gap-2 rounded border px-2 py-1.5 text-[9px] text-cyber-muted ' +
+            (operatorGlobeView === 'exposure'
+              ? 'border-amber-500/30 bg-amber-500/5 text-amber-200/90'
+              : 'border-cyber-cyan/30 bg-cyber-cyan/5 text-cyber-cyan/80')
+          }
+        >
+          <span>
+            Operator view: <span className="font-cyber text-cyber-text">
+              {operatorGlobeView === 'settlement' ? 'Settlement' : 'Exposure'}
+            </span>
+            &nbsp;— two-phase &amp; posted state is labeled in the side panel; map lens unchanged.
+          </span>
+          <span className="text-cyber-yellow/80">Demo</span>
+        </div>
+      )}
       {/* Header - compact */}
       <div className="mb-4 pb-3 border-b border-cyber-border/60 flex flex-wrap items-center justify-between gap-2">
         <div>

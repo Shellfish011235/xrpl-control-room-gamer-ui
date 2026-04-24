@@ -1,13 +1,15 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Wallet, Bot, BookOpen, Wrench, DollarSign, LayoutDashboard, BarChart3 } from 'lucide-react'
+import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Wallet, Bot, BookOpen, Wrench, DollarSign, LayoutDashboard, BarChart3, LayoutGrid } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { useAgentPanelStore } from '../store/agentPanelStore'
 import { useXRPPrice } from '../services/websocketPriceFeeds'
 import GlobalSearch from './GlobalSearch'
 import NodeStatusWidget from './NodeStatusWidget'
+import { XrplEndpointStatusBar } from './XrplEndpointStatusBar'
 import { connect, getLastLedgerIndex, onStateChange } from '../lib/xrplWebsocket'
+import { useOperatingLayoutStore } from '../store/operatingLayoutStore'
 
 function priceSourceLabel(source: string): string {
   if (source === 'binance-ws') return 'Binance (WebSocket)'
@@ -68,6 +70,7 @@ export default function Navigation() {
   const sourceLabel = priceSourceLabel(source)
   const { ledgerIndex, loading: ledgerLoading } = useLedgerIndex()
   const setAgentOpen = useAgentPanelStore((s) => s.setOpen)
+  const toggleMobileOpsNav = useOperatingLayoutStore((s) => s.toggleMobileNav)
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 pt-[env(safe-area-inset-top)]">
@@ -180,6 +183,7 @@ export default function Navigation() {
             </span>
 
             {/* Node Status widget (connection, server_state, ledger, peers) */}
+            <XrplEndpointStatusBar />
             <NodeStatusWidget />
 
             {/* Ledger - Live Feed */}
@@ -200,13 +204,24 @@ export default function Navigation() {
             </div>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-cyber-text hover:text-cyber-glow transition-colors"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {/* Mobile: layer nav (ops terminal) + main app menu */}
+          <div className="md:hidden flex items-center gap-0.5">
+            <button
+              type="button"
+              className="p-2 text-cyber-cyan/90 hover:text-cyber-cyan border border-cyber-border/50 rounded-lg"
+              onClick={toggleMobileOpsNav}
+              title="Observe / interpret / decide (layer nav)"
+              aria-label="Open operating model navigation"
+            >
+              <LayoutGrid size={22} />
+            </button>
+            <button
+              className="p-2 text-cyber-text hover:text-cyber-glow transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Global search bar — consistent on all pages */}

@@ -25,7 +25,7 @@ export default function XRPLLiveNetworkFeed() {
       return lastLedgerIndex != null ? `Streaming · last ledger #${lastLedgerIndex.toLocaleString()}` : 'Streaming ledger + transactions';
     }
     if (connectionState === 'connecting') return 'Connecting to node…';
-    return 'Disconnected — check VITE_XRPL_WS_URL or use public endpoints';
+    return 'Disconnected — check XRPL connection / endpoint in Settings, or use public defaults';
   }, [connectionState, lastLedgerIndex]);
 
   return (

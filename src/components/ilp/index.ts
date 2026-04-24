@@ -2,6 +2,11 @@
 
 // Core Map Components
 export { ConnectorMap } from './ConnectorMap';
+export type { OperatorGlobeView } from './ConnectorMap';
+export { CorridorExposurePanel } from './CorridorExposurePanel';
+export type { OperatorViewMode } from './CorridorExposurePanel';
+export { SettlementQueueWidget } from './SettlementQueueWidget';
+export { SettlementInspectorSection } from './SettlementInspectorSection';
 export { CytoscapeMap, useCytoscapeControls } from './CytoscapeMap';
 export { HighPerfCytoscapeMap } from './HighPerfCytoscapeMap';
 

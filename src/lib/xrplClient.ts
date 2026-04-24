@@ -3,7 +3,8 @@
  * Safe method allowlist; no admin commands exposed.
  */
 
-import { getRpcUrl, getPublicRpcFallbacks, isCustomNode } from '../config/xrplNode';
+import { getPickedRpcUrl } from './xrplUrlBridge';
+import { advanceOnRpcFailure } from '../services/xrplEndpointManager';
 
 const ALLOWED_METHODS = new Set([
   'server_info',
@@ -26,21 +27,6 @@ const ALLOWED_METHODS = new Set([
   'submit_multisigned',
 ]);
 
-let currentFallbackIndex = 0;
-
-function getCurrentRpcUrl(): string {
-  if (isCustomNode()) return getRpcUrl();
-  const fallbacks = getPublicRpcFallbacks();
-  return fallbacks[currentFallbackIndex % Math.max(1, fallbacks.length)];
-}
-
-function advanceRpcFallback(): void {
-  if (isCustomNode()) return;
-  const fallbacks = getPublicRpcFallbacks();
-  if (fallbacks.length <= 1) return;
-  currentFallbackIndex = (currentFallbackIndex + 1) % fallbacks.length;
-}
-
 /**
  * Send a JSON-RPC request to the XRPL node. Params are sent as a single object in params[0].
  */
@@ -58,7 +44,7 @@ export async function xrplRequest<T = unknown>(
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const url = getCurrentRpcUrl();
+    const url = getPickedRpcUrl();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -86,7 +72,9 @@ export async function xrplRequest<T = unknown>(
     } catch (err) {
       clearTimeout(timeoutId);
       lastError = err;
-      if (attempt < maxRetries) advanceRpcFallback();
+      if (attempt < maxRetries) {
+        advanceOnRpcFailure();
+      }
     }
   }
   throw lastError;

@@ -506,7 +506,20 @@ select:focus-visible {
   min-height: 72vh;
 }
 
+/* ILP: when operator queue/exposure is expanded, pull width from the map column (not a skinny tall strip). */
+@media (min-width: 1201px) {
+  .network-grid.network-grid--ilp-operator-expanded {
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.1fr) minmax(0, 1.65fr);
+  }
+}
+
 /* Left column: single card filling full height */
+.network-left-sidebar,
+.network-map-container,
+.network-right-sidebar {
+  min-width: 0; /* fr columns honor ratio; child min-content must not grow column */
+}
+
 .network-left-sidebar {
   grid-column: 1;
   display: flex;
@@ -533,6 +546,7 @@ select:focus-visible {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   height: 100%;
 }
 
@@ -569,6 +583,7 @@ select:focus-visible {
 .network-right-sidebar .network-panel-card {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   overflow: auto;

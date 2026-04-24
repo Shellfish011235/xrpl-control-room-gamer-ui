@@ -5,7 +5,7 @@ import {
   Globe, Server, Users, Link2,
   Route, Scale, Building, Building2, Eye, X, RefreshCw, Wifi, WifiOff,
   ArrowRight, ExternalLink, Shield, AlertTriangle, CheckCircle, Clock, HelpCircle,
-  Activity,
+  Activity, Maximize2, Minimize2,
 } from 'lucide-react'
 import { WorldGlobe } from '../components/globe/WorldGlobe'
 import { useGlobeStore } from '../store/globeStore'
@@ -75,6 +75,13 @@ import {
   type XRPLConnectedChain,
 } from '../data/corridorData'
 import type { GlobeLens, GlobeHub } from '../types/globe'
+import {
+  CorridorExposurePanel,
+  SettlementQueueWidget,
+  SettlementInspectorSection,
+  type OperatorViewMode,
+} from '../components/ilp'
+import { getMockSettlementQueueSummary } from '../lib/settlement/mockSettlementData'
 import {
   xrplCategories,
   getAllProjects,
@@ -222,6 +229,10 @@ export default function Network() {
   const [ilpFilter, setIlpFilter] = useState<'all' | 'connectors' | 'repos' | 'corridors'>('all')
   const [selectedConnector, setSelectedConnector] = useState<ILPConnectorInstance | null>(null)
   const [selectedILPCorridor, setSelectedILPCorridor] = useState<ILPCorridor | null>(null)
+  /** ILP operator overlay: map + sidebar (demo settlement / exposure; see realtime adapter). */
+  const [ilpOperatorView, setIlpOperatorView] = useState<OperatorViewMode>('flow')
+  /** When false, keep a slim strip so the globe column stays ~1:3:1; user expands for full queue + table. */
+  const [ilpOperatorLayerExpanded, setIlpOperatorLayerExpanded] = useState(false)
   const ilpStats = useMemo(() => getILPStats(), [])
   
   // Corridor data state
@@ -353,6 +364,15 @@ export default function Network() {
       { label: 'Ledger agreement', value: '—', change: 'Enable LIVE for real %', color: 'cyber-cyan', live: false, lens: 'validators' as GlobeLens, hint: 'View details', isPlaceholder: true, description: 'Agreement on ledger closes (consensus). Enable LIVE in the header for live data from XRPScan.' },
     ]
   }, [hubs, corridors, liveStats, showLiveData])
+
+  const ilpQueueStripSummary = useMemo(
+    () => (activeLens === 'ilp' ? getMockSettlementQueueSummary(true) : null),
+    [activeLens]
+  )
+
+  useEffect(() => {
+    if (activeLens !== 'ilp') setIlpOperatorLayerExpanded(false)
+  }, [activeLens])
 
   return (
     <div className="min-h-screen pt-20 pb-12 px-4 lg:px-8">
@@ -486,7 +506,14 @@ export default function Network() {
         </motion.div>
         
         {/* Main content: CSS Grid for consistent alignment (left | map | right) */}
-        <div className="network-grid max-w-full">
+        <div
+          className={
+            'network-grid max-w-full' +
+            (activeLens === 'ilp' && ilpOperatorLayerExpanded
+              ? ' network-grid--ilp-operator-expanded'
+              : '')
+          }
+        >
           <motion.aside
             className="network-left-sidebar"
             initial={{ opacity: 0, x: -12 }}
@@ -1062,6 +1089,89 @@ export default function Network() {
             )}
             
             {/* ILP Connectors Panel (when in ILP lens) */}
+            {activeLens === 'ilp' && ilpQueueStripSummary && (
+              <motion.div
+                className="cyber-panel p-3 mb-3 w-full min-w-0"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
+                  <p className="text-[9px] text-cyber-muted font-cyber uppercase tracking-wider">
+                    Operator: routing vs settlement
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIlpOperatorLayerExpanded((v) => !v)}
+                    className="shrink-0 flex items-center gap-1.5 text-[9px] px-2 py-1 rounded-md border border-cyber-cyan/35 bg-cyber-darker/60 text-cyber-cyan hover:bg-cyber-cyan/10 transition-colors"
+                  >
+                    {ilpOperatorLayerExpanded ? (
+                      <>
+                        <Minimize2 size={12} />
+                        Collapse tables
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 size={12} />
+                        Expand queue &amp; exposure
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1 p-0.5 rounded-lg bg-cyber-darker/50 border border-cyber-border/50 mb-2 w-fit max-w-full">
+                  {(
+                    [
+                      { id: 'flow' as const, label: 'Flow' },
+                      { id: 'settlement' as const, label: 'Settlement' },
+                      { id: 'exposure' as const, label: 'Exposure' },
+                    ] as const
+                  ).map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setIlpOperatorView(t.id)}
+                      className={`px-2.5 py-1.5 rounded-md text-[10px] font-cyber transition-colors ${
+                        ilpOperatorView === t.id
+                          ? 'bg-cyber-purple/25 text-cyber-cyan border border-cyber-purple/40'
+                          : 'text-cyber-muted hover:text-cyber-text border border-transparent'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+                {ilpOperatorLayerExpanded ? (
+                  <>
+                    <p className="text-[9px] text-cyber-muted mb-2">
+                      Layout: panel widens toward the map. Labels and emphasis only — data:{' '}
+                      <span className="text-cyber-yellow/90">demo</span> until a control-room stream is connected.
+                    </p>
+                    <div className="flex w-full min-w-0 flex-col gap-3">
+                      <div className="min-w-0 w-full">
+                        <SettlementQueueWidget useDemoData compact={false} />
+                      </div>
+                      <div className="min-w-0 w-full">
+                        <CorridorExposurePanel viewMode={ilpOperatorView} expandedWide />
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[9px] text-cyber-muted leading-snug">
+                    Queue (demo):{' '}
+                    <span className="text-cyber-cyan/90">
+                      {ilpQueueStripSummary.pendingCount} pending · {ilpQueueStripSummary.postedCount} posted
+                    </span>
+                    {ilpQueueStripSummary.oldestPendingAgeSeconds > 0 && (
+                      <>
+                        {' '}
+                        · oldest unsettled {Math.floor(ilpQueueStripSummary.oldestPendingAgeSeconds / 60)}m+ · corridor
+                        table hidden — expand to review.
+                      </>
+                    )}
+                  </p>
+                )}
+              </motion.div>
+            )}
+
             {activeLens === 'ilp' && (
               <motion.div 
                 className="cyber-panel p-4"
@@ -1433,6 +1543,14 @@ export default function Network() {
                         </div>
                       </div>
                     )}
+
+                    <div className="mb-4">
+                      <SettlementInspectorSection
+                        corridorId={selectedILPCorridor.id}
+                        viewMode={ilpOperatorView}
+                        useDemoData
+                      />
+                    </div>
                     
                     <div className="mt-4 pt-3 border-t border-cyber-border/30">
                       <p className="text-[9px] text-cyber-muted italic">
@@ -2773,7 +2891,7 @@ export default function Network() {
             </Suspense>
           </motion.section>
         ) : (
-          <LedgerTopologySection />
+          <LedgerTopologySection activeLens={activeLens} ilpOperatorView={ilpOperatorView} />
         )}
 
         {/* Full Network Topology + Live Radar (merged: map + realtime movement) */}
@@ -2813,11 +2931,17 @@ function InnovationRadarSection() {
 }
 
 // ==================== LEDGER TOPOLOGY SECTION ====================
-function LedgerTopologySection() {
+type LedgerTopologySectionProps = {
+  activeLens?: GlobeLens
+  ilpOperatorView?: OperatorViewMode
+}
+
+function LedgerTopologySection({ activeLens, ilpOperatorView = 'flow' }: LedgerTopologySectionProps = {}) {
   const initialize = useILPStore((s) => s.initialize)
   const initialized = useILPStore((s) => s.initialized)
   const ledgers = useILPStore((s) => s.ledgers)
   const corridors = useILPStore((s) => s.corridors)
+  const isIlpGlobeLens = activeLens === 'ilp'
 
   useEffect(() => {
     if (!initialized) initialize()
@@ -2876,11 +3000,28 @@ function LedgerTopologySection() {
         <p className="text-[11px] text-cyber-muted mb-4 flex-shrink-0">
           Nodes are ledgers or networks (on-ledger, off-ledger, hybrid). Lines are corridors; click a ledger or corridor for details. Trust % and explanations are shown below.
         </p>
+        {isIlpGlobeLens && ilpOperatorView !== 'flow' && (
+          <p className="text-[10px] text-cyber-cyan/90 mb-2 p-2 rounded border border-cyber-cyan/20 bg-cyber-cyan/5">
+            ILP operator view: <span className="font-cyber text-cyber-cyan">
+              {ilpOperatorView === 'settlement' ? 'Settlement' : 'Exposure'}
+            </span>
+            — sidebar tables emphasize pending balances / net exposure (demo data).
+          </p>
+        )}
         {initialized && ledgers.length > 0 ? (
-          <div className="rounded-xl border border-cyber-border/50 bg-cyber-darker/30 overflow-visible">
+          <div
+            className={`rounded-xl border border-cyber-border/50 bg-cyber-darker/30 overflow-visible ${
+              isIlpGlobeLens && ilpOperatorView === 'exposure'
+                ? 'ring-1 ring-amber-500/20'
+                : isIlpGlobeLens && ilpOperatorView === 'settlement'
+                  ? 'ring-1 ring-cyber-cyan/25'
+                  : ''
+            }`}
+          >
             <ConnectorMap
               onLedgerClick={() => {}}
               onCorridorClick={() => {}}
+              operatorGlobeView={isIlpGlobeLens ? ilpOperatorView : 'flow'}
             />
           </div>
         ) : (
