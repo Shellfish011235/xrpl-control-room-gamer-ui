@@ -37,7 +37,7 @@ export default function Builder() {
         </h1>
       </div>
       <p className="text-sm text-cyber-muted">
-        OODA: Observe (repo + task) → Orient (UI Triage / XRPL Wiring / Module Factory) → Decide (patch format) → Act (paste patch → run → validate).
+        OODA: Observe (repo + task) → Orient (UI Triage / XRPL Wiring / Module Factory / Sign in Xaman) → Decide (patch format or payment draft) → Act (paste patch → run → validate, or approve in Xaman).
       </p>
       <div className="rounded-lg border border-cyber-border bg-cyber-darker/50 p-2">
         <button

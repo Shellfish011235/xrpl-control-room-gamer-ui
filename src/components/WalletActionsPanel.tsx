@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import { dropsToXrp, xrpToDrops } from 'xrpl';
 import { isValidClassicAddress } from 'xrpl';
 import { useWalletStore } from '../store/walletStore';
+import { useXrplAddressBookSorted, useXrplAddressBookStore } from '../store/xrplAddressBookStore';
 import { getXRPLClient, getNetwork, setNetwork } from '../services/xrplClient';
 import { xamanService } from '../services/xaman';
 import type { SigningRequest } from '../services/xaman';
@@ -44,8 +45,14 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
   });
 
   const [dest, setDest] = useState('');
+  const [destTagStr, setDestTagStr] = useState('');
+  const [saveLabel, setSaveLabel] = useState('');
   const [amtXrp, setAmtXrp] = useState('');
   const [sendStatus, setSendStatus] = useState('');
+  const savedContacts = useXrplAddressBookSorted();
+  const addOrUpdateContact = useXrplAddressBookStore((s) => s.addOrUpdateContact);
+  const removeContact = useXrplAddressBookStore((s) => s.removeContact);
+  const recordUse = useXrplAddressBookStore((s) => s.recordUse);
   const [mode, setMode] = useState<'sell' | 'buy'>('sell');
   const [xrpAmount, setXrpAmount] = useState('');
   const [tokenCurrency, setTokenCurrency] = useState('RLUSD');
@@ -87,6 +94,7 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       if (p.type === 'send') {
         setSendStatus(`✅ Sent. Hash: ${req.txHash ?? '—'}`);
         setDest('');
+        setDestTagStr('');
         setAmtXrp('');
       } else if (p.type === 'dex') {
         setDexStatus(`✅ Offer placed. Hash: ${req.txHash ?? '—'}`);
@@ -140,12 +148,23 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
     }
     try {
       const client = await ensureClient();
-      const tx = {
+      let destinationTag: number | undefined;
+      if (destTagStr.trim()) {
+        const t = parseInt(destTagStr.trim(), 10);
+        if (!Number.isFinite(t) || t < 0 || t > 0xffffffff) {
+          setSendStatus('Destination tag must be a valid 32-bit unsigned integer.');
+          return;
+        }
+        destinationTag = t;
+      }
+      recordUse(dest.trim());
+      const tx: Record<string, unknown> = {
         TransactionType: 'Payment',
         Account: address,
         Destination: dest.trim(),
         Amount: xrpToDrops(String(amt)),
       };
+      if (destinationTag !== undefined) tx.DestinationTag = destinationTag;
       const prepared = await client.autofill(tx as unknown as Parameters<typeof client.autofill>[0]);
       const req = await xamanService.requestCustomTransactionSignature(
         prepared as unknown as Parameters<typeof xamanService.requestCustomTransactionSignature>[0],
@@ -257,8 +276,80 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
           <div className="p-3 rounded-xl border border-cyber-border/50 bg-cyber-dark/40">
             <div className="text-sm text-cyber-text mb-2">Send XRP (sign in Xaman)</div>
             <div className="grid gap-2">
+              {savedContacts.length > 0 && (
+                <details className="rounded-xl border border-cyber-border/60 bg-cyber-darker/40 px-2 py-1">
+                  <summary className="cursor-pointer text-xs text-cyber-muted py-1">
+                    Saved addresses ({savedContacts.length}) — tap to pick or remove
+                  </summary>
+                  <ul className="mt-1 max-h-32 space-y-1 overflow-y-auto pb-1">
+                    {savedContacts.map((c) => (
+                      <li key={c.id} className="flex items-center gap-1 text-xs">
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 truncate rounded border border-cyber-border/50 px-2 py-1 text-left text-cyber-text hover:bg-cyber-cyan/10"
+                          onClick={() => {
+                            setDest(c.address);
+                            setDestTagStr(c.destinationTag != null ? String(c.destinationTag) : '');
+                            setSaveLabel(c.label === 'Saved' ? '' : c.label);
+                          }}
+                        >
+                          <span className="text-cyber-glow">{c.label}</span>
+                          <span className="text-cyber-muted"> · </span>
+                          <span className="font-mono">{c.address.slice(0, 10)}…{c.address.slice(-6)}</span>
+                          {c.destinationTag != null ? <span className="text-cyber-muted"> · tag {c.destinationTag}</span> : null}
+                        </button>
+                        <button
+                          type="button"
+                          className="shrink-0 px-2 py-1 text-cyber-red hover:bg-cyber-red/10 rounded"
+                          title="Remove from saved"
+                          onClick={() => removeContact(c.id)}
+                        >
+                          ×
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
               <input value={dest} onChange={(e) => setDest(e.target.value)} placeholder="Destination r..." className="px-3 py-2 rounded-xl bg-cyber-dark border border-cyber-border text-cyber-text placeholder:text-cyber-muted text-sm" />
+              <input value={destTagStr} onChange={(e) => setDestTagStr(e.target.value)} placeholder="Destination tag (optional)" className="px-3 py-2 rounded-xl bg-cyber-dark border border-cyber-border text-cyber-text placeholder:text-cyber-muted text-sm" />
               <input value={amtXrp} onChange={(e) => setAmtXrp(e.target.value)} placeholder="Amount XRP" className="px-3 py-2 rounded-xl bg-cyber-dark border border-cyber-border text-cyber-text placeholder:text-cyber-muted text-sm" />
+              <div className="flex flex-wrap gap-2 items-center">
+                <input
+                  value={saveLabel}
+                  onChange={(e) => setSaveLabel(e.target.value)}
+                  placeholder="Label (e.g. Hot wallet)"
+                  className="min-w-[140px] flex-1 px-3 py-2 rounded-xl bg-cyber-dark border border-cyber-border text-cyber-text placeholder:text-cyber-muted text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isValidClassicAddress(dest.trim())) {
+                      setSendStatus('Enter a valid destination before saving.');
+                      return;
+                    }
+                    let tag: number | undefined;
+                    if (destTagStr.trim()) {
+                      const t = parseInt(destTagStr.trim(), 10);
+                      if (!Number.isFinite(t) || t < 0) {
+                        setSendStatus('Invalid destination tag for save.');
+                        return;
+                      }
+                      tag = t;
+                    }
+                    addOrUpdateContact({
+                      address: dest.trim(),
+                      label: saveLabel.trim() || undefined,
+                      destinationTag: tag,
+                    });
+                    setSendStatus('Saved to this browser.');
+                    setTimeout(() => setSendStatus((s) => (s === 'Saved to this browser.' ? '' : s)), 2500);
+                  }}
+                  className="px-3 py-2 rounded-xl border border-cyber-border text-cyber-muted hover:text-cyber-text hover:border-cyber-text/40 text-sm"
+                >
+                  Save address
+                </button>
+              </div>
               <button type="button" onClick={sendXrp} disabled={!hasXaman} className="px-4 py-2 rounded-xl border border-cyber-cyan/40 text-cyber-cyan hover:bg-cyber-cyan/10 text-sm disabled:opacity-50">
                 Sign in Xaman…
               </button>

@@ -5,8 +5,27 @@
  * Testnet only; no mainnet spends.
  */
 
+import { isValidClassicAddress } from 'xrpl';
 import { loadSkills, matchSkills } from './skills/registry';
 import type { SkillName } from './skills/types';
+
+function coerceXamanSendDraft(raw: unknown): XamanSendDraft | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const o = raw as Record<string, unknown>;
+  const destination = typeof o.destination === 'string' ? o.destination.trim() : '';
+  let amountXrp = '';
+  if (typeof o.amountXrp === 'number' && Number.isFinite(o.amountXrp)) amountXrp = String(o.amountXrp);
+  else if (typeof o.amountXrp === 'string') amountXrp = o.amountXrp.trim().replace(/,/g, '');
+  if (!isValidClassicAddress(destination)) return undefined;
+  const n = parseFloat(amountXrp);
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  const memo = typeof o.memo === 'string' && o.memo.trim() ? o.memo.trim().slice(0, 500) : undefined;
+  const destinationTag =
+    typeof o.destinationTag === 'number' && Number.isFinite(o.destinationTag) && o.destinationTag >= 0
+      ? Math.floor(o.destinationTag)
+      : undefined;
+  return { destination, amountXrp: String(n), memo, destinationTag };
+}
 
 /** Minimal XRPL client shape so we don't depend on the xrpl package at build time. */
 export interface XRPLClientLike {
@@ -29,12 +48,22 @@ async function getXRPLClient(): Promise<XRPLClientLike> {
 
 export type AgentType = 'ledger' | 'portfolio' | 'ui-enhance';
 
+/** Optional payment draft from AI (validated in UI before Xaman). */
+export interface XamanSendDraft {
+  destination: string;
+  amountXrp: string;
+  memo?: string;
+  destinationTag?: number;
+}
+
 export interface AgentInvocationResult {
   analysis: string;
   codeSuggestions: string[];
   uiUpdates: Record<string, unknown>;
   neonImpactScore?: number;
   agentType: AgentType;
+  /** When set, Builder / tools may offer “Sign in Xaman” after user confirmation. */
+  xamanSend?: XamanSendDraft;
 }
 
 const DEFAULT_SKILLS: SkillName[] = ['xrpl-expert', 'real-time-data', 'error-handling-master', 'cyberpunk-ui'];
@@ -133,6 +162,7 @@ User: Task: ${task}. Context: ${JSON.stringify(context)}.
         codeSuggestions: Array.isArray(data.codeSuggestions) ? data.codeSuggestions : [],
         uiUpdates: (data.uiUpdates as Record<string, unknown>) ?? {},
         neonImpactScore: typeof data.neonImpactScore === 'number' ? data.neonImpactScore : undefined,
+        xamanSend: coerceXamanSendDraft(data.xamanSend),
       };
     }
     let raw = '';
@@ -152,6 +182,7 @@ User: Task: ${task}. Context: ${JSON.stringify(context)}.
           codeSuggestions: Array.isArray(json.codeSuggestions) ? json.codeSuggestions : [],
           uiUpdates: (json.uiUpdates as Record<string, unknown>) ?? {},
           neonImpactScore: typeof json.neonImpactScore === 'number' ? json.neonImpactScore : undefined,
+          xamanSend: coerceXamanSendDraft(json.xamanSend),
         };
       }
     } catch (_) {}
@@ -184,6 +215,7 @@ User: Task: ${task}. Context: ${JSON.stringify(context)}.
       uiUpdates: (response.uiUpdates as Record<string, unknown>) ?? {},
       neonImpactScore:
         typeof response.neonImpactScore === 'number' ? response.neonImpactScore : undefined,
+      xamanSend: coerceXamanSendDraft(response.xamanSend),
       agentType,
     };
   }
