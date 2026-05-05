@@ -169,7 +169,7 @@ export function useIlpOperatorRealtime(enabled: boolean): UseIlpOperatorRealtime
         wsRef.current = null
       }
     }
-  }, [enabled, cfg.isConfigured, cfg.wsUrl, cfg.httpSnapshotUrl, cfg.pollIntervalMs, applySnapshot, pollHttp])
+  }, [enabled, cfg.isConfigured, cfg.wsUrl, cfg.httpSnapshotUrl, cfg.pollIntervalMs, applySnapshot])
 
   useEffect(() => {
     if (enabled) return

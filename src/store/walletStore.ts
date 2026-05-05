@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getWalletData, isValidXRPLAddress, getAccountCreationYear } from '../services/xrplService';
+import { devLog, devError, redactAddresses } from '../lib/secureLog';
 import { useProfileStore } from './profileStore';
 import { useStrategyStore } from './strategyStore';
 
@@ -177,20 +178,19 @@ export const useWalletStore = create<WalletState>()(
 
         // Fetch real data from XRPL
         try {
-          console.log(`[WalletStore] Fetching data for wallet: ${wallet.address}`);
-          
+          devLog(`[WalletStore] Fetching data for wallet: ${redactAddresses(wallet.address)}`);
+
           if (isValidXRPLAddress(wallet.address)) {
             // Fetch wallet data and creation year in parallel
             const [data, creationYear] = await Promise.all([
               getWalletData(wallet.address),
               getAccountCreationYear(wallet.address),
             ]);
-            console.log(`[WalletStore] Got wallet data:`, data);
-            console.log(`[WalletStore] Balance specifically: ${data.balance} (type: ${typeof data.balance})`);
-            console.log(`[WalletStore] Creation year: ${creationYear}`);
-            
+            devLog('[WalletStore] Got wallet data (balance redacted in dev trace)');
+            devLog(`[WalletStore] Creation year: ${creationYear}`);
+
             set((state) => {
-              console.log(`[WalletStore] Setting wallet ${id} balance to: ${data.balance}`);
+              devLog(`[WalletStore] Setting wallet ${id} balance`);
               return {
                 wallets: state.wallets.map(w =>
                   w.id === id ? {
@@ -217,7 +217,7 @@ export const useWalletStore = create<WalletState>()(
             }
             syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
           } else {
-            console.log(`[WalletStore] Invalid address format: ${wallet.address}`);
+            devLog(`[WalletStore] Invalid address format: ${redactAddresses(wallet.address)}`);
             set((state) => ({
               wallets: state.wallets.map(w =>
                 w.id === id ? { ...w, isLoading: false, error: 'Invalid XRPL address' } : w
@@ -226,7 +226,7 @@ export const useWalletStore = create<WalletState>()(
             syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);
           }
         } catch (error) {
-          console.error(`[WalletStore] Error fetching wallet data:`, error);
+          devError('[WalletStore] Error fetching wallet data:', error);
           set((state) => ({
             wallets: state.wallets.map(w =>
               w.id === id ? { 
@@ -244,7 +244,7 @@ export const useWalletStore = create<WalletState>()(
         const wallet = get().wallets.find(w => w.id === id);
         if (!wallet || wallet.provider === 'demo') return;
 
-        console.log(`[WalletStore] Refreshing wallet: ${wallet.address}`);
+        devLog(`[WalletStore] Refreshing wallet: ${redactAddresses(wallet.address)}`);
 
         set((state) => ({
           wallets: state.wallets.map(w =>
@@ -255,8 +255,8 @@ export const useWalletStore = create<WalletState>()(
         try {
           if (isValidXRPLAddress(wallet.address)) {
             const data = await getWalletData(wallet.address);
-            console.log(`[WalletStore] Refresh complete:`, data);
-            
+            devLog('[WalletStore] Refresh complete');
+
             set((state) => ({
               wallets: state.wallets.map(w =>
                 w.id === id ? {
@@ -271,9 +271,21 @@ export const useWalletStore = create<WalletState>()(
                 } : w
               ),
             }));
+          } else {
+            set((state) => ({
+              wallets: state.wallets.map((w) =>
+                w.id === id
+                  ? {
+                      ...w,
+                      isLoading: false,
+                      error: 'Invalid XRPL address',
+                    }
+                  : w
+              ),
+            }));
           }
         } catch (error) {
-          console.error(`[WalletStore] Refresh error:`, error);
+          devError('[WalletStore] Refresh error:', error);
           set((state) => ({
             wallets: state.wallets.map(w =>
               w.id === id ? { 

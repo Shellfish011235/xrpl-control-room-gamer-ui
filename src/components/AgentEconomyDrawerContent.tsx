@@ -12,13 +12,17 @@ import {
   agentEconomyTabs,
   type AgentEconomyTabId,
 } from '../pages/AgentEconomy';
+import { AgentRuntimeStatus } from './agents/AgentRuntimeStatus';
 
 export function AgentEconomyDrawerContent() {
   const [tab, setTab] = useState<AgentEconomyTabId>('receipts');
 
   return (
     <div className="flex flex-col h-full">
-      <p className="text-[11px] text-cyber-muted px-3 pt-2 pb-1 shrink-0">
+      <div className="px-3 pt-2 shrink-0">
+        <AgentRuntimeStatus />
+      </div>
+      <p className="text-[11px] text-cyber-muted px-3 pt-1 pb-1 shrink-0">
         Stay in control: receipts for taxes, spend limits so you don’t overspend, and optional paid tools when they help you.
       </p>
       <div className="flex gap-1 p-2 border-b border-cyber-border/60 shrink-0 overflow-x-auto">

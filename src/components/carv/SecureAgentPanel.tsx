@@ -21,7 +21,19 @@ import { getXamanMode, initializeXaman } from '../../config/xaman';
 import { useWalletStore } from '../../store/walletStore';
 import { usePlatformModeStore } from '../../store/platformModeStore';
 import { useAgentPanelStore } from '../../store/agentPanelStore';
+import { useAgentRuntimeStore } from '../../store/agentRuntimeStore';
+import type { AgentTaskType } from '../../agents/types';
 import { getTransaction, waitForTransaction, TransactionResult } from '../../services/xrplService';
+
+function tryParseRuntimeObserveCommand(input: string): AgentTaskType | null {
+  const t = input.trim().toLowerCase();
+  if (t === '/network-check' || t === '/net-check') return 'network_health_check';
+  if (t === '/ilp-check' || t === '/ilp') return 'ilp_endpoint_check';
+  if (t === '/compliance' || t === '/compliance-review') return 'compliance_review';
+  if (t === '/security' || t === '/security-review') return 'security_review';
+  if (t === '/route-sim' || t === '/route-simulation') return 'route_simulation';
+  return null;
+}
 
 // ==================== TYPES ====================
 
@@ -234,6 +246,31 @@ export function SecureAgentPanel() {
 
     const userInput = input.trim();
     setInput('');
+
+    const observeCmd = tryParseRuntimeObserveCommand(userInput);
+    if (observeCmd) {
+      addMessage('user', userInput);
+      setIsProcessing(true);
+      try {
+        const out = await useAgentRuntimeStore.getState().runQuickTask(observeCmd);
+        if (out) {
+          const f = out.findings[0];
+          const r = out.recommendations[0];
+          addMessage(
+            'system',
+            `Agent runtime (${out.task.type})\n\nFinding: ${f?.title ?? '—'} — ${f?.summary ?? ''}\n\nRecommendation: ${r?.title ?? '—'} — ${r?.recommendation ?? ''}\n\nReceipt output hash: ${out.receipt.outputHash}`
+          );
+        } else {
+          addMessage('system', 'Agent runtime finished with no result (check Track tab or console).');
+        }
+      } catch (err) {
+        addMessage('system', `Agent runtime error: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        setIsProcessing(false);
+      }
+      return;
+    }
+
     addMessage('user', userInput);
     setIsProcessing(true);
 

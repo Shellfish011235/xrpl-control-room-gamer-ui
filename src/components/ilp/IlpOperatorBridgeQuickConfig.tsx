@@ -4,6 +4,7 @@ import {
   ILP_OPERATOR_STORAGE_KEYS,
   clearIlpOperatorStorageOverrides,
 } from '../../config/ilpOperatorRealtimeConfig'
+import { validateIlpHttpSnapshotInput, validateIlpWebSocketInput } from '../../lib/urlValidation'
 
 type Props = {
   className?: string
@@ -19,6 +20,7 @@ function getBundledExampleSnapshotUrl(): string {
 export function IlpOperatorBridgeQuickConfig({ className = '' }: Props) {
   const [httpUrl, setHttpUrl] = useState('')
   const [wsUrl, setWsUrl] = useState('')
+  const [urlError, setUrlError] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -30,16 +32,33 @@ export function IlpOperatorBridgeQuickConfig({ className = '' }: Props) {
   }, [])
 
   const apply = () => {
+    setUrlError(null)
     try {
       const h = httpUrl.trim()
       const w = wsUrl.trim()
-      if (h) localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl, h)
-      else localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl)
-      if (w) localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl, w)
-      else localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl)
+      if (h) {
+        const vh = validateIlpHttpSnapshotInput(h)
+        if (vh.ok === false) {
+          setUrlError(`HTTP snapshot: ${vh.reason}`)
+          return
+        }
+        localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl, vh.normalized)
+      } else {
+        localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl)
+      }
+      if (w) {
+        const vw = validateIlpWebSocketInput(w)
+        if (vw.ok === false) {
+          setUrlError(`WebSocket: ${vw.reason}`)
+          return
+        }
+        localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl, vw.normalized)
+      } else {
+        localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl)
+      }
       window.location.reload()
     } catch {
-      /* ignore */
+      setUrlError('Could not save URLs')
     }
   }
 
@@ -126,6 +145,11 @@ export function IlpOperatorBridgeQuickConfig({ className = '' }: Props) {
           spellCheck={false}
         />
       </label>
+      {urlError ? (
+        <p className="text-[9px] text-red-400 border border-red-500/35 rounded px-2 py-1" role="alert">
+          {urlError}
+        </p>
+      ) : null}
       <div className="flex flex-wrap gap-2 pt-0.5">
         <button
           type="button"

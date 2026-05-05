@@ -1,12 +1,18 @@
 import { Calendar, ExternalLink } from 'lucide-react';
 import { eventsMock } from '../../../data/dashboardMockData';
+import { classifyDashboardEventsMock } from '../../../services/dataAccuracyClassifier';
+import { DataAccuracyBadge } from '../../common/DataAccuracyBadge';
 
 export function EventsList() {
+  const eventsSource = classifyDashboardEventsMock();
   return (
     <div className="cyber-panel rounded-xl border border-cyber-border h-full flex flex-col overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-cyber-border">
-        <Calendar size={16} className="text-cyber-blue" />
-        <span className="font-cyber text-sm text-cyber-blue">Upcoming events</span>
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-cyber-border">
+        <div className="flex items-center gap-2 min-w-0">
+          <Calendar size={16} className="text-cyber-blue shrink-0" />
+          <span className="font-cyber text-sm text-cyber-blue truncate">Upcoming events</span>
+        </div>
+        <DataAccuracyBadge meta={eventsSource} compact />
       </div>
       <div className="flex-1 overflow-auto p-2 space-y-1.5">
         {eventsMock.map((e) => (

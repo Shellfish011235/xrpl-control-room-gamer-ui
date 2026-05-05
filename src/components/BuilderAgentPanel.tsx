@@ -169,7 +169,7 @@ export default function BuilderAgentPanel(props: BuilderAgentPanelProps) {
             },
           ];
         }
-        const prepared = await client.autofill(tx as Parameters<typeof client.autofill>[0]);
+        const prepared = await client.autofill(tx as unknown as Parameters<typeof client.autofill>[0]);
         const req = await xamanService.requestCustomTransactionSignature(
           prepared as Parameters<typeof xamanService.requestCustomTransactionSignature>[0],
           payerAddress

@@ -30,11 +30,11 @@ export function DisclaimerBanner() {
     <AnimatePresence>
       {!dismissed && (
         <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="overflow-hidden border-b border-cyber-yellow/30 bg-cyber-yellow/5"
+          className="border-b border-cyber-yellow/30 bg-cyber-yellow/5"
         >
           <div className="max-w-7xl mx-auto px-4 lg:px-8 py-2 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">

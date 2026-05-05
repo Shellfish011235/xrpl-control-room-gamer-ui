@@ -11,6 +11,7 @@
 
 import { Xumm } from 'xumm';
 import { xrpToDrops } from '../xrplService';
+import { devLog, devError, devWarn, isDevLogEnabled, summarizeTxForLog } from '../../lib/secureLog';
 
 // ==================== TYPES ====================
 
@@ -122,9 +123,9 @@ class XamanService {
       // Save for later
       localStorage.setItem('xaman-api-key', apiKey);
       
-      console.log('[Xaman] ✅ SDK initialized successfully');
+      devLog('[Xaman] ✅ SDK initialized successfully');
     } catch (error) {
-      console.error('[Xaman] Failed to initialize SDK:', error);
+      devError('[Xaman] Failed to initialize SDK:', error);
       throw error;
     }
   }
@@ -141,7 +142,7 @@ class XamanService {
         return true;
       }
     } catch (e) {
-      console.warn('[Xaman] Could not load credentials from localStorage');
+      devWarn('[Xaman] Could not load credentials from localStorage');
     }
     return false;
   }
@@ -166,7 +167,7 @@ class XamanService {
     } catch (e) {
       // Ignore
     }
-    console.log('[Xaman] Credentials cleared. Add API key in Settings to sign.');
+    devLog('[Xaman] Credentials cleared. Add API key in Settings to sign.');
   }
 
   /**
@@ -340,8 +341,7 @@ class XamanService {
 
     // Real mode - use Xumm SDK
     try {
-      console.log('[Xaman] Creating payload via SDK...');
-      console.log('[Xaman] Payload:', JSON.stringify(payload, null, 2));
+      devLog('[Xaman] Creating payload via SDK…', summarizeTxForLog(payload as Record<string, unknown>));
       
       // Add timeout for SDK operations
       const PAYLOAD_TIMEOUT = 30000; // 30 seconds to create payload
@@ -349,26 +349,25 @@ class XamanService {
       const createPromise = this.xumm.payload?.createAndSubscribe({
         txjson: payload,
       } as any, (event: any) => {
-        // Real-time event handler
-        console.log('[Xaman] WebSocket Event:', event);
+        devLog('[Xaman] payload event', event?.data?.opened != null ? 'opened' : event?.data?.signed != null ? 'signed/rejected' : 'update');
         
         if (event.data.opened) {
-          console.log('[Xaman] ✅ User opened the signing request');
+          devLog('[Xaman] User opened the signing request');
           this.emit('signingOpened', { id: event.uuid });
         }
         
         if (event.data.signed !== undefined) {
-          console.log('[Xaman] Signing result received:', event.data.signed ? 'SIGNED' : 'REJECTED');
+          devLog('[Xaman] Signing result:', event.data.signed ? 'SIGNED' : 'REJECTED');
           const request = this.pendingRequests.get(event.uuid);
           if (request) {
             if (event.data.signed) {
               request.status = 'signed';
               request.txHash = event.data.txid;
-              console.log('[Xaman] ✅ Transaction signed! Hash:', event.data.txid);
+              devLog('[Xaman] Transaction signed (hash redacted in logs)');
               this.emit('signingSigned', request);
             } else {
               request.status = 'rejected';
-              console.log('[Xaman] ❌ Transaction rejected by user');
+              devLog('[Xaman] Transaction rejected by user');
               this.emit('signingRejected', request);
             }
           }
@@ -384,7 +383,7 @@ class XamanService {
       const result = await Promise.race([createPromise, timeoutPromise]) as any;
 
       if (!result || !result.created) {
-        console.error('[Xaman] Failed to create payload - no result');
+        devError('[Xaman] Failed to create payload - no result');
         throw new Error('Failed to create payload');
       }
 
@@ -406,32 +405,29 @@ class XamanService {
       this.pendingRequests.set(created.uuid, request);
       this.emit('signingRequested', request);
 
-      console.log('[Xaman] ✅ Payload created:', created.uuid);
-      console.log('[Xaman] QR Code:', created.refs.qr_png);
-      console.log('[Xaman] Deep Link:', created.next.always);
-      console.log('[Xaman] WebSocket URL:', created.refs.websocket_status);
+      devLog('[Xaman] Payload created', created.uuid);
 
       // Handle the resolved promise in the background with timeout
       const resolvedTimeout = new Promise<null>((resolve) => {
         setTimeout(() => {
-          console.log('[Xaman] ⏰ Resolved promise timeout - checking status');
+          devLog('[Xaman] Resolved promise timeout - checking status');
           resolve(null);
         }, 10 * 60 * 1000); // 10 minute timeout for signing
       });
 
       Promise.race([resolved, resolvedTimeout]).then((resolvedPayload) => {
-        console.log('[Xaman] Resolved payload:', resolvedPayload);
+        devLog('[Xaman] Resolved payload received');
         if (resolvedPayload) {
           const req = this.pendingRequests.get(created.uuid);
           if (req && req.status === 'pending') {
             if (resolvedPayload.signed) {
               req.status = 'signed';
               req.txHash = resolvedPayload.txid;
-              console.log('[Xaman] ✅ Payment signed via resolved promise');
+              devLog('[Xaman] Payment signed via resolved promise');
               this.emit('signingSigned', req);
             } else {
               req.status = 'rejected';
-              console.log('[Xaman] ❌ Payment rejected via resolved promise');
+              devLog('[Xaman] Payment rejected via resolved promise');
               this.emit('signingRejected', req);
             }
           }
@@ -440,12 +436,12 @@ class XamanService {
           const req = this.pendingRequests.get(created.uuid);
           if (req && req.status === 'pending') {
             req.status = 'expired';
-            console.log('[Xaman] ⏰ Signing request expired');
+            devLog('[Xaman] Signing request expired');
             this.emit('signingExpired', req);
           }
         }
       }).catch((err) => {
-        console.error('[Xaman] Resolved promise error:', err);
+        devError('[Xaman] Resolved promise error:', err);
         const req = this.pendingRequests.get(created.uuid);
         if (req && req.status === 'pending') {
           req.status = 'rejected';
@@ -456,7 +452,8 @@ class XamanService {
       return request;
       
     } catch (error) {
-      console.error('[Xaman] SDK error:', error);
+      if (isDevLogEnabled()) console.error('[Xaman] SDK error:', error);
+      else console.error('[Xaman] SDK error (enable dev mode for details)');
       // If we have credentials, do NOT silently fall back to demo — surface the error so the user can fix it
       const msg = error instanceof Error ? error.message : String(error);
       const isConnectionError = /fetch|network|cors|Failed to fetch|connect|server not found|ECONNREFUSED|timeout/i.test(msg);
@@ -498,7 +495,7 @@ class XamanService {
       if (request.status === 'pending') {
         request.status = 'signed';
         request.txHash = `DEMO_TX_${id.toUpperCase()}`;
-        console.log('[Xaman] 🎮 Demo: Auto-approved');
+        devLog('[Xaman] Demo: Auto-approved');
         this.emit('signingSigned', request);
       }
     }, 3000);

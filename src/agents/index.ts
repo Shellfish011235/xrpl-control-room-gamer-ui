@@ -18,3 +18,28 @@ export { publishAgentEvent, subscribeAgentEvent } from './eventBus';
 export type { AgentEventType, AgentEventPayload } from './eventBus';
 export { loadSkills, matchSkills } from './skills';
 export type { Skill, SkillName } from './skills/types';
+
+export type {
+  AgentStatus,
+  AgentRiskLevel,
+  AgentCapability,
+  AgentBlockedAction,
+  AgentDefinition,
+  AgentTaskType,
+  AgentTask,
+  AgentFinding,
+  AgentRecommendation,
+  AgentReceipt,
+} from './types';
+export { AGENT_REGISTRY, getAgentById, getAgentsByCapability, getDefaultActiveAgents, UNIVERSAL_BLOCKED, FINANCIAL_BLOCKED } from './agentRegistry';
+export {
+  isBlockedAction,
+  getBlockedReason,
+  assertAgentActionNotBlocked,
+  canAgentPerformCapability,
+  requireHumanApproval,
+} from './policy';
+export { createSimpleHash, createAgentReceipt } from './agentReceiptEngine';
+export type { CreateAgentReceiptParams } from './agentReceiptEngine';
+export { runAgentTask, getPrimaryAgentIdForTaskType, PRIMARY_AGENT_FOR_TASK } from './agentTaskEngine';
+export type { RunAgentTaskResult } from './agentTaskEngine';

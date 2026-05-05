@@ -57,6 +57,13 @@ export function classifyMockSettlementData(): DataSourceMeta {
   })
 }
 
+/** Dashboard widget: upcoming events subset from dashboardMockData (not a live calendar). */
+export function classifyDashboardEventsMock(): DataSourceMeta {
+  return withWarning('DEMO', 'mock_dataset', 'dashboardMockData.eventsMock', {
+    confidencePct: 5,
+  })
+}
+
 export function classifyRafikiLocalTelemetry(): DataSourceMeta {
   return withWarning('LOCAL_TELEMETRY', 'rafiki_local', 'Local Rafiki / connector telemetry', {
     isLive: true,

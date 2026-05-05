@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -559,16 +559,21 @@ export default function Character() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps -- run once on mount
 
+  // Earliest known account creation year among real wallets (stable key avoids effect storms during refresh)
+  const earliestWalletCreationYear = useMemo(() => {
+    const years = wallets
+      .filter((w) => w.provider !== 'demo' && typeof w.creationYear === 'number')
+      .map((w) => w.creationYear as number)
+    if (years.length === 0) return null
+    return Math.min(...years)
+  }, [wallets])
+
   // Sync "Member since" from connected wallet when profile has none (fixes "Connect wallet to see history")
   useEffect(() => {
     if (memberSinceYear != null) return
-    const withYear = wallets
-      .filter((w): w is typeof w & { creationYear: number } => w.provider !== 'demo' && typeof w.creationYear === 'number')
-      .sort((a, b) => a.creationYear - b.creationYear)
-    if (withYear.length > 0) {
-      setMemberSinceYear(withYear[0].creationYear)
-    }
-  }, [wallets, memberSinceYear, setMemberSinceYear])
+    if (earliestWalletCreationYear == null) return
+    setMemberSinceYear(earliestWalletCreationYear)
+  }, [memberSinceYear, earliestWalletCreationYear, setMemberSinceYear])
 
   const copyAddress = async (address: string) => {
     await navigator.clipboard.writeText(address)

@@ -4,6 +4,8 @@
  * Do not put secrets in VITE_* vars for public builds.
  */
 
+import { validateIlpHttpSnapshotInput, validateIlpWebSocketInput } from '../lib/urlValidation'
+
 export interface IlpOperatorRealtimeConfig {
   /** Full WebSocket URL (e.g. wss://your-bridge.example/ws/ilp-operator) */
   wsUrl?: string
@@ -32,6 +34,32 @@ function storageUrl(key: string): string | undefined {
   }
 }
 
+function validatedHttpFromStorage(key: string): string | undefined {
+  const raw = storageUrl(key)
+  if (!raw) return undefined
+  const v = validateIlpHttpSnapshotInput(raw)
+  return v.ok ? v.normalized : undefined
+}
+
+function validatedWsFromStorage(key: string): string | undefined {
+  const raw = storageUrl(key)
+  if (!raw) return undefined
+  const v = validateIlpWebSocketInput(raw)
+  return v.ok ? v.normalized : undefined
+}
+
+function validatedEnvHttp(s: string | undefined): string | undefined {
+  if (!s?.trim()) return undefined
+  const v = validateIlpHttpSnapshotInput(s.trim())
+  return v.ok ? v.normalized : undefined
+}
+
+function validatedEnvWs(s: string | undefined): string | undefined {
+  if (!s?.trim()) return undefined
+  const v = validateIlpWebSocketInput(s.trim())
+  return v.ok ? v.normalized : undefined
+}
+
 export function clearIlpOperatorStorageOverrides(): void {
   if (typeof window === 'undefined') return
   try {
@@ -55,13 +83,21 @@ export function bootstrapIlpOperatorFromQuery(): boolean {
     const w = q.get('ilpWs')
     if (h !== null) {
       const t = h.trim()
-      if (t) localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl, t)
-      else localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl)
+      if (!t) {
+        localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl)
+      } else {
+        const v = validateIlpHttpSnapshotInput(t)
+        if (v.ok) localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl, v.normalized)
+      }
     }
     if (w !== null) {
       const t = w.trim()
-      if (t) localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl, t)
-      else localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl)
+      if (!t) {
+        localStorage.removeItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl)
+      } else {
+        const v = validateIlpWebSocketInput(t)
+        if (v.ok) localStorage.setItem(ILP_OPERATOR_STORAGE_KEYS.wsUrl, v.normalized)
+      }
     }
     q.delete('ilpHttp')
     q.delete('ilpWs')
@@ -81,18 +117,20 @@ export function bootstrapIlpOperatorFromQuery(): boolean {
 export function getIlpOperatorRealtimeConfig(): IlpOperatorRealtimeConfig {
   // Each VITE_* key must appear as a static property access so Vite can inline at build time.
   const wsUrl =
-    (import.meta.env.VITE_ILP_OPERATOR_WS_URL as string | undefined)?.trim() ||
-    (import.meta.env.VITE_ILP_OPERATOR_WEBSOCKET_URL as string | undefined)?.trim() ||
-    storageUrl(ILP_OPERATOR_STORAGE_KEYS.wsUrl) ||
+    validatedEnvWs((import.meta.env.VITE_ILP_OPERATOR_WS_URL as string | undefined)?.trim()) ||
+    validatedEnvWs((import.meta.env.VITE_ILP_OPERATOR_WEBSOCKET_URL as string | undefined)?.trim()) ||
+    validatedWsFromStorage(ILP_OPERATOR_STORAGE_KEYS.wsUrl) ||
     undefined
   const httpSnapshotUrl =
-    (import.meta.env.VITE_ILP_OPERATOR_HTTP_SNAPSHOT_URL as string | undefined)?.trim() ||
-    (import.meta.env.VITE_ILP_OPERATOR_SNAPSHOT_URL as string | undefined)?.trim() ||
-    (import.meta.env.VITE_ILP_OPERATOR_HTTP_URL as string | undefined)?.trim() ||
-    storageUrl(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl) ||
+    validatedEnvHttp((import.meta.env.VITE_ILP_OPERATOR_HTTP_SNAPSHOT_URL as string | undefined)?.trim()) ||
+    validatedEnvHttp((import.meta.env.VITE_ILP_OPERATOR_SNAPSHOT_URL as string | undefined)?.trim()) ||
+    validatedEnvHttp((import.meta.env.VITE_ILP_OPERATOR_HTTP_URL as string | undefined)?.trim()) ||
+    validatedHttpFromStorage(ILP_OPERATOR_STORAGE_KEYS.httpSnapshotUrl) ||
     undefined
   const pollRaw = import.meta.env.VITE_ILP_OPERATOR_POLL_MS as string | undefined
-  const pollIntervalMs = Math.max(2000, Number.parseInt(pollRaw || '', 10) || DEFAULT_POLL_MS)
+  const parsed = Number.parseInt(String(pollRaw ?? '').trim() || '', 10)
+  const basePoll = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_POLL_MS
+  const pollIntervalMs = Math.max(2000, basePoll)
 
   return {
     wsUrl,
