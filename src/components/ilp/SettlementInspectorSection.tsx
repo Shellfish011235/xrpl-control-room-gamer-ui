@@ -1,6 +1,8 @@
 import { AlertCircle, CheckCircle, RefreshCw, TrendingUp } from 'lucide-react'
+import { DataAccuracyBadge } from '../common/DataAccuracyBadge'
 import type { IlpCorridorInspectorSettlement, OperatorSettlementStatus } from '../../types/settlement'
 import { getMockInspectorSettlement, getMockCorridorExposure } from '../../lib/settlement/mockSettlementData'
+import { classifyMockSettlementData } from '../../services/dataAccuracyClassifier'
 import type { OperatorViewMode } from './CorridorExposurePanel'
 
 type Props = {
@@ -9,6 +11,8 @@ type Props = {
   useDemoData?: boolean
   viewMode?: OperatorViewMode
 }
+
+const demoSettlementMeta = classifyMockSettlementData()
 
 function exceptionBadge(
   s: IlpCorridorInspectorSettlement['exceptionOrCorrection'],
@@ -45,7 +49,12 @@ function exceptionBadge(
   )
 }
 
-export function SettlementInspectorSection({ corridorId, settlement, useDemoData = true, viewMode = 'flow' }: Props) {
+export function SettlementInspectorSection({
+  corridorId,
+  settlement,
+  useDemoData = false,
+  viewMode = 'flow',
+}: Props) {
   const s = settlement ?? (useDemoData ? getMockInspectorSettlement(corridorId) : null)
   const ex = useDemoData ? getMockCorridorExposure(corridorId) : null
 
@@ -53,8 +62,10 @@ export function SettlementInspectorSection({ corridorId, settlement, useDemoData
     return (
       <div className="p-3 rounded bg-cyber-darker/40 border border-cyber-border/30">
         <p className="text-[10px] font-cyber text-cyber-muted uppercase mb-1">Settlement state</p>
-        <p className="text-xs text-cyber-muted">No operator settlement data for this corridor. Connect a bridge feed when available.</p>
-        {/* TODO(control-room): map tigerbeetle.account_snapshot by corridor from WebSocket */}
+        <p className="text-xs text-cyber-muted leading-snug">
+          No verified Rafiki/Open Payments settlement telemetry configured. Connect a local Rafiki webhook feed to
+          replace demo settlement data.
+        </p>
       </div>
     )
   }
@@ -71,16 +82,19 @@ export function SettlementInspectorSection({ corridorId, settlement, useDemoData
           : 'bg-cyber-darker/50 border-cyber-border/40')
       }
     >
-      <div className="flex items-center justify-between gap-2 mb-2">
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
         <p className="text-[10px] font-cyber uppercase tracking-wider text-cyber-cyan">Settlement state</p>
-        {ex?.settlementStatus && (
-          <span
-            className="text-[9px] text-cyber-muted"
-            title="Aggregate settlement posture for this route (from internal ledger / connector model)"
-          >
-            Operator: {ex.settlementStatus}
-          </span>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {useDemoData && settlement === undefined && <DataAccuracyBadge meta={demoSettlementMeta} compact />}
+          {ex?.settlementStatus && (
+            <span
+              className="text-[9px] text-cyber-muted"
+              title="Aggregate settlement posture for this route (from internal ledger / connector model)"
+            >
+              Operator: {ex.settlementStatus}
+            </span>
+          )}
+        </div>
       </div>
 
       {exposureCallout && (

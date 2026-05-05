@@ -1,13 +1,21 @@
 import { Inbox, Timer, CheckCircle, Ban, XCircle, RefreshCw, Activity } from 'lucide-react'
 import type { SettlementQueueSummary } from '../../types/settlement'
+import type { DataSourceMeta } from '../../types/dataAccuracy'
 import { formatDurationSeconds } from '../../lib/settlement/formatters'
 import { getMockSettlementQueueSummary } from '../../lib/settlement/mockSettlementData'
+import { DataAccuracyBadge } from '../common/DataAccuracyBadge'
+import { classifyMockSettlementData } from '../../services/dataAccuracyClassifier'
 
 type Props = {
   queue?: SettlementQueueSummary
   /** false = structurally empty (no demo numbers) */
   useDemoData?: boolean
   compact?: boolean
+  /** Bridge configured but no queue payload yet */
+  awaitingSnapshot?: boolean
+  connectionError?: string | null
+  /** Shown when not using demo data (e.g. operator bridge) */
+  accuracyMeta?: DataSourceMeta
 }
 
 function StatBox({
@@ -47,16 +55,41 @@ function StatBox({
   )
 }
 
-export function SettlementQueueWidget({ queue, useDemoData = true, compact: compactProp }: Props) {
-  const q = queue ?? getMockSettlementQueueSummary(useDemoData)
+const demoQueueMeta = classifyMockSettlementData()
+
+export function SettlementQueueWidget({
+  queue,
+  useDemoData = false,
+  compact: compactProp,
+  awaitingSnapshot = false,
+  connectionError = null,
+  accuracyMeta,
+}: Props) {
   const compact = compactProp !== false
+
   if (!useDemoData && !queue) {
+    if (awaitingSnapshot) {
+      return (
+        <div className="rounded-lg border border-cyber-cyan/20 bg-cyber-darker/30 p-3 text-[10px] text-cyber-muted">
+          <span className="font-cyber text-cyber-cyan">Queue status</span> — connecting, waiting for first snapshot…
+        </div>
+      )
+    }
+    if (connectionError) {
+      return (
+        <div className="rounded-lg border border-red-500/30 bg-red-950/20 p-3 text-[10px] text-red-200/90">
+          <span className="font-cyber">Queue status</span> — {connectionError}
+        </div>
+      )
+    }
     return (
       <div className="rounded-lg border border-cyber-border/50 bg-cyber-darker/30 p-3 text-[10px] text-cyber-muted">
         <span className="font-cyber">Queue status</span> — no data source configured.
       </div>
     )
   }
+
+  const q = useDemoData ? (queue ?? getMockSettlementQueueSummary(true)) : queue!
 
   return (
     <div className="rounded-lg border border-cyber-cyan/25 bg-cyber-darker/50 p-3">
@@ -65,14 +98,15 @@ export function SettlementQueueWidget({ queue, useDemoData = true, compact: comp
           <Activity size={14} className="text-cyber-cyan shrink-0" />
           <div className="min-w-0">
             <p className="text-[10px] font-cyber uppercase tracking-wider text-cyber-cyan">Queue status</p>
-            <p className="text-[9px] text-cyber-muted truncate">Settlements &amp; two-phase state (demo)</p>
+            <p className="text-[9px] text-cyber-muted truncate">
+              {useDemoData
+                ? 'Demo settlement queue — replace with Rafiki webhook / Open Payments telemetry'
+                : 'Live queue from configured operator bridge'}
+            </p>
           </div>
         </div>
-        {useDemoData && (
-          <span className="text-[8px] px-1.5 py-0.5 rounded border border-cyber-yellow/30 text-cyber-yellow shrink-0">
-            DEMO
-          </span>
-        )}
+        {useDemoData ? <DataAccuracyBadge meta={demoQueueMeta} compact /> : null}
+        {!useDemoData && accuracyMeta ? <DataAccuracyBadge meta={accuracyMeta} compact /> : null}
       </div>
       {compact ? (
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">

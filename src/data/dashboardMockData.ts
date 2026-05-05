@@ -98,12 +98,16 @@ export const whaleFeedMock: WhaleTxMock[] = [
   { id: '4', from: 'rPQR...yZ3', to: 'rSTU...bC9', amountXrp: 8_700_000, timeAgo: '1h ago', hash: 'g7h8...' },
 ];
 
-// ——— Upcoming events ———
+// ——— Upcoming events (subset): Ripple + XRPL.org / Commons / ILF ———
 export const eventsMock: EventMock[] = [
-  { id: '1', date: 'Feb 25–26, 2026', title: 'XRPL Community Day (Virtual)', type: 'summit', url: 'https://ripple.com/insights/', endDate: '2026-02-26' },
-  { id: '2', date: 'Mar 12–15, 2026', title: 'ETHMumbai — India Web3', type: 'conference', url: 'https://ethmumbai.net/', endDate: '2026-03-15' },
-  { id: '3', date: 'Apr 29–30, 2026', title: 'TOKEN2049 Dubai', type: 'conference', url: 'https://www.token2049.com/dubai', endDate: '2026-04-30' },
-  { id: '4', date: 'Oct 27–29, 2026', title: 'Ripple Swell 2026 — NYC', type: 'summit', url: 'https://ripple.com/events/swell/', endDate: '2026-10-29' },
+  { id: '1', date: 'Feb 10–12, 2026', title: 'EasyA Consensus Hong Kong Hackathon (XRPL partner)', type: 'hackathon', url: 'https://www.easya.io/events/easya-consensus-hong-kong-hackathon', endDate: '2026-02-12' },
+  { id: '2', date: 'Apr 11–12, 2026', title: 'Hack The Block — PBW XRPL (Paris)', type: 'hackathon', url: 'https://lu.ma/Hacktheblock2026-PBW-XRPL', endDate: '2026-04-12' },
+  { id: '3', date: 'May 5–7, 2026', title: 'Consensus Miami (XRP/XRPL)', type: 'conference', url: 'https://consensus.coindesk.com/', endDate: '2026-05-07' },
+  { id: '4', date: 'May 5–7, 2026', title: 'EasyA Consensus Miami Hackathon (XRPL partner)', type: 'hackathon', url: 'https://www.easya.io/events/easya-consensus-miami-hackathon', endDate: '2026-05-07' },
+  { id: '5', date: 'May 20–22, 2026', title: 'Chain of Blocks EU26 — Malta', type: 'conference', url: 'https://lu.ma/8xdc6wgg', endDate: '2026-05-22' },
+  { id: '6', date: 'Jun 2–4, 2026', title: 'Money20/20 Europe — Amsterdam', type: 'conference', url: 'https://europe.money2020.com/', endDate: '2026-06-04' },
+  { id: '7', date: 'Annual', title: 'Interledger Summit (ILP / Open Payments)', type: 'summit', url: 'https://interledger.org/summit', endDate: '2026-12-31' },
+  { id: '8', date: 'Oct 27–29, 2026', title: 'Ripple Swell 2026 — NYC', type: 'summit', url: 'https://ripple.com/events/swell/', endDate: '2026-10-29' },
 ];
 
 // ——— Strategy terminal summary ———

@@ -75,8 +75,11 @@ import {
   type XRPLConnectedChain,
 } from '../data/corridorData'
 import type { GlobeLens, GlobeHub } from '../types/globe'
+import type { DataSourceMeta } from '../types/dataAccuracy'
+import type { SettlementQueueSummary } from '../types/settlement'
 import {
   CorridorExposurePanel,
+  IlpOperatorBridgeQuickConfig,
   SettlementQueueWidget,
   SettlementInspectorSection,
   type OperatorViewMode,
@@ -96,6 +99,17 @@ import {
 } from '../components/network'
 import type { PaymentInfraNodeLayout } from '../types/payment-infrastructure'
 import { useILPStore } from '../store/ilpStore'
+import { useIlpAccuracyData } from '../hooks/useIlpAccuracyData'
+import { useIlpOperatorRealtime } from '../hooks/useIlpOperatorRealtime'
+import { bootstrapIlpOperatorFromQuery } from '../config/ilpOperatorRealtimeConfig'
+import { DataAccuracyBadge } from '../components/common/DataAccuracyBadge'
+import {
+  classifyIlpStaticData,
+  classifyIlpStaticDataBesideLiveBridge,
+  classifyIlpOperatorBridge,
+  classifyMockSettlementData,
+} from '../services/dataAccuracyClassifier'
+import { getIlpConnectorsWithSourceMeta } from '../services/ilpStaticDataSourceAdapter'
 import InnovationRadar from '../components/InnovationRadar'
 import LedgerHeartbeat from '../modules/visualization/LedgerHeartbeat'
 import ReactorCoreView from '../modules/visualization/ReactorCoreView'
@@ -116,6 +130,17 @@ const lensIcons: Record<GlobeLens, React.ReactNode> = {
 }
 
 const lensOrder: GlobeLens[] = ['validators', 'ilp', 'corridors', 'community', 'regulation', 'globalPaymentInfrastructure']
+
+/** Placeholder counts for ILP operator strip when bridge is configured but no queue payload yet. */
+const EMPTY_OPERATOR_QUEUE: SettlementQueueSummary = {
+  pendingCount: 0,
+  postedCount: 0,
+  voidedCount: 0,
+  expiredCount: 0,
+  correctedCount: 0,
+  oldestPendingAgeSeconds: 0,
+  lastPostedAt: '',
+}
 
 /** Map panel: proportional height so validators, ILP, corridors, community, and regulation maps match layout */
 
@@ -178,6 +203,12 @@ function decodeCorridorCode(code: string): string {
 }
 
 export default function Network() {
+  useEffect(() => {
+    if (bootstrapIlpOperatorFromQuery()) {
+      window.location.reload()
+    }
+  }, [])
+
   const { activeLens, setActiveLens, selection, clearSelection } = useGlobeStore()
   const { 
     validators: liveValidators,
@@ -234,6 +265,26 @@ export default function Network() {
   /** When false, keep a slim strip so the globe column stays ~1:3:1; user expands for full queue + table. */
   const [ilpOperatorLayerExpanded, setIlpOperatorLayerExpanded] = useState(false)
   const ilpStats = useMemo(() => getILPStats(), [])
+  const ilpAccuracy = useIlpAccuracyData(activeLens === 'ilp')
+  const verifiedEndpointsCount = useMemo(
+    () => ilpAccuracy.endpointHealth.filter((h) => h.status === 'online').length,
+    [ilpAccuracy.endpointHealth]
+  )
+  const mockSettlementQueueMeta = useMemo(() => classifyMockSettlementData(), [])
+  const ilpOperatorBridgeMeta = useMemo(() => classifyIlpOperatorBridge(), [])
+  const ilpOperatorRt = useIlpOperatorRealtime(activeLens === 'ilp')
+  const ilpOperatorStripMeta: DataSourceMeta = ilpOperatorRt.configured
+    ? ilpOperatorBridgeMeta
+    : mockSettlementQueueMeta
+  const ilpStaticDatasetMeta = useMemo(() => classifyIlpStaticData(), [])
+  const ilpEcosystemSectionMeta: DataSourceMeta = ilpOperatorRt.configured
+    ? classifyIlpStaticDataBesideLiveBridge()
+    : ilpStaticDatasetMeta
+  const connectorSourceById = useMemo(() => {
+    const m = new Map<string, DataSourceMeta>()
+    getIlpConnectorsWithSourceMeta(ilpOperatorRt.configured).forEach((c) => m.set(c.id, c.dataSource))
+    return m
+  }, [ilpOperatorRt.configured])
   
   // Corridor data state
   const [corridorFilter, setCorridorFilter] = useState<'all' | 'corridors' | 'partners' | 'bridges' | 'chains'>('all')
@@ -365,10 +416,11 @@ export default function Network() {
     ]
   }, [hubs, corridors, liveStats, showLiveData])
 
-  const ilpQueueStripSummary = useMemo(
-    () => (activeLens === 'ilp' ? getMockSettlementQueueSummary(true) : null),
-    [activeLens]
-  )
+  const ilpQueueStripSummary = useMemo(() => {
+    if (activeLens !== 'ilp') return null
+    if (!ilpOperatorRt.configured) return getMockSettlementQueueSummary(true)
+    return ilpOperatorRt.queueSummary ?? EMPTY_OPERATOR_QUEUE
+  }, [activeLens, ilpOperatorRt.configured, ilpOperatorRt.queueSummary])
 
   useEffect(() => {
     if (activeLens !== 'ilp') setIlpOperatorLayerExpanded(false)
@@ -597,6 +649,10 @@ export default function Network() {
               {activeLens === 'ilp' && (
                 <div className="pt-4 border-t border-cyber-border/60">
                   <p className="text-[10px] font-semibold text-cyber-muted uppercase tracking-wider mb-2">ILP network</p>
+                  <p className="text-[9px] text-cyber-muted leading-snug mb-2 border border-cyber-border/40 rounded-lg p-2 bg-cyber-darker/30">
+                    ILP connector topology is not globally public like XRPL ledger data. This view separates verified
+                    endpoint checks, local Rafiki telemetry, testnet data, and demo/reference records.
+                  </p>
                   <div className="grid grid-cols-2 gap-2 mb-3">
                     <button 
                       onClick={() => setIlpFilter(ilpFilter === 'connectors' ? 'all' : 'connectors')}
@@ -604,8 +660,8 @@ export default function Network() {
                         ilpFilter === 'connectors' ? 'bg-cyber-green/15 border border-cyber-green/40' : 'bg-cyber-darker/40 border border-cyber-border/60'
                       }`}
                     >
-                      <p className="text-base font-cyber text-cyber-green">{ilpStats.activeConnectors}</p>
-                      <p className="text-[10px] text-cyber-muted mt-0.5">Connectors</p>
+                      <p className="text-base font-cyber text-cyber-green">{ilpStats.totalConnectors}</p>
+                      <p className="text-[10px] text-cyber-muted mt-0.5">Connector records</p>
                     </button>
                     <button 
                       onClick={() => setIlpFilter(ilpFilter === 'corridors' ? 'all' : 'corridors')}
@@ -630,6 +686,14 @@ export default function Network() {
                       <p className="text-[10px] text-cyber-muted mt-0.5">Protocols</p>
                     </div>
                   </div>
+                  <p className="text-[9px] text-cyber-muted mb-2 flex flex-wrap items-center gap-2">
+                    <span>
+                      Verified endpoints (browser probe):{' '}
+                      <span className="text-cyber-cyan font-cyber">{verifiedEndpointsCount}</span>
+                      {ilpAccuracy.isLoading ? ' · checking…' : ''}
+                    </span>
+                    {ilpAccuracy.error && <span className="text-cyber-yellow">· {ilpAccuracy.error}</span>}
+                  </p>
                   <p className="text-[10px] font-semibold text-cyber-muted uppercase tracking-wider mb-1.5">Corridor types</p>
                   <div className="space-y-1 mb-3">
                     {[
@@ -1095,10 +1159,16 @@ export default function Network() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
+                {!ilpOperatorRt.configured && (
+                  <IlpOperatorBridgeQuickConfig className="mb-3 border-cyber-yellow/30 bg-cyber-yellow/5" />
+                )}
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
-                  <p className="text-[9px] text-cyber-muted font-cyber uppercase tracking-wider">
-                    Operator: routing vs settlement
-                  </p>
+                  <div className="flex flex-wrap items-center gap-2 min-w-0">
+                    <p className="text-[9px] text-cyber-muted font-cyber uppercase tracking-wider">
+                      Operator: routing vs settlement
+                    </p>
+                    <DataAccuracyBadge meta={ilpOperatorStripMeta} compact />
+                  </div>
                   <button
                     type="button"
                     onClick={() => setIlpOperatorLayerExpanded((v) => !v)}
@@ -1142,23 +1212,59 @@ export default function Network() {
                 {ilpOperatorLayerExpanded ? (
                   <>
                     <p className="text-[9px] text-cyber-muted mb-2">
-                      Layout: panel widens toward the map. Labels and emphasis only — data:{' '}
-                      <span className="text-cyber-yellow/90">demo</span> until a control-room stream is connected.
+                      {ilpOperatorRt.configured
+                        ? 'Layout: panel widens toward the map. Queue and exposure rows update from your operator bridge (env and/or saved URLs). Last posted time comes from payload lastPostedAt.'
+                        : 'Layout: panel widens toward the map. Below is demo data until you save a live URL or set VITE_ILP_OPERATOR_* and restart dev.'}
                     </p>
                     <div className="flex w-full min-w-0 flex-col gap-3">
                       <div className="min-w-0 w-full">
-                        <SettlementQueueWidget useDemoData compact={false} />
+                        <SettlementQueueWidget
+                          useDemoData={!ilpOperatorRt.configured}
+                          queue={
+                            ilpOperatorRt.configured
+                              ? ilpOperatorRt.queueSummary ?? undefined
+                              : undefined
+                          }
+                          awaitingSnapshot={
+                            ilpOperatorRt.configured &&
+                            !ilpOperatorRt.receivedQueue &&
+                            ilpOperatorRt.status !== 'error'
+                          }
+                          connectionError={
+                            ilpOperatorRt.configured && ilpOperatorRt.status === 'error'
+                              ? ilpOperatorRt.error
+                              : null
+                          }
+                          accuracyMeta={ilpOperatorRt.configured ? ilpOperatorBridgeMeta : undefined}
+                          compact={false}
+                        />
                       </div>
                       <div className="min-w-0 w-full">
-                        <CorridorExposurePanel viewMode={ilpOperatorView} expandedWide />
+                        <CorridorExposurePanel
+                          viewMode={ilpOperatorView}
+                          expandedWide
+                          exposures={ilpOperatorRt.configured ? ilpOperatorRt.exposures ?? undefined : undefined}
+                          demoFallback={!ilpOperatorRt.configured}
+                        />
                       </div>
                     </div>
                   </>
                 ) : (
-                  <p className="text-[9px] text-cyber-muted leading-snug">
-                    Queue (demo):{' '}
-                    <span className="text-cyber-cyan/90">
-                      {ilpQueueStripSummary.pendingCount} pending · {ilpQueueStripSummary.postedCount} posted
+                  <p className="text-[9px] text-cyber-muted leading-snug flex flex-wrap items-center gap-2">
+                    <DataAccuracyBadge meta={ilpOperatorStripMeta} compact />
+                    <span>
+                      {ilpOperatorRt.configured ? 'Operator bridge:' : 'Demo settlement queue:'}{' '}
+                      <span className="text-cyber-cyan/90">
+                        {ilpQueueStripSummary.pendingCount} pending · {ilpQueueStripSummary.postedCount} posted
+                      </span>
+                      {ilpOperatorRt.configured &&
+                        !ilpOperatorRt.receivedQueue &&
+                        ilpOperatorRt.status !== 'error' && (
+                          <span className="text-cyber-yellow/80"> · waiting for queue snapshot</span>
+                        )}
+                      {ilpOperatorRt.configured && ilpOperatorRt.status === 'error' && ilpOperatorRt.error && (
+                        <span className="text-red-300/90"> · {ilpOperatorRt.error}</span>
+                      )}
                     </span>
                     {ilpQueueStripSummary.oldestPendingAgeSeconds > 0 && (
                       <>
@@ -1178,20 +1284,25 @@ export default function Network() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
               >
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                   <span className="font-cyber text-sm text-cyber-purple">
                     {ilpFilter === 'connectors' ? 'CONNECTORS' : 
                      ilpFilter === 'corridors' ? 'CORRIDORS' : 
                      ilpFilter === 'repos' ? 'GITHUB REPOS' : 'ILP ECOSYSTEM'}
                   </span>
+                  <DataAccuracyBadge meta={ilpEcosystemSectionMeta} compact />
                 </div>
                 
                 {/* Connectors List */}
                 {(ilpFilter === 'all' || ilpFilter === 'connectors') && (
                   <div className="mb-4">
-                    <p className="text-[10px] text-cyber-muted mb-2">Rafiki/ILP Connectors ({ilpStats.activeConnectors} online) - Click to expand</p>
+                    <p className="text-[10px] text-cyber-muted mb-2">
+                      {ilpOperatorRt.configured
+                        ? `Connector directory (reference, ${ilpStats.totalConnectors} in ilpData.ts) — not the same feed as the operator queue/exposure above.`
+                        : `Connector records (demo/reference, ${ilpStats.totalConnectors} in dataset) — status field is illustrative, not live production.`}
+                    </p>
                     <div className="max-h-[180px] overflow-y-auto space-y-1.5 custom-scrollbar">
-                      {ilpConnectorInstances.filter(c => c.status === 'online').map((connector) => (
+                      {ilpConnectorInstances.map((connector) => (
                         <button
                           key={connector.id}
                           onClick={() => setSelectedConnector(selectedConnector?.id === connector.id ? null : connector)}
@@ -1201,14 +1312,17 @@ export default function Network() {
                               : 'border-cyber-green/50 hover:bg-cyber-darker/80'
                           }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-2 min-w-0">
                               <div 
-                                className="w-2 h-2 rounded-full"
+                                className="w-2 h-2 rounded-full shrink-0"
                                 style={{ backgroundColor: getILPStatusColor(connector.status) }}
                               />
                               <span className="text-xs text-cyber-text font-medium truncate">{connector.name}</span>
                             </div>
+                            {connectorSourceById.get(connector.id) && (
+                              <DataAccuracyBadge meta={connectorSourceById.get(connector.id)!} compact />
+                            )}
                             {connector.monthlyVolume && (
                               <span className="text-[8px] px-1 py-0.5 rounded bg-cyber-glow/20 text-cyber-glow">
                                 {connector.monthlyVolume}/mo
@@ -2891,7 +3005,11 @@ export default function Network() {
             </Suspense>
           </motion.section>
         ) : (
-          <LedgerTopologySection activeLens={activeLens} ilpOperatorView={ilpOperatorView} />
+          <LedgerTopologySection
+            activeLens={activeLens}
+            ilpOperatorView={ilpOperatorView}
+            operatorBridgeConfigured={ilpOperatorRt.configured}
+          />
         )}
 
         {/* Full Network Topology + Live Radar (merged: map + realtime movement) */}
@@ -2934,9 +3052,15 @@ function InnovationRadarSection() {
 type LedgerTopologySectionProps = {
   activeLens?: GlobeLens
   ilpOperatorView?: OperatorViewMode
+  /** From Network — never reference hook variables inside this child (scope bug caused ReferenceError). */
+  operatorBridgeConfigured?: boolean
 }
 
-function LedgerTopologySection({ activeLens, ilpOperatorView = 'flow' }: LedgerTopologySectionProps = {}) {
+function LedgerTopologySection({
+  activeLens,
+  ilpOperatorView = 'flow',
+  operatorBridgeConfigured = false,
+}: LedgerTopologySectionProps = {}) {
   const initialize = useILPStore((s) => s.initialize)
   const initialized = useILPStore((s) => s.initialized)
   const ledgers = useILPStore((s) => s.ledgers)
@@ -3005,7 +3129,8 @@ function LedgerTopologySection({ activeLens, ilpOperatorView = 'flow' }: LedgerT
             ILP operator view: <span className="font-cyber text-cyber-cyan">
               {ilpOperatorView === 'settlement' ? 'Settlement' : 'Exposure'}
             </span>
-            — sidebar tables emphasize pending balances / net exposure (demo data).
+            — sidebar tables emphasize pending balances / net exposure (
+            {operatorBridgeConfigured ? 'operator bridge when configured' : 'demo until VITE_ILP_OPERATOR_* is set'}).
           </p>
         )}
         {initialized && ledgers.length > 0 ? (
@@ -3022,6 +3147,7 @@ function LedgerTopologySection({ activeLens, ilpOperatorView = 'flow' }: LedgerT
               onLedgerClick={() => {}}
               onCorridorClick={() => {}}
               operatorGlobeView={isIlpGlobeLens ? ilpOperatorView : 'flow'}
+              operatorRealtimeConfigured={operatorBridgeConfigured}
             />
           </div>
         ) : (

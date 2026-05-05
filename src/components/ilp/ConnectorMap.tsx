@@ -15,6 +15,8 @@ interface ConnectorMapProps {
   onCorridorClick?: (corridor: Corridor) => void;
   /** When the Network page uses the ILP globe lens, optional settlement/exposure operator overlay (demo; does not replace the map UI lens from the store). */
   operatorGlobeView?: OperatorGlobeView;
+  /** When true, strip badge reflects `VITE_ILP_OPERATOR_*` bridge instead of demo. */
+  operatorRealtimeConfigured?: boolean;
 }
 
 // Color schemes for different lenses
@@ -138,7 +140,12 @@ function certaintyToDashArray(lineStyle: 'solid' | 'dashed' | 'dotted'): string 
   }
 }
 
-export function ConnectorMap({ onLedgerClick, onCorridorClick, operatorGlobeView = 'flow' }: ConnectorMapProps) {
+export function ConnectorMap({
+  onLedgerClick,
+  onCorridorClick,
+  operatorGlobeView = 'flow',
+  operatorRealtimeConfigured = false,
+}: ConnectorMapProps) {
   const { 
     ledgers, connectors, corridors, activeLens, activeRoute, 
     showLabels, showRiskFog, showFlowParticles,
@@ -246,7 +253,11 @@ export function ConnectorMap({ onLedgerClick, onCorridorClick, operatorGlobeView
             </span>
             &nbsp;— two-phase &amp; posted state is labeled in the side panel; map lens unchanged.
           </span>
-          <span className="text-cyber-yellow/80">Demo</span>
+          {operatorRealtimeConfigured ? (
+            <span className="text-cyber-green/90 font-cyber uppercase tracking-wide">Bridge</span>
+          ) : (
+            <span className="text-cyber-yellow/80">Demo</span>
+          )}
         </div>
       )}
       {/* Header - compact */}

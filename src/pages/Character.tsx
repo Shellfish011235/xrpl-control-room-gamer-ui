@@ -76,18 +76,42 @@ function StrategyStatusCard() {
   )
 }
 
-// Upcoming events: XRP/XRPL/Ripple + major crypto. endDate = last day (YYYY-MM-DD); events drop off after that.
+// Upcoming events: XRPL / XRP / Ripple / ILP + major crypto. endDate = last day (YYYY-MM-DD).
+// Sources: xrpl.org/community/events, xrpl-commons.org, interledger.org, ripple.com/events/all/, etc. (verify before travel).
 const communityEventsAll: { date: string; title: string; type: string; url: string; endDate: string }[] = [
+  { date: 'Jan 26–27, 2026', title: 'Building on the XRP Ledger — dev training (XRPL Commons, Paris)', type: 'training', url: 'https://lu.ma/lxb5ttsc', endDate: '2026-01-27' },
   { date: 'Feb 10–12, 2026', title: 'Consensus Hong Kong — policy, DeFi, institutions (XRP/crypto)', type: 'conference', url: 'https://www.coindesk.com/events/consensus-hong-kong-2026/', endDate: '2026-02-12' },
+  { date: 'Feb 10–12, 2026', title: 'EasyA Consensus Hong Kong Hackathon — partner stacks incl. XRPL (Ripple)', type: 'hackathon', url: 'https://www.easya.io/events/easya-consensus-hong-kong-hackathon', endDate: '2026-02-12' },
   { date: 'Feb 11–12, 2026', title: 'XRP Community Day 2026 — virtual, EMEA/Americas/APAC (Ripple)', type: 'summit', url: 'https://ripple.com/insights/xrp-community-day-2026-what-to-expect/', endDate: '2026-02-12' },
+  { date: 'Feb 18, 2026', title: 'XRPL Meetup London — hubs & builders (XRPL Commons)', type: 'meetup', url: 'https://lu.ma/xshnm19t', endDate: '2026-02-18' },
   { date: 'Feb 17–21, 2026', title: 'ETHDenver — builder fest; XRPL/ecosystem often represented', type: 'conference', url: 'https://www.ethdenver.com/', endDate: '2026-02-21' },
   { date: 'Mar 12–15, 2026', title: 'ETHMumbai — India Web3; cross-chain & XRPL topics', type: 'conference', url: 'https://ethmumbai.net/', endDate: '2026-03-15' },
+  { date: 'Mar 24, 2026', title: 'XRPL Meetup Warsaw — Polish Blockchain Week (XRPL Commons)', type: 'meetup', url: 'https://lu.ma/boucntsh', endDate: '2026-03-24' },
+  { date: 'Mar 25, 2026', title: 'XRPL Aquarium Demo Day #8 — social impact (Paris)', type: 'community', url: 'https://lu.ma/2feub5uj', endDate: '2026-03-25' },
   { date: 'Mar 30 – Apr 2, 2026', title: 'ETHCC Cannes — core dev & infra; blockchain-wide', type: 'conference', url: 'https://ethcc.io/', endDate: '2026-04-02' },
+  { date: 'Apr 7, 2026', title: 'XRPL & GDF stablecoins roundtable — invite-only (Paris)', type: 'summit', url: 'https://lu.ma/tgg0id1d', endDate: '2026-04-07' },
+  { date: 'Apr 11–12, 2026', title: 'Hack The Block 2026 — PBW XRPL hackathon (XRPL Commons / PBW)', type: 'hackathon', url: 'https://lu.ma/Hacktheblock2026-PBW-XRPL', endDate: '2026-04-12' },
+  { date: 'Apr 14, 2026', title: 'XRPL Zone Paris — builders & projects (XRPL Commons)', type: 'community', url: 'https://lu.ma/780xhfr7', endDate: '2026-04-14' },
+  { date: 'Apr 15, 2026', title: 'XRP Community Night Paris — PBW week', type: 'community', url: 'https://xrpl.org/community/events', endDate: '2026-04-15' },
   { date: 'Apr 29–30, 2026', title: 'TOKEN2049 Dubai — liquidity, Web3 leaders, Ripple/XRP', type: 'conference', url: 'https://www.token2049.com/dubai', endDate: '2026-04-30' },
-  { date: 'May 5–7, 2026', title: 'Consensus Miami — largest Americas crypto conf (XRP/Ripple)', type: 'conference', url: 'https://consensus.coindesk.com/', endDate: '2026-05-07' },
+  { date: 'May 1–2, 2026', title: 'XRPLasVegas — community & builders (XRP Ledger)', type: 'conference', url: 'https://xrplasvegas.com/', endDate: '2026-05-02' },
+  { date: 'May 5–7, 2026', title: 'Consensus Miami — Ripple calendar; Americas crypto (XRP/XRPL)', type: 'conference', url: 'https://consensus.coindesk.com/', endDate: '2026-05-07' },
+  { date: 'May 5–7, 2026', title: 'EasyA Consensus Miami Hackathon — partner stacks incl. XRPL (Ripple)', type: 'hackathon', url: 'https://www.easya.io/events/easya-consensus-miami-hackathon', endDate: '2026-05-07' },
   { date: 'May 8–10, 2026', title: 'ETHPrague — European builders; multi-chain', type: 'conference', url: 'https://ethprague.com/', endDate: '2026-05-10' },
+  { date: 'May 19–20, 2026', title: 'Stablecon Europe — Ripple calendar (stablecoins, Amsterdam)', type: 'summit', url: 'https://ripple.com/events/all/', endDate: '2026-05-20' },
+  { date: 'May 20–22, 2026', title: 'Chain of Blocks Summit EU26 — Malta (XRPL Commons partner program)', type: 'conference', url: 'https://lu.ma/8xdc6wgg', endDate: '2026-05-22' },
+  { date: 'Jun 2–4, 2026', title: 'Money20/20 Europe — Ripple calendar (payments, Amsterdam)', type: 'conference', url: 'https://europe.money2020.com/', endDate: '2026-06-04' },
+  { date: 'Jun 16–17, 2026', title: 'XRPL Blockchain Research Summit — invitation only (Paris)', type: 'summit', url: 'https://www.xrpl-commons.org/engage/events', endDate: '2026-06-17' },
+  { date: 'Jun 23–25, 2026', title: 'Point Zero Forum — Ripple calendar (Zurich)', type: 'summit', url: 'https://www.pointzeroforum.ch/', endDate: '2026-06-25' },
+  { date: 'Aug 24–26, 2026', title: 'Febraban Tech — Ripple calendar (São Paulo)', type: 'conference', url: 'https://ripple.com/events/all/', endDate: '2026-08-26' },
+  { date: 'Sep 9–11, 2026', title: 'Stablecon USA — Ripple calendar (Washington, D.C.)', type: 'summit', url: 'https://ripple.com/events/all/', endDate: '2026-09-11' },
+  { date: 'Sep 28 – Oct 1, 2026', title: 'SIBOS — Ripple calendar (Miami, FL)', type: 'conference', url: 'https://www.sibos.com/', endDate: '2026-10-01' },
+  { date: 'Sep 30 – Oct 1, 2026', title: 'Korea Blockchain Week — Ripple calendar (Seoul)', type: 'conference', url: 'https://koreablockchainweek.com/', endDate: '2026-10-01' },
   { date: 'Oct 7–8, 2026', title: 'TOKEN2049 Singapore — global Web3; XRP/XRPL ecosystem', type: 'conference', url: 'https://www.token2049.com/singapore', endDate: '2026-10-08' },
   { date: 'Oct 27–29, 2026', title: 'Ripple Swell 2026 — NYC (unified Swell + Apex, XRPL flagship)', type: 'summit', url: 'https://ripple.com/events/swell/', endDate: '2026-10-29' },
+  { date: 'Annual · check site', title: 'Interledger Summit & hackathon — Open Payments / ILP (Interledger Foundation)', type: 'summit', url: 'https://interledger.org/summit', endDate: '2026-12-31' },
+  { date: 'Ongoing', title: 'EasyA — XRPL challenges & hackathon calendar', type: 'community', url: 'https://www.easya.io/challenges/xrpledger', endDate: '2026-12-31' },
+  { date: 'Ongoing', title: 'XRPL community calendar — meetups, hackathons, zones (xrpl.org)', type: 'community', url: 'https://xrpl.org/community/events', endDate: '2026-12-31' },
   { date: 'TBD 2026', title: 'Apex: Innovating with XRP — Miami (investors, enterprise, devs)', type: 'summit', url: 'https://www.apexrippleevent.com/', endDate: '2026-12-31' },
 ]
 
@@ -1101,7 +1125,7 @@ export default function Character() {
                   if (upcoming.length === 0) {
                     return (
                       <p className="text-sm text-cyber-muted p-3 rounded bg-cyber-darker/50 border border-cyber-border/50">
-                        No upcoming events right now. Check <a href="https://ripple.com/events" target="_blank" rel="noopener noreferrer" className="text-cyber-glow hover:underline">ripple.com/events</a> for the latest.
+                        No upcoming events right now. Check <a href="https://ripple.com/events/all/" target="_blank" rel="noopener noreferrer" className="text-cyber-glow hover:underline">ripple.com/events/all/</a> for the latest.
                       </p>
                     )
                   }

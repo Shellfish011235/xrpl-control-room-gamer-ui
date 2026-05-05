@@ -3,6 +3,7 @@
 // Core Map Components
 export { ConnectorMap } from './ConnectorMap';
 export type { OperatorGlobeView } from './ConnectorMap';
+export { IlpOperatorBridgeQuickConfig } from './IlpOperatorBridgeQuickConfig';
 export { CorridorExposurePanel } from './CorridorExposurePanel';
 export type { OperatorViewMode } from './CorridorExposurePanel';
 export { SettlementQueueWidget } from './SettlementQueueWidget';

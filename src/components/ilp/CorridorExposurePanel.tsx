@@ -22,12 +22,14 @@ const statusLabel: Record<CorridorExposure['settlementStatus'], string> = {
 }
 
 type Props = {
-  /** When absent, uses demo data from mock layer (clearly for operator preview). */
+  /** When absent and `demoFallback` is true, uses mock rows for operator preview. */
   exposures?: CorridorExposure[]
   viewMode?: OperatorViewMode
   compact?: boolean
   /** Wider ILP bar: more horizontal room and taller table viewport (less “compressed” vertically). */
   expandedWide?: boolean
+  /** When false, empty `exposures` stays empty (realtime / no mock fill). Default true. */
+  demoFallback?: boolean
 }
 
 export function CorridorExposurePanel({
@@ -35,8 +37,11 @@ export function CorridorExposurePanel({
   viewMode = 'flow',
   compact = false,
   expandedWide = false,
+  demoFallback = true,
 }: Props) {
-  const rows = exposures?.length ? exposures : getMockCorridorExposuresList(true)
+  const rows =
+    demoFallback && !exposures?.length ? getMockCorridorExposuresList(true) : (exposures ?? [])
+  const isDemoRows = demoFallback && !exposures?.length
   const emphasizeNet = viewMode === 'exposure' || viewMode === 'settlement'
   const emphasizePending = viewMode === 'settlement'
 
@@ -44,7 +49,9 @@ export function CorridorExposurePanel({
     return (
       <div className="rounded-lg border border-cyber-border/50 bg-cyber-darker/40 p-3">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-cyber uppercase tracking-wider text-cyber-muted">Corridor exposure (demo)</span>
+          <span className="text-[10px] font-cyber uppercase tracking-wider text-cyber-muted">
+            Corridor exposure{isDemoRows ? ' (demo)' : ''}
+          </span>
           <span className="text-[9px] text-cyber-muted">{rows.length} rows</span>
         </div>
         <ul className="space-y-1.5 max-h-28 overflow-y-auto custom-scrollbar">
@@ -67,7 +74,11 @@ export function CorridorExposurePanel({
         <ShieldAlert size={14} className="text-cyber-purple" />
         <div>
           <p className="text-[10px] font-cyber uppercase tracking-wider text-cyber-purple">Corridor exposure</p>
-          <p className="text-[9px] text-cyber-muted">Internal balances &amp; net exposure (demo / TigerBeetle-style model)</p>
+          <p className="text-[9px] text-cyber-muted">
+            Internal balances &amp; net exposure (
+            {isDemoRows ? 'demo / ' : ''}
+            TigerBeetle-style model)
+          </p>
         </div>
       </div>
       <div
@@ -145,6 +156,13 @@ export function CorridorExposurePanel({
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="p-6 text-center text-[10px] text-cyber-muted">
+                  No corridor exposure rows yet. Include an exposures array in your operator snapshot payload.
+                </td>
+              </tr>
+            ) : null}
             {rows.map((r) => (
               <tr key={r.corridorId} className="border-b border-cyber-border/30 hover:bg-cyber-darker/50">
                 <td className="max-w-[12rem] p-1.5 align-top break-words">

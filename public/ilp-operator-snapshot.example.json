@@ -1,0 +1,30 @@
+{
+  "queue": {
+    "pendingCount": 2,
+    "postedCount": 42,
+    "voidedCount": 0,
+    "expiredCount": 0,
+    "correctedCount": 0,
+    "oldestPendingAgeSeconds": 45,
+    "lastPostedAt": "2026-05-05T14:00:00.000Z"
+  },
+  "exposures": [
+    {
+      "corridorId": "example-us-eu",
+      "source": "Example connector (US)",
+      "destination": "Example peer (EU)",
+      "assetPath": "USD → EUR",
+      "debitsPending": "10K",
+      "debitsPosted": "500K",
+      "creditsPending": "8K",
+      "creditsPosted": "480K",
+      "pendingExposure": "2K",
+      "postedExposure": "20K",
+      "netExposure": "18K",
+      "creditUtilizationPct": 12,
+      "exceptionCount": 0,
+      "lastSettlementAt": "2026-05-05T13:55:00.000Z",
+      "settlementStatus": "settled"
+    }
+  ]
+}
