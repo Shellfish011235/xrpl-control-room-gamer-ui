@@ -2,6 +2,7 @@
  * Control Room sidebar — Mission Control v0.1 navigation (10 sections; wallet/trade/offers are legacy sub-routes from home).
  */
 
+import type { ReactNode } from 'react';
 import {
   LayoutDashboard,
   Bot,
@@ -39,7 +40,7 @@ export function controlRoomSidebarHighlight(section: ControlRoomSection): Contro
   return section;
 }
 
-const NAV: { id: ControlRoomNavId; label: string; icon: React.ReactNode }[] = [
+const NAV: { id: ControlRoomNavId; label: string; icon: ReactNode }[] = [
   { id: 'mission', label: 'Mission Control', icon: <LayoutDashboard className="w-5 h-5" /> },
   { id: 'agent_fleet', label: 'Agent Fleet', icon: <Bot className="w-5 h-5" /> },
   { id: 'private_quant', label: 'Private Quant Lab', icon: <LineChart className="w-5 h-5" /> },

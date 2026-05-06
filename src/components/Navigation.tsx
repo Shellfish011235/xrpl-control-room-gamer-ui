@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Wallet, Bot, BookOpen, Wrench, DollarSign, LayoutDashboard, BarChart3, LayoutGrid } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { Globe, Skull, User, Menu, X, TrendingUp, TrendingDown, Brain, Activity, Bot, BookOpen, Wrench, DollarSign, LayoutDashboard, BarChart3, LayoutGrid } from 'lucide-react'
 import { useState, useEffect, useCallback } from 'react'
 import defaultLogo from '../assets/profile-default.png'
 import { useAgentPanelStore } from '../store/agentPanelStore'
@@ -49,8 +50,10 @@ function useLedgerIndex() {
   return { ledgerIndex, loading, error }
 }
 
+type TopNavItem = { path: string; label: string; icon: LucideIcon; matchPrefix?: boolean }
+
 // Order: You (Profile) → Pay → Ops (Control Room) → Tools → Explore (Network, Learn, Regulations, Trending)
-const navItems = [
+const navItems: TopNavItem[] = [
   { path: '/', label: 'Profile', icon: User },
   { path: '/pay', label: 'Pay', icon: DollarSign },
   { path: '/tools/control-room', label: 'Control Room', icon: LayoutDashboard },
@@ -102,7 +105,7 @@ export default function Navigation() {
             {navItems.map((item) => {
               const isActive = item.path === '/tools'
                 ? location.pathname.startsWith('/tools') && !location.pathname.startsWith('/tools/control-room')
-                : 'matchPrefix' in item && item.matchPrefix
+                : item.matchPrefix === true
                   ? location.pathname.startsWith(item.path)
                   : location.pathname === item.path
               const Icon = item.icon
@@ -283,7 +286,7 @@ export default function Navigation() {
               {navItems.map((item) => {
                 const isActive = item.path === '/tools'
                   ? location.pathname.startsWith('/tools') && !location.pathname.startsWith('/tools/control-room')
-                  : 'matchPrefix' in item && item.matchPrefix
+                  : item.matchPrefix === true
                     ? location.pathname.startsWith(item.path)
                     : location.pathname === item.path
                 const Icon = item.icon

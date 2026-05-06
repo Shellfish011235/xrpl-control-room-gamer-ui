@@ -14,7 +14,16 @@ import type {
 } from './taskReceiptTypes';
 export type { CreateTaskReceiptInput } from './taskReceiptTypes';
 
-/** Local display hash only: not suitable for security-critical verification in v0.1. */
+/** Cryptographic SHA-256 (browser) — preferred for receipt fingerprints when `crypto.subtle` exists. */
+export async function sha256Hex(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/** Local display hash only: not suitable for security-critical verification — use `createTaskReceiptAsync` + SHA-256 when possible. */
 export function createSimpleHash(input: unknown): string {
   const s = typeof input === 'string' ? input : JSON.stringify(input, null, 0);
   let h = 5381;
@@ -143,4 +152,51 @@ export function createTaskReceipt(input: CreateTaskReceiptInput): TaskReceipt {
     hashes,
     notes: input.notes,
   };
+}
+
+/**
+ * Async receipt builder: same as `createTaskReceipt`, but recomputes hashes with SHA-256 when available.
+ * Falls back to `createSimpleHash` if `crypto.subtle` is missing (non-secure contexts).
+ */
+export async function createTaskReceiptAsync(input: CreateTaskReceiptInput): Promise<TaskReceipt> {
+  const sync = createTaskReceipt(input);
+  if (typeof crypto === 'undefined' || !crypto.subtle) {
+    return sync;
+  }
+  try {
+    const inputHash = await sha256Hex(
+      JSON.stringify([input.title, input.summary, input.jurisdiction, input.moduleId])
+    );
+    const outputHash = await sha256Hex(input.summary);
+    const policyHash = await sha256Hex(JSON.stringify([input.compliance, input.security]));
+    const baseForHash = {
+      source: sync.source,
+      title: sync.title,
+      summary: sync.summary,
+      mode: sync.mode,
+      status: sync.status,
+      moduleId: sync.moduleId,
+      agentId: sync.agentId,
+      opportunityId: sync.opportunityId,
+      jurisdiction: sync.jurisdiction,
+      compliance: sync.compliance,
+      security: sync.security,
+      execution: sync.execution,
+      timestamp: sync.timestamp,
+    };
+    const receiptContentHash = await sha256Hex(
+      JSON.stringify({ ...baseForHash, subHashes: { inputHash, outputHash, policyHash } })
+    );
+    return {
+      ...sync,
+      hashes: {
+        inputHash,
+        outputHash,
+        policyHash,
+        receiptHash: receiptContentHash,
+      },
+    };
+  } catch {
+    return sync;
+  }
 }

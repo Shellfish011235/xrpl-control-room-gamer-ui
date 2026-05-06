@@ -1,16 +1,21 @@
 /**
  * Control Room — read-only balances/offers + Sign in Xaman for Send/DEX/Cancel.
+ * Safety Kernel v0.2: all signing requests pass through evaluateSafetyIntent.
  * No custody: no seed, no in-app signing. Connect wallet (Xaman or watch-only); sign in Xaman.
  */
 
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { dropsToXrp, xrpToDrops } from 'xrpl';
-import { isValidClassicAddress } from 'xrpl';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { dropsToXrp, xrpToDrops, isValidClassicAddress } from 'xrpl';
 import { useWalletStore } from '../store/walletStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { useXrplAddressBookSorted, useXrplAddressBookStore } from '../store/xrplAddressBookStore';
-import { getXRPLClient, getNetwork, setNetwork } from '../services/xrplClient';
+import { getXRPLClient, setNetwork } from '../services/xrplClient';
 import { xamanService } from '../services/xaman';
 import type { SigningRequest } from '../services/xaman';
+import { evaluateSafetyIntent, summarizeSafetyDecision } from '../safety/safetyKernel';
+import type { SafetyDecision } from '../safety/safetyTypes';
+import { recordWalletSafetyReceipt } from '../receipts/walletActionReceiptHelpers';
+import { IntentPreviewCard } from './safety/IntentPreviewCard';
 
 interface OfferRow {
   seq: number;
@@ -44,6 +49,10 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
     return w ?? null;
   });
 
+  const network = useSettingsStore((s) => s.network);
+  const safetyMode = useSettingsStore((s) => s.safetyMode);
+  const mainnetConfirmedAt = useSettingsStore((s) => s.mainnetConfirmedAt);
+
   const [dest, setDest] = useState('');
   const [destTagStr, setDestTagStr] = useState('');
   const [saveLabel, setSaveLabel] = useState('');
@@ -61,13 +70,12 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
   const [dexStatus, setDexStatus] = useState('');
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [offersStatus, setOffersStatus] = useState('');
-  const net = useMemo(() => getNetwork(), []);
-  const [networkUI, setNetworkUI] = useState<'testnet' | 'mainnet'>(net);
+  const [sendPreview, setSendPreview] = useState<SafetyDecision | null>(null);
 
   const pendingSignRef = useRef<{ id: string; type: 'send' | 'dex' | 'cancel'; cancelSeq?: number } | null>(null);
 
   async function ensureClient() {
-    setNetwork(networkUI);
+    setNetwork(network);
     return await getXRPLClient();
   }
 
@@ -84,18 +92,29 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
     } catch (e: unknown) {
       setOffersStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
     }
-  }, [address, networkUI]);
+  }, [address, network]);
+
+  useEffect(() => {
+    setNetwork(network);
+  }, [network]);
 
   useEffect(() => {
     const onSigned = (req: SigningRequest) => {
       const p = pendingSignRef.current;
       if (!p || req.id !== p.id) return;
       pendingSignRef.current = null;
+      void recordWalletSafetyReceipt({
+        title: 'Xaman signing flow completed',
+        summary: `Type: ${p.type}. Hash: ${req.txHash ?? '—'}. No custody or in-app keys; external wallet only.`,
+        mode: 'user_approved_signing',
+        status: 'passed',
+      });
       if (p.type === 'send') {
         setSendStatus(`✅ Sent. Hash: ${req.txHash ?? '—'}`);
         setDest('');
         setDestTagStr('');
         setAmtXrp('');
+        setSendPreview(null);
       } else if (p.type === 'dex') {
         setDexStatus(`✅ Offer placed. Hash: ${req.txHash ?? '—'}`);
       } else if (p.type === 'cancel') {
@@ -108,6 +127,12 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       const p = pendingSignRef.current;
       if (!p || req.id !== p.id) return;
       pendingSignRef.current = null;
+      void recordWalletSafetyReceipt({
+        title: 'Xaman request rejected',
+        summary: `Type: ${p.type}. User declined or dismissed in wallet.`,
+        mode: 'user_approved_signing',
+        status: 'needs_review',
+      });
       if (p.type === 'send') setSendStatus('Rejected.');
       else if (p.type === 'dex') setDexStatus('Rejected.');
       else if (p.type === 'cancel') setOffersStatus('Rejected.');
@@ -116,6 +141,12 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       const p = pendingSignRef.current;
       if (!p || req.id !== p.id) return;
       pendingSignRef.current = null;
+      void recordWalletSafetyReceipt({
+        title: 'Xaman request expired',
+        summary: `Type: ${p.type}.`,
+        mode: 'user_approved_signing',
+        status: 'needs_review',
+      });
       if (p.type === 'send') setSendStatus('Expired.');
       else if (p.type === 'dex') setDexStatus('Expired.');
       else if (p.type === 'cancel') setOffersStatus('Expired.');
@@ -132,6 +163,7 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
 
   async function sendXrp() {
     setSendStatus('');
+    setSendPreview(null);
     if (!address) return;
     if (!isValidClassicAddress(dest.trim())) {
       setSendStatus('Destination address invalid.');
@@ -146,17 +178,56 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       setSendStatus('Add Xaman API key in Settings to sign.');
       return;
     }
+    let destinationTag: number | undefined;
+    if (destTagStr.trim()) {
+      const t = parseInt(destTagStr.trim(), 10);
+      if (!Number.isFinite(t) || t < 0 || t > 0xffffffff) {
+        setSendStatus('Destination tag must be a valid 32-bit unsigned integer.');
+        return;
+      }
+      destinationTag = t;
+    }
+
+    const decision = evaluateSafetyIntent(
+      {
+        id: `send-${Date.now()}`,
+        source: 'wallet_actions',
+        action: 'send_xrp',
+        capability: 'request_wallet_signature',
+        mode: safetyMode,
+        network,
+        amountXrp: amt,
+        destination: dest.trim(),
+        destinationTag,
+        transactionType: 'Payment',
+        metadata: { activeWalletId, mainnetConfirmedAt },
+      },
+      safetyMode
+    );
+    setSendPreview(decision);
+
+    if (!decision.allowed) {
+      setSendStatus(`Blocked by Safety Kernel: ${decision.reasons.join(' ')}`);
+      await recordWalletSafetyReceipt({
+        title: 'Blocked signing request (send XRP)',
+        summary: `${decision.reasons.join('; ')} Warnings: ${decision.warnings.join('; ')}`,
+        mode: 'blocked',
+        status: 'blocked',
+      });
+      return;
+    }
+    if (decision.status === 'needs_review') {
+      const ok = typeof window !== 'undefined' && window.confirm(summarizeSafetyDecision(decision));
+      if (!ok) return;
+    } else if (decision.warnings.length && network === 'mainnet') {
+      const ok =
+        typeof window !== 'undefined' &&
+        window.confirm(`${decision.warnings.join('\n')}\n\nContinue to create Xaman request?`);
+      if (!ok) return;
+    }
+
     try {
       const client = await ensureClient();
-      let destinationTag: number | undefined;
-      if (destTagStr.trim()) {
-        const t = parseInt(destTagStr.trim(), 10);
-        if (!Number.isFinite(t) || t < 0 || t > 0xffffffff) {
-          setSendStatus('Destination tag must be a valid 32-bit unsigned integer.');
-          return;
-        }
-        destinationTag = t;
-      }
       recordUse(dest.trim());
       const tx: Record<string, unknown> = {
         TransactionType: 'Payment',
@@ -172,6 +243,12 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       );
       pendingSignRef.current = { id: req.id, type: 'send' };
       setSendStatus('Waiting for signature in Xaman…');
+      await recordWalletSafetyReceipt({
+        title: 'Xaman signing request created (Payment)',
+        summary: `To ${dest.trim().slice(0, 10)}… Amount ${amt} XRP. ${decision.warnings.join(' ')}`,
+        mode: 'user_approved_signing',
+        status: 'needs_review',
+      });
     } catch (e: unknown) {
       setSendStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -194,18 +271,66 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       setDexStatus('Add Xaman API key in Settings to sign.');
       return;
     }
+    const x = Number(xrpAmount);
+    const t = Number(tokenAmount);
+    if (!Number.isFinite(x) || x <= 0 || !Number.isFinite(t) || t <= 0) {
+      setDexStatus('Amounts must be > 0.');
+      return;
+    }
+
+    const decision = evaluateSafetyIntent(
+      {
+        id: `dex-${Date.now()}`,
+        source: 'wallet_actions',
+        action: 'place_offer',
+        capability: 'request_wallet_signature',
+        mode: safetyMode,
+        network,
+        amountXrp: x,
+        issuer,
+        currency: cur,
+        transactionType: 'OfferCreate',
+        metadata: { activeWalletId, mainnetConfirmedAt, tokenAmount: t, dexMode: mode },
+      },
+      safetyMode
+    );
+
+    if (!decision.allowed) {
+      setDexStatus(`Blocked by Safety Kernel: ${decision.reasons.join(' ')}`);
+      await recordWalletSafetyReceipt({
+        title: 'Blocked signing request (DEX offer)',
+        summary: decision.reasons.join('; '),
+        mode: 'blocked',
+        status: 'blocked',
+      });
+      return;
+    }
+    if (decision.status === 'needs_review') {
+      const ok = typeof window !== 'undefined' && window.confirm(summarizeSafetyDecision(decision));
+      if (!ok) return;
+    } else if (decision.warnings.length && network === 'mainnet') {
+      const ok =
+        typeof window !== 'undefined' &&
+        window.confirm(`${decision.warnings.join('\n')}\n\nContinue to create Xaman request?`);
+      if (!ok) return;
+    }
+
     try {
       const client = await ensureClient();
-      const x = Number(xrpAmount);
-      const t = Number(tokenAmount);
-      if (!Number.isFinite(x) || x <= 0 || !Number.isFinite(t) || t <= 0) {
-        setDexStatus('Amounts must be > 0.');
-        return;
-      }
       const tx =
         mode === 'sell'
-          ? { TransactionType: 'OfferCreate', Account: address, TakerGets: { currency: cur, issuer, value: String(t) }, TakerPays: xrpToDrops(String(x)) }
-          : { TransactionType: 'OfferCreate', Account: address, TakerGets: xrpToDrops(String(x)), TakerPays: { currency: cur, issuer, value: String(t) } };
+          ? {
+              TransactionType: 'OfferCreate',
+              Account: address,
+              TakerGets: { currency: cur, issuer, value: String(t) },
+              TakerPays: xrpToDrops(String(x)),
+            }
+          : {
+              TransactionType: 'OfferCreate',
+              Account: address,
+              TakerGets: xrpToDrops(String(x)),
+              TakerPays: { currency: cur, issuer, value: String(t) },
+            };
       const prepared = await client.autofill(tx as unknown as Parameters<typeof client.autofill>[0]);
       const req = await xamanService.requestCustomTransactionSignature(
         prepared as unknown as Parameters<typeof xamanService.requestCustomTransactionSignature>[0],
@@ -213,6 +338,12 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       );
       pendingSignRef.current = { id: req.id, type: 'dex' };
       setDexStatus('Waiting for signature in Xaman…');
+      await recordWalletSafetyReceipt({
+        title: 'Xaman signing request created (OfferCreate)',
+        summary: `${cur} @ ${issuer.slice(0, 8)}… XRP leg ${x}`,
+        mode: 'user_approved_signing',
+        status: 'needs_review',
+      });
     } catch (e: unknown) {
       setDexStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -225,6 +356,36 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       setOffersStatus('Add Xaman API key in Settings to sign.');
       return;
     }
+
+    const decision = evaluateSafetyIntent(
+      {
+        id: `cancel-${Date.now()}`,
+        source: 'wallet_actions',
+        action: 'cancel_offer',
+        capability: 'request_wallet_signature',
+        mode: safetyMode,
+        network,
+        transactionType: 'OfferCancel',
+        metadata: { activeWalletId, mainnetConfirmedAt, offerSeq },
+      },
+      safetyMode
+    );
+
+    if (!decision.allowed) {
+      setOffersStatus(`Blocked by Safety Kernel: ${decision.reasons.join(' ')}`);
+      await recordWalletSafetyReceipt({
+        title: 'Blocked signing request (cancel offer)',
+        summary: decision.reasons.join('; '),
+        mode: 'blocked',
+        status: 'blocked',
+      });
+      return;
+    }
+    if (decision.status === 'needs_review') {
+      const ok = typeof window !== 'undefined' && window.confirm(summarizeSafetyDecision(decision));
+      if (!ok) return;
+    }
+
     try {
       const client = await ensureClient();
       const tx = { TransactionType: 'OfferCancel', Account: address, OfferSequence: offerSeq };
@@ -235,14 +396,16 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
       );
       pendingSignRef.current = { id: req.id, type: 'cancel', cancelSeq: offerSeq };
       setOffersStatus('Waiting for signature in Xaman…');
+      await recordWalletSafetyReceipt({
+        title: 'Xaman signing request created (OfferCancel)',
+        summary: `Offer sequence ${offerSeq}`,
+        mode: 'user_approved_signing',
+        status: 'needs_review',
+      });
     } catch (e: unknown) {
       setOffersStatus(`Error: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
-
-  useEffect(() => {
-    setNetwork(networkUI);
-  }, [networkUI]);
 
   if (!address) {
     return (
@@ -260,7 +423,17 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
         <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
           <div>
             <div className="text-xl font-cyber text-cyber-glow">CONTROL ROOM — ACTIONS</div>
-            <div className="text-xs text-cyber-muted mt-1">Mode: <span className="text-cyber-text">{networkUI}</span></div>
+            <div className="text-xs text-cyber-muted mt-1">
+              Network: <span className="text-cyber-text">{network}</span>
+              {' · '}
+              Safety: <span className="text-cyber-cyan">{safetyMode.replace(/_/g, ' ')}</span>
+            </div>
+            {safetyMode !== 'user_approved_signing' && (
+              <div className="text-xs text-cyber-yellow mt-1 max-w-xl">
+                Switch <strong className="text-cyber-text">Safety Mode</strong> to <strong>User-approved Wallet Signing</strong>{' '}
+                (Compliance Guard) to create Xaman signing requests.
+              </div>
+            )}
             {!hasXaman && (
               <div className="text-xs text-cyber-yellow mt-1">Add Xaman API key in Settings to sign Send/DEX/Cancel.</div>
             )}
@@ -276,6 +449,18 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
           <div className="p-3 rounded-xl border border-cyber-border/50 bg-cyber-dark/40">
             <div className="text-sm text-cyber-text mb-2">Send XRP (sign in Xaman)</div>
             <div className="grid gap-2">
+              {sendPreview && (
+                <IntentPreviewCard
+                  title="Safety check — Payment"
+                  action="send_xrp"
+                  network={network}
+                  amountXrp={Number(amtXrp) || undefined}
+                  destination={dest.trim() || undefined}
+                  destinationTag={destTagStr.trim() ? parseInt(destTagStr, 10) : undefined}
+                  decision={sendPreview}
+                  onCancel={() => setSendPreview(null)}
+                />
+              )}
               {savedContacts.length > 0 && (
                 <details className="rounded-xl border border-cyber-border/60 bg-cyber-darker/40 px-2 py-1">
                   <summary className="cursor-pointer text-xs text-cyber-muted py-1">
@@ -295,7 +480,9 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
                         >
                           <span className="text-cyber-glow">{c.label}</span>
                           <span className="text-cyber-muted"> · </span>
-                          <span className="font-mono">{c.address.slice(0, 10)}…{c.address.slice(-6)}</span>
+                          <span className="font-mono">
+                            {c.address.slice(0, 10)}…{c.address.slice(-6)}
+                          </span>
                           {c.destinationTag != null ? <span className="text-cyber-muted"> · tag {c.destinationTag}</span> : null}
                         </button>
                         <button
@@ -396,8 +583,12 @@ export default function WalletActionsPanel({ showLockForm = true, showSection = 
             <div className="mt-3 grid gap-2">
               {offers.map((o) => (
                 <div key={o.seq} className="p-3 rounded-xl border border-cyber-border/50 bg-cyber-darker/40">
-                  <div className="text-xs text-cyber-muted">Seq: <span className="text-cyber-text">{o.seq}</span></div>
-                  <div className="mt-1 text-sm text-cyber-text">Gets: {fmtIOUAmount(o.taker_gets)} · Pays: {fmtIOUAmount(o.taker_pays)}</div>
+                  <div className="text-xs text-cyber-muted">
+                    Seq: <span className="text-cyber-text">{o.seq}</span>
+                  </div>
+                  <div className="mt-1 text-sm text-cyber-text">
+                    Gets: {fmtIOUAmount(o.taker_gets)} · Pays: {fmtIOUAmount(o.taker_pays)}
+                  </div>
                   <button type="button" onClick={() => cancelOffer(o.seq)} disabled={!hasXaman} className="mt-2 px-3 py-2 rounded-xl border border-cyber-red/40 text-cyber-red hover:bg-cyber-red/10 text-sm disabled:opacity-50">
                     Cancel (sign in Xaman)
                   </button>

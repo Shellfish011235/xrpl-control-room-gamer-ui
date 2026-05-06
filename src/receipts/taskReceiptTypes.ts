@@ -10,7 +10,8 @@ export type ReceiptSource =
   | 'security_ops'
   | 'payment_rails'
   | 'ledger_intel'
-  | 'manual';
+  | 'manual'
+  | 'wallet_actions';
 
 export type ReceiptMode =
   | 'read_only'

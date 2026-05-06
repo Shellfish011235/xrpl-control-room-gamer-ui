@@ -45,7 +45,7 @@ const pageCards = [
     ]
   },
   {
-    path: '/character',
+    path: '/',
     title: 'Profile',
     subtitle: 'Account, Portfolio & Community',
     icon: User,
@@ -223,7 +223,7 @@ export default function Home() {
               <div className="space-y-2 mb-4">
                 {/* Meme Coins */}
                 <Link 
-                  to="/character"
+                  to="/"
                   className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-yellow/50 transition-colors"
                 >
                   <ImageIcon size={14} className="text-cyber-yellow" />
@@ -257,7 +257,7 @@ export default function Home() {
 
                 {/* NFTs */}
                 <Link 
-                  to="/character"
+                  to="/"
                   className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-purple/50 transition-colors"
                 >
                   <Database size={14} className="text-cyber-purple" />
@@ -304,7 +304,7 @@ export default function Home() {
 
                 {/* View All link */}
                 <Link 
-                  to="/character"
+                  to="/"
                   className="flex items-center gap-2 p-2 rounded bg-cyber-darker/50 border border-cyber-border/50 hover:border-cyber-orange/50 transition-colors"
                 >
                   <Trophy size={14} className="text-cyber-orange" />

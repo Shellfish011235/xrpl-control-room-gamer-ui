@@ -5,11 +5,12 @@
  * they do not submit XRPL transactions or write memos. Wallet / Xaman flows are unchanged in this file.
  */
 
-import { useMemo, useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getNetwork, setNetwork } from '../services/xrplClient';
+import { setNetwork } from '../services/xrplClient';
 import { useWalletStore } from '../store/walletStore';
+import { useSettingsStore } from '../store/settingsStore';
 import ControlRoomTopBar from '../components/ControlRoomTopBar';
 import ControlRoomSidebar from '../components/ControlRoomSidebar';
 import type { ControlRoomSection } from '../components/ControlRoomSidebar';
@@ -38,9 +39,14 @@ export default function ControlRoomPage() {
     return w?.address ?? null;
   });
 
-  const net = useMemo(() => getNetwork(), []);
-  const [networkUI, setNetworkUI] = useState<'testnet' | 'mainnet'>(net);
+  const settingsNetwork = useSettingsStore((s) => s.network);
+  const [networkUI, setNetworkUI] = useState<'testnet' | 'mainnet'>(() => useSettingsStore.getState().network);
   const [section, setSection] = useState<ControlRoomSection>('mission');
+
+  useEffect(() => {
+    setNetwork(settingsNetwork);
+    setNetworkUI(settingsNetwork);
+  }, [settingsNetwork]);
 
   const handleNetworkChange = useCallback((next: 'testnet' | 'mainnet') => {
     setNetwork(next);

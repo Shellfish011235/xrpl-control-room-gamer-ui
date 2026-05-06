@@ -3,7 +3,12 @@
  */
 
 import { Lock, Bell } from 'lucide-react';
-import { getNetwork, setNetwork } from '../services/xrplClient';
+import { setNetwork } from '../services/xrplClient';
+import { useSettingsStore } from '../store/settingsStore';
+import { SafetyModeBadge } from './safety/SafetyModeBadge';
+
+const MAINNET_CONFIRM =
+  'Mainnet uses real XRP. Continue only if you understand all signing happens externally in Xaman and no transaction should be approved without review.';
 
 interface ControlRoomTopBarProps {
   locked: boolean;
@@ -20,20 +25,31 @@ export default function ControlRoomTopBar({
   onNetworkChange,
   onLock,
 }: ControlRoomTopBarProps) {
+  const setSettingsNetwork = useSettingsStore((s) => s.setNetwork);
+  const confirmMainnetForSession = useSettingsStore((s) => s.confirmMainnetForSession);
+  const clearMainnetConfirmation = useSettingsStore((s) => s.clearMainnetConfirmation);
+
   function selectTestnet() {
+    clearMainnetConfirmation();
     setNetwork('testnet');
+    setSettingsNetwork('testnet');
     onNetworkChange('testnet');
   }
   function selectMainnet() {
+    const ok = typeof window !== 'undefined' && window.confirm(MAINNET_CONFIRM);
+    if (!ok) return;
+    confirmMainnetForSession();
     setNetwork('mainnet');
+    setSettingsNetwork('mainnet');
     onNetworkChange('mainnet');
   }
 
   return (
     <header className="fixed top-16 left-0 right-0 z-40 h-12 md:h-14 flex items-center justify-between px-4 bg-[var(--cyber-darker)]/95 border-b border-[var(--cyber-border)] backdrop-blur-sm">
       {/* Left: logo / title */}
-      <div className="flex items-center gap-2">
-        <span className="font-cyber text-lg text-[var(--cyber-cyan)] neon-glow">XRPL Control Room</span>
+      <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <span className="font-cyber text-lg text-[var(--cyber-cyan)] neon-glow shrink-0">XRPL Control Room</span>
+        <SafetyModeBadge compact />
       </div>
 
       {/* Center: network pill */}
@@ -52,6 +68,7 @@ export default function ControlRoomTopBar({
         <button
           type="button"
           onClick={selectMainnet}
+          title="Mainnet — confirmation required"
           className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
             networkUI === 'mainnet'
               ? 'bg-amber-500/20 text-amber-400'
@@ -64,6 +81,11 @@ export default function ControlRoomTopBar({
 
       {/* Right: address + Lock + optional alert */}
       <div className="flex items-center gap-2">
+        {networkUI === 'mainnet' && (
+          <span className="text-[9px] font-cyber text-cyber-red max-w-[100px] leading-tight text-right hidden sm:inline">
+            Real XRP
+          </span>
+        )}
         {!locked && address && (
           <span className="font-mono text-xs text-cyber-muted max-w-[120px] truncate" title={address}>
             r…{address.slice(-4)}

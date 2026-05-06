@@ -53,7 +53,6 @@ function isNavItemActive(itemTo: string, loc: { pathname: string; hash: string }
 
 function ItemRow({ item, onPick }: { item: OperatingNavItem; onPick?: () => void }) {
   const location = useLocation();
-  const active = item.to ? isNavItemActive(item.to, location) : false;
 
   if (item.disabled || !item.to) {
     return (
@@ -67,6 +66,8 @@ function ItemRow({ item, onPick }: { item: OperatingNavItem; onPick?: () => void
       </div>
     );
   }
+
+  const active = isNavItemActive(item.to, location);
 
   return (
     <NavLink

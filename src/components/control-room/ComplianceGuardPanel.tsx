@@ -6,6 +6,7 @@ import { Check, X, Scale, AlertCircle } from 'lucide-react';
 import { useComplianceStore } from '../../store/complianceStore';
 import { COPY_COMPLIANCE_NOT_LEGAL } from './dashboardSafetyCopy';
 import type { BotMode, IntendedUse, UserType } from '../../compliance/jurisdictionRules';
+import { SafetyModeSelector } from '../safety/SafetyModeSelector';
 
 const USER_TYPES: { value: UserType; label: string }[] = [
   { value: 'individual', label: 'Individual' },
@@ -75,6 +76,8 @@ export function ComplianceGuardPanel() {
           <span>{COPY_COMPLIANCE_NOT_LEGAL}</span>
         </p>
       </div>
+
+      <SafetyModeSelector />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="neon-panel space-y-1 block">
