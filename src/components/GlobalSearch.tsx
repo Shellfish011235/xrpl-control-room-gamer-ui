@@ -1,48 +1,52 @@
 /**
- * Global search bar for dashboard navigation. Rendered in the top nav on all pages.
- * Type to filter routes; select to navigate.
+ * Global command / search router — navigates to read-only routes only (no signing or custody).
+ *
+ * Uses `src/search/searchIntentRegistry.ts` for synonyms, NL phrases, and /commands.
+ * Extend behavior via `registerSearchIntents()` from app or feature modules.
  */
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { Search, Terminal, Sparkles } from 'lucide-react'
+import {
+  rankSearchIntents,
+  normalizeSearchQuery,
+  SUGGESTED_SEARCH_CHIPS,
+  getPopularShortcuts,
+  categoryLabel,
+  type RankedSearchResult,
+  type SearchIntentCategory,
+} from '../search/searchIntentRegistry'
 
-export interface SearchRoute {
-  path: string
-  label: string
-  keywords?: string
+const MAX_RESULTS = 12
+
+function categoryTone(cat: SearchIntentCategory): string {
+  switch (cat) {
+    case 'wallet':
+      return 'border-cyber-cyan/40 text-cyber-cyan bg-cyber-cyan/10'
+    case 'dex':
+    case 'liquidity':
+      return 'border-cyber-purple/40 text-cyber-purple bg-cyber-purple/10'
+    case 'ilp':
+      return 'border-cyber-glow/40 text-cyber-glow bg-cyber-glow/10'
+    case 'agents':
+      return 'border-cyber-magenta/40 text-cyber-magenta bg-cyber-magenta/10'
+    case 'security':
+      return 'border-cyber-red/40 text-cyber-red bg-cyber-red/10'
+    case 'compliance':
+      return 'border-cyber-orange/40 text-cyber-orange bg-cyber-orange/10'
+    case 'learn':
+    case 'infra':
+      return 'border-cyber-yellow/40 text-cyber-yellow bg-cyber-yellow/10'
+    case 'payments':
+    case 'nft':
+      return 'border-cyber-green/40 text-cyber-green bg-cyber-green/10'
+    case 'ledger':
+      return 'border-cyber-blue/40 text-cyber-blue bg-cyber-blue/10'
+    default:
+      return 'border-cyber-border text-cyber-muted bg-cyber-darker/80'
+  }
 }
-
-const SEARCH_ROUTES: SearchRoute[] = [
-  { path: '/', label: 'Profile', keywords: 'home you portfolio character account nft collectibles avatar' },
-  { path: '/pay', label: 'Pay', keywords: 'pay send receive stream micropayments agent economy carv payment xrp transfer open claw openclaw' },
-  { path: '/tools/control-room', label: 'Control Room', keywords: 'control room dashboard hub ops wallet send receive' },
-  { path: '/tools', label: 'Tools', keywords: 'tools nft nfts nftoken mint ledger impact dex bridges agents builder' },
-  { path: '/tools/ledger-impact', label: 'Ledger Impact', keywords: 'amendments impact governance voting rippled xls protocol upgrade' },
-  { path: '/tools/optimizer', label: 'Optimizer', keywords: 'optimizer swap optimize trade best route' },
-  { path: '/tools/bridges', label: 'Bridges', keywords: 'bridge bridges cross-chain evm sidechain layer' },
-  { path: '/tools/agents', label: 'Agents', keywords: 'agents bots automation strategies open claw openclaw' },
-  { path: '/tools/builder', label: 'Builder', keywords: 'builder ai code develop cursor open claw openclaw' },
-  { path: '/tools/wallet', label: 'Wallet', keywords: 'wallet mvp hold balance xrp' },
-  { path: '/tools/dex-order', label: 'DEX Order', keywords: 'dex order book trade amm swap liquidity' },
-  { path: '/network', label: 'Network', keywords: 'network globe map radar innovation community validators topology xrpl ilp interledger protocol corridor corridors connectors rafiki' },
-  { path: '/terminal', label: 'Terminal', keywords: 'terminal trading activity etf chart grid dca market' },
-  { path: '/learn', label: 'Learn', keywords: 'learn docs help etf spot education tutorial ilp interledger open claw streams' },
-  { path: '/underworld', label: 'Regulations', keywords: 'regulations risk compliance underworld etf sec legal jurisdiction' },
-  { path: '/memetic-lab', label: 'Trending', keywords: 'trending memetic lab etf xrp price sentiment polymarket' },
-  { path: '/governance-guide', label: 'Governance Guide', keywords: 'governance guide amendments xls voting' },
-]
-
-function matchQuery(route: SearchRoute, q: string): boolean {
-  if (!q.trim()) return true
-  const lower = q.toLowerCase().trim()
-  const labelMatch = route.label.toLowerCase().includes(lower)
-  const pathMatch = route.path.toLowerCase().includes(lower)
-  const keywordMatch = route.keywords?.toLowerCase().includes(lower)
-  return labelMatch || pathMatch || !!keywordMatch
-}
-
-const MAX_RESULTS = 10
 
 export default function GlobalSearch() {
   const navigate = useNavigate()
@@ -52,9 +56,16 @@ export default function GlobalSearch() {
   const inputRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const results = query.trim()
-    ? SEARCH_ROUTES.filter((r) => matchQuery(r, query)).slice(0, MAX_RESULTS)
-    : SEARCH_ROUTES.slice(0, MAX_RESULTS)
+  const normalizedPreview = useMemo(() => normalizeSearchQuery(query), [query])
+
+  const ranked = useMemo(() => {
+    if (!query.trim()) return []
+    return rankSearchIntents(query, MAX_RESULTS)
+  }, [query])
+
+  const popular = useMemo(() => getPopularShortcuts(), [])
+
+  const results: RankedSearchResult[] = query.trim() ? ranked : popular
 
   const select = (path: string) => {
     navigate(path)
@@ -94,7 +105,7 @@ export default function GlobalSearch() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, results, highlight, navigate])
+  }, [open, results, highlight])
 
   useEffect(() => {
     function onClickOutside(event: MouseEvent) {
@@ -107,12 +118,9 @@ export default function GlobalSearch() {
   }, [])
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md">
+    <div ref={containerRef} className="relative w-full max-w-md lg:max-w-xl">
       <div className="relative flex items-center">
-        <Search
-          className="absolute left-3 w-4 h-4 text-cyber-muted pointer-events-none"
-          aria-hidden
-        />
+        <Search className="absolute left-3 w-4 h-4 text-cyber-muted pointer-events-none" aria-hidden />
         <input
           ref={inputRef}
           type="search"
@@ -121,50 +129,110 @@ export default function GlobalSearch() {
           aria-autocomplete="list"
           aria-controls="global-search-list"
           aria-activedescendant={open && results[highlight] ? `search-option-${highlight}` : undefined}
-          placeholder="Search dashboard…"
+          placeholder="Search, ask, or /command…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
-          onBlur={() => {
-            // keep open briefly so click on item registers
-            setTimeout(() => setOpen(false), 150)
-          }}
           className="w-full pl-9 pr-3 py-2 rounded-lg bg-cyber-darker/80 border border-cyber-border text-cyber-text placeholder:text-cyber-muted text-sm font-cyber focus:outline-none focus:border-cyber-glow/50 focus:ring-1 focus:ring-cyber-glow/30"
         />
       </div>
 
       {open && (
-        <ul
+        <div
           id="global-search-list"
           role="listbox"
-          className="absolute top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto rounded-lg border border-cyber-border bg-cyber-darker shadow-xl z-[60]"
+          className="absolute top-full left-0 right-0 mt-1 max-h-[min(24rem,70vh)] overflow-y-auto rounded-lg border border-cyber-border bg-cyber-darker z-[60]"
         >
-          {results.length === 0 ? (
-            <li className="px-3 py-4 text-sm text-cyber-muted text-center">No matches</li>
-          ) : (
-            results.map((r, i) => (
-              <li
-                key={r.path}
-                id={`search-option-${i}`}
-                role="option"
-                aria-selected={i === highlight}
-                onMouseEnter={() => setHighlight(i)}
-                onClick={() => select(r.path)}
-                className={`px-3 py-2.5 text-sm cursor-pointer transition-colors ${
-                  i === highlight
-                    ? 'bg-cyber-glow/15 text-cyber-glow'
-                    : 'text-cyber-text hover:bg-cyber-border/20'
-                }`}
-              >
-                <span className="font-cyber tracking-wide">{r.label}</span>
-                <span className="ml-2 text-cyber-muted text-xs">{r.path}</span>
-              </li>
-            ))
+          {!query.trim() && (
+            <div className="px-3 py-2 border-b border-cyber-border/60 bg-cyber-darker/90">
+              <div className="flex items-center gap-2 text-[10px] font-cyber text-cyber-muted uppercase tracking-wider mb-2">
+                <Sparkles size={12} className="text-cyber-glow" aria-hidden />
+                Suggested
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {SUGGESTED_SEARCH_CHIPS.map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    className="px-2 py-1 rounded text-[10px] font-cyber border border-cyber-border/80 text-cyber-cyan hover:bg-cyber-glow/10 hover:border-cyber-glow/40 transition-colors"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setQuery(chip)
+                      setHighlight(0)
+                    }}
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
-        </ul>
+
+          {query.trim() && normalizedPreview !== query.trim().toLowerCase() && (
+            <div className="px-3 py-1.5 text-[9px] text-cyber-muted border-b border-cyber-border/40 font-mono truncate">
+              Normalized: {normalizedPreview || '—'}
+            </div>
+          )}
+
+          {results.length === 0 ? (
+            <div className="px-3 py-6 text-sm text-cyber-muted text-center">
+              <Terminal size={18} className="mx-auto mb-2 opacity-50" aria-hidden />
+              No matching intents — try a /command or a shorter phrase.
+            </div>
+          ) : (
+            <ul className="py-1">
+              {!query.trim() && (
+                <li className="px-3 py-1.5 text-[9px] text-cyber-muted font-cyber uppercase tracking-wider">
+                  Quick links
+                </li>
+              )}
+              {results.map((r, i) => (
+                <li
+                  key={`${r.id}-${i}`}
+                  id={`search-option-${i}`}
+                  role="option"
+                  aria-selected={i === highlight}
+                  onMouseEnter={() => setHighlight(i)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => select(r.path)}
+                  className={`px-3 py-2.5 cursor-pointer transition-colors border-l-2 ${
+                    i === highlight
+                      ? 'bg-cyber-glow/15 border-l-cyber-glow text-cyber-text'
+                      : 'border-l-transparent hover:bg-cyber-border/15 text-cyber-text'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-cyber tracking-wide text-sm text-cyber-glow">{r.title}</span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded border font-cyber ${categoryTone(r.category)}`}
+                        >
+                          {categoryLabel(r.category)}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-cyber-muted mt-0.5 line-clamp-2">{r.description}</p>
+                      <p className="text-[10px] text-cyber-cyan/80 font-mono mt-1 truncate">{r.path}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="text-[10px] font-cyber text-cyber-muted block">match</span>
+                      <span className="text-xs font-mono text-cyber-green">
+                        {Math.round((query.trim() ? r.confidence : 1) * 100)}%
+                      </span>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="px-3 py-2 border-t border-cyber-border/50 text-[9px] text-cyber-muted font-cyber">
+            Read-only router — navigation only. No signing or key handling from search.
+          </div>
+        </div>
       )}
     </div>
   )
