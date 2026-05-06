@@ -1,82 +1,57 @@
 /**
- * Agent Voice (TTS) + Telegram bridge for the Secure Payment Agent.
- * - speakAgentMessage: Web Speech API TTS so the agent "talks" to the user.
- * - sendAgentMessageToTelegram: forward agent replies to Telegram (same bot/chat as Alerts).
+ * Optional voice (browser TTS) and Telegram forwarding for the secure payment agent.
  */
 
-/** Strip markdown for TTS: remove **, `code`, [text](url), emoji-ish, collapse newlines. */
-export function stripMarkdownForTts(text: string): string {
-  if (!text || typeof text !== 'string') return '';
-  let out = text
+function stripForSpeech(text: string): string {
+  return text
     .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\*([^*]+)\*/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .replace(/\n+/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/\[([^\]]+)]\([^)]+\)/g, '$1')
+    .replace(/`+/g, '')
+    .replace(/\n+/g, '. ')
     .trim();
-  // Optional: remove common emoji for cleaner speech (keep optional)
-  out = out.replace(/[🔒🔐✅❌🤔📤📍⏳]/g, '');
-  return out;
 }
 
-let speechSynth: SpeechSynthesis | null = null;
-
-function getSpeechSynth(): SpeechSynthesis | null {
-  if (typeof window === 'undefined') return null;
-  if (!speechSynth) speechSynth = window.speechSynthesis;
-  return speechSynth;
-}
-
-/** Speak text using the browser's TTS. Cancels any ongoing utterance. */
-export function speakAgentMessage(text: string, options?: { rate?: number; volume?: number }): void {
-  const plain = stripMarkdownForTts(text);
+/** Speak agent text using the Web Speech API (no-op if unavailable). */
+export function speakAgentMessage(text: string): void {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  const plain = stripForSpeech(text);
   if (!plain) return;
-  const synth = getSpeechSynth();
-  if (!synth) return;
-  synth.cancel();
+  window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(plain);
-  u.rate = options?.rate ?? 0.95;
-  u.volume = options?.volume ?? 1;
-  const voices = synth.getVoices();
-  const en = voices.find((v) => v.lang.startsWith('en'));
-  if (en) u.voice = en;
-  synth.speak(u);
+  u.rate = 1;
+  window.speechSynthesis.speak(u);
 }
 
-/** Stop any current TTS. */
+/** Stop any in-progress speech. */
 export function stopAgentVoice(): void {
-  const synth = getSpeechSynth();
-  if (synth) synth.cancel();
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
 }
 
-export interface TelegramAgentConfig {
-  botToken: string;
-  chatId: string;
-}
-
-/** Send a plain-text message to Telegram (agent reply). Uses same API as alert notifications. */
+/** Forward plain text to a Telegram chat (bot must be allowed to message the chat). */
 export async function sendAgentMessageToTelegram(
   text: string,
-  config: TelegramAgentConfig
-): Promise<{ ok: boolean; error?: string }> {
-  const plain = stripMarkdownForTts(text);
-  if (!plain.trim()) return { ok: true };
-  if (!config.botToken?.trim() || !config.chatId?.trim()) return { ok: false, error: 'Bot token and Chat ID required' };
-  const url = `https://api.telegram.org/bot${config.botToken.trim()}/sendMessage`;
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: config.chatId.trim(),
-        text: `🤖 Agent: ${plain.slice(0, 4000)}`,
-      }),
-    });
-    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string };
-    if (!res.ok || !data.ok) return { ok: false, error: data.description || `HTTP ${res.status}` };
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : 'Request failed' };
+  opts: { botToken: string; chatId: string }
+): Promise<void> {
+  const botToken = opts.botToken?.trim();
+  const chatId = opts.chatId?.trim();
+  if (!botToken || !chatId) return;
+
+  const body = text.length > 3500 ? `${text.slice(0, 3497)}...` : text;
+
+  const url = `https://api.telegram.org/bot${encodeURIComponent(botToken)}/sendMessage`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: body,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const desc = typeof err === 'object' && err && 'description' in err ? String((err as { description?: string }).description) : res.statusText;
+    throw new Error(desc || `Telegram HTTP ${res.status}`);
   }
 }

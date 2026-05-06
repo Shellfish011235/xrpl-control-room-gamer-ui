@@ -4,7 +4,7 @@ import {
   Skull, Shield, AlertTriangle, Scale, FileText, Clock,
   ChevronRight, Globe, TrendingUp,
   Eye, Bell, ExternalLink, Building, Landmark,
-  CheckCircle, Activity
+  CheckCircle, Activity, Sparkles, Cpu,
 } from 'lucide-react'
 import { RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer } from 'recharts'
 import {
@@ -14,6 +14,8 @@ import {
   getItemsByStatus,
   getImpactColor,
   getStatusColor,
+  getRegulatoryIpTechItems,
+  sortRegulatoryItemsForIpTab,
   type RegulatoryItem,
 } from '../data/regulatoryData'
 import { countryRegulatoryStatus } from '../data/globeContent'
@@ -61,6 +63,26 @@ const buildRegulatoryTimeline = () => {
     'MiCA': Globe,
     'EXEC ORDER': Shield,
     'FIT21': FileText,
+    'CLARITY': FileText,
+    'GENIUS': Landmark,
+    'SEC/CFTC': Scale,
+    'CBLR': Landmark,
+    'OCC/FDIC': Building,
+    'ILF': Globe,
+    'RIPPLE': Building,
+    'IBM': Building,
+    'INVENTOR': FileText,
+    'DARPA': Shield,
+    'NEURALINK': Activity,
+    'PARADROMICS': Activity,
+    'BCI': Activity,
+    'STANFORD': Building,
+    'CROSS-REF': Eye,
+    'LANDSCAPE': Globe,
+    'NEUROMORPHIC': Cpu,
+    'SPW-R': Activity,
+    'MEDTECH': Activity,
+    'EXOS': Landmark,
     'STABLE': Landmark,
     'CFTC': Scale,
     'FINCEN': AlertTriangle,
@@ -111,13 +133,31 @@ const buildAlerts = () => {
 
 /** Regulations content: used standalone on /underworld and embedded in Network → Regulation lens */
 export function RegulationsContent() {
-  const [selectedJurisdiction, setSelectedJurisdiction] = useState<string | null>(null)
+  const [mainTab, setMainTab] = useState<'overview' | 'ip'>('overview')
   
   const riskMetrics = useMemo(() => calculateRiskMetrics(), [])
   const regulatoryTimeline = useMemo(() => buildRegulatoryTimeline(), [])
   const alerts = useMemo(() => buildAlerts(), [])
   const stats = useMemo(() => getRegulatoryStats(), [])
   const corridorStats = useMemo(() => getCorridorStats(), [])
+  const ipTechItems = useMemo(
+    () => [...getRegulatoryIpTechItems()].sort(sortRegulatoryItemsForIpTab),
+    []
+  )
+  const ipPatentAgencies = useMemo(
+    () => regulatoryAgencies.filter((a) => a.category === 'patent'),
+    []
+  )
+  const ipStats = useMemo(() => {
+    const by = (s: RegulatoryItem['status']) => ipTechItems.filter((i) => i.status === s).length
+    return {
+      total: ipTechItems.length,
+      active: by('active'),
+      pending: by('pending'),
+      proposed: by('proposed'),
+      watch: by('watch'),
+    }
+  }, [ipTechItems])
   
   return (
     <div className="max-w-7xl mx-auto">
@@ -152,8 +192,139 @@ export function RegulationsContent() {
             <Clock size={10} />
             Data as of {stats.dataAsOf ?? 'N/A'} · Curated dataset, not live. Verify with official sources for latest.
           </p>
+          
+          <div className="flex flex-wrap gap-2 mt-4" role="tablist" aria-label="Regulations views">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mainTab === 'overview'}
+              onClick={() => setMainTab('overview')}
+              className={`px-4 py-2 rounded font-cyber text-xs tracking-wide border transition-colors ${
+                mainTab === 'overview'
+                  ? 'bg-cyber-purple/20 border-cyber-purple/60 text-cyber-glow'
+                  : 'bg-cyber-darker/50 border-cyber-border text-cyber-muted hover:border-cyber-purple/40'
+              }`}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mainTab === 'ip'}
+              onClick={() => setMainTab('ip')}
+              className={`px-4 py-2 rounded font-cyber text-xs tracking-wide border transition-colors flex items-center gap-2 ${
+                mainTab === 'ip'
+                  ? 'bg-cyber-purple/20 border-cyber-purple/60 text-cyber-glow'
+                  : 'bg-cyber-darker/50 border-cyber-border text-cyber-muted hover:border-cyber-purple/40'
+              }`}
+            >
+              <Sparkles size={14} className="text-cyber-magenta shrink-0" />
+              IP · DLT · AI & marketplaces
+            </button>
+          </div>
         </motion.div>
         
+        {mainTab === 'ip' ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+            role="tabpanel"
+          >
+            <div className="cyber-panel p-4 border-cyber-magenta/30">
+              <p className="text-sm text-cyber-text mb-2 font-cyber tracking-wide">BLOCKCHAIN · DLT · COPYRIGHT · PATENTS · AI / AGENTIC COMMERCE</p>
+              <p className="text-xs text-cyber-muted leading-relaxed">
+                Curated rows tagged for intellectual property, ledger-based assets, and oversight of AI-driven marketplaces (including impersonation, platform duties, and patent/copyright offices).
+                Expand the dataset by tagging new <code className="text-cyber-glow/90">ip</code> entries in <code className="text-cyber-glow/90">regulatoryData.ts</code>.
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              {[
+                { label: 'Tracked', value: ipStats.total, color: 'text-cyber-text' },
+                { label: 'Active', value: ipStats.active, color: 'text-cyber-green' },
+                { label: 'Pending', value: ipStats.pending, color: 'text-cyber-yellow' },
+                { label: 'Proposed', value: ipStats.proposed, color: 'text-cyber-orange' },
+                { label: 'Watch', value: ipStats.watch, color: 'text-cyber-purple' },
+              ].map((row) => (
+                <div key={row.label} className="cyber-panel p-3">
+                  <p className="text-[10px] text-cyber-muted mb-1">{row.label}</p>
+                  <span className={`font-cyber text-xl ${row.color}`}>{row.value}</span>
+                </div>
+              ))}
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {ipTechItems.map((item) => (
+                <a
+                  key={item.id}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cyber-panel p-4 border-cyber-border hover:border-cyber-magenta/40 transition-colors group flex flex-col gap-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-cyber text-xs text-cyber-magenta">{item.type}</span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded shrink-0 ${
+                        item.status === 'active'
+                          ? 'bg-cyber-green/20 text-cyber-green'
+                          : item.status === 'pending'
+                            ? 'bg-cyber-yellow/20 text-cyber-yellow'
+                            : item.status === 'proposed'
+                              ? 'bg-cyber-orange/20 text-cyber-orange'
+                              : 'bg-cyber-purple/20 text-cyber-purple'
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+                  <h3 className="text-sm text-cyber-text font-medium group-hover:text-cyber-glow transition-colors line-clamp-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-[11px] text-cyber-muted line-clamp-3 flex-1">{item.desc}</p>
+                  <div className="flex items-center justify-between pt-1 border-t border-cyber-border/50">
+                    <span className="text-[10px] text-cyber-purple">{item.jurisdiction}</span>
+                    <ExternalLink size={12} className="text-cyber-muted opacity-0 group-hover:opacity-100" />
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {item.categories.map((c) => (
+                      <span key={c} className="text-[9px] px-1 py-0.5 rounded bg-cyber-darker text-cyber-muted">
+                        {c}
+                      </span>
+                    ))}
+                  </div>
+                </a>
+              ))}
+            </div>
+            
+            <div className="cyber-panel p-4 border-cyber-purple/30">
+              <div className="flex items-center gap-2 mb-3 pb-2 border-b border-cyber-border">
+                <Building size={16} className="text-cyber-purple" />
+                <span className="font-cyber text-sm text-cyber-purple">PATENT & COPYRIGHT OFFICES</span>
+                <span className="text-xs text-cyber-muted">({ipPatentAgencies.length})</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {ipPatentAgencies.map((agency) => (
+                  <a
+                    key={agency.id}
+                    href={agency.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded bg-cyber-darker/50 border border-cyber-purple/30 hover:border-cyber-purple/55 transition-all group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-cyber text-cyber-purple">{agency.shortName}</span>
+                      <span className="text-[9px] text-cyber-muted">{agency.jurisdiction}</span>
+                      <ExternalLink size={8} className="text-cyber-muted opacity-0 group-hover:opacity-100" />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <>
         {/* Stats Bar */}
         <motion.div 
           className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-6"
@@ -435,7 +606,7 @@ export function RegulationsContent() {
               items: [
                 'XRP classified as non-security (programmatic sales)',
                 'Spot BTC & ETH ETFs approved and trading',
-                'FIT21 defines SEC vs CFTC jurisdiction',
+                'CLARITY Act / FIT21 lineage: SEC vs CFTC digital-asset roles',
                 'ETF applications for XRP under consideration'
               ],
               color: 'cyber-glow',
@@ -517,7 +688,7 @@ export function RegulationsContent() {
           </div>
           
           <div className="flex flex-wrap gap-2">
-            {regulatoryAgencies.slice(0, 16).map((agency) => (
+            {regulatoryAgencies.map((agency) => (
               <a
                 key={agency.id}
                 href={agency.url}
@@ -534,6 +705,8 @@ export function RegulationsContent() {
             ))}
           </div>
         </motion.div>
+        </>
+        )}
     </div>
   )
 }

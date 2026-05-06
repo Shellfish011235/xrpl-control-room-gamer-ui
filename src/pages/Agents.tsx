@@ -8,6 +8,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Bot, Brain, ChevronRight } from 'lucide-react';
 import { AgentHub } from '../components/AgentHub';
 import WalletActionsPanel from '../components/WalletActionsPanel';
+import { NIST_AI_RMF_HUB_URL, NIST_AI_RMF_PDF_URL } from '../lib/nistAiRmf';
 
 export default function Agents() {
   const location = useLocation();
@@ -41,9 +42,30 @@ export default function Agents() {
         </Link>
       </motion.div>
 
-      <p className="text-xs text-cyber-muted mb-6">
+      <p className="text-xs text-cyber-muted mb-3">
         <strong>Autonomous sims only.</strong> All actions require user confirm via Xaman.
         To train or improve agents: edit skills in <code className="bg-cyber-darker px-1 rounded">src/agents/skills/registry.ts</code>, agents in <code className="bg-cyber-darker px-1 rounded">src/store/agentStore.ts</code>, and optional AI via <code className="bg-cyber-darker px-1 rounded">VITE_AI_API_URL</code>. Full guide: <code className="bg-cyber-darker px-1 rounded">docs/AGENT-HUB-TRAINING.md</code>.
+      </p>
+      <p className="text-xs text-cyber-muted mb-6">
+        AI-assisted flows follow themes from NIST’s voluntary{' '}
+        <a
+          href={NIST_AI_RMF_PDF_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyber-cyan hover:underline underline-offset-2"
+        >
+          AI Risk Management Framework (NIST.AI.100-1)
+        </a>{' '}
+        and{' '}
+        <a
+          href={NIST_AI_RMF_HUB_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-cyber-cyan hover:underline underline-offset-2"
+        >
+          NIST hub resources
+        </a>
+        . Open the floating agent button and expand <em className="text-cyber-text/90">AI trust &amp; safety</em> for a plain-language mapping (Govern / Map / Measure / Manage).
       </p>
 
       <motion.div

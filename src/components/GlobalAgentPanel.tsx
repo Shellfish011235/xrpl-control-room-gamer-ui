@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, X, Send, ChevronDown, ChevronUp, Loader, Receipt, Zap } from 'lucide-react';
 import { useAgentPanelStore } from '../store/agentPanelStore';
 import { useCARVStore } from '../store/carvStore';
+import { AiSafetyQuickRef } from './AiSafetyQuickRef';
 
 const SecureAgentPanel = lazy(() =>
   import('./carv/SecureAgentPanel').then((m) => ({ default: m.SecureAgentPanel }))
@@ -142,7 +143,7 @@ export function GlobalAgentPanel() {
         type="button"
         onClick={() => setOpen(true)}
         className="fixed bottom-6 right-6 z-50 flex items-center justify-center w-14 h-14 rounded-full bg-cyber-cyan/90 text-cyber-darker shadow-lg hover:bg-cyber-cyan focus:outline-none focus:ring-2 focus:ring-cyber-glow"
-        aria-label="Open AI payment agent"
+        aria-label="Open payment agent drawer (AI safety reference included)"
       >
         <Bot size={24} />
       </button>
@@ -180,6 +181,8 @@ export function GlobalAgentPanel() {
                   <X size={20} />
                 </button>
               </div>
+
+              <AiSafetyQuickRef />
 
               {/* Main tabs: Chat | Economy | Streams */}
               <div className="flex gap-1 px-2 pb-2 border-b border-cyber-border/60 shrink-0">

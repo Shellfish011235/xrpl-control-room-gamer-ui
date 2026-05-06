@@ -374,6 +374,16 @@ export const NETWORK_COSTS: CostComparison[] = [
     micropaymentScore: 100,
   },
   {
+    // TigerBeetle: distributed double-entry ledger (OLTP), not a public L1 — figures are reference
+    // throughput/latency benchmarks; “fee” = illustrative marginal infra cost per transfer, not gas.
+    network: 'TigerBeetle (ledger DB)',
+    feePerTx: 0.000002,
+    finality: 0.001,          // ~1ms class commit (deployment-dependent)
+    tps: 1_000_000,           // Stress-test class throughput (hardware-dependent)
+    minViableTx: 0.0002,
+    micropaymentScore: 99,
+  },
+  {
     network: 'ILP (via XRPL)',
     feePerTx: 0.00005,
     finality: 0.5,

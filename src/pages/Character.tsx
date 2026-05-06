@@ -21,7 +21,6 @@ import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/the
 import type { NFTAsset, MemeToken } from '../store/assetsStore'
 import { BackgroundPreview } from '../modules/theme/BackgroundPreview'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
-import { SettlementQueueWidget, CorridorExposurePanel } from '../components/ilp'
 
 // Strategy status card for Home: which strategies are on, exposure, PnL (sim), link to Terminal
 function StrategyStatusCard() {
@@ -35,7 +34,7 @@ function StrategyStatusCard() {
   return (
     <Link
       to="/terminal"
-      className="cyber-panel p-4 block rounded-lg border border-cyber-border hover:border-cyber-cyan/50 transition-colors text-left"
+      className="cyber-panel p-5 block rounded-lg border border-cyber-border hover:border-cyber-cyan/50 transition-colors text-left shadow-md shadow-black/20"
     >
       <div className="flex items-center justify-between mb-2">
         <span className="font-cyber text-xs text-cyber-muted uppercase tracking-wider">Strategy status</span>
@@ -845,13 +844,13 @@ export default function Character() {
           
           {/* Center Column - Ledger Impact (top) + Nav boxes + Profile/Portfolio section boxes */}
           <motion.div 
-            className="lg:col-span-6 space-y-4"
+            className="lg:col-span-6 space-y-5"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
             {/* 1) Ledger Impact - main top box */}
-            <div className="cyber-panel p-4">
+            <div className="cyber-panel p-5 shadow-lg shadow-cyber-glow/5">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-cyber text-xl tracking-wider">
                   <span className="text-cyber-text">LEDGER</span>
@@ -864,7 +863,7 @@ export default function Character() {
             </div>
 
             {/* 2) Nav boxes: Network, Terminal, Learn, Regulation, Trending */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {[
                 { path: '/network', title: 'Network', subtitle: 'Topology', icon: Globe, gradient: 'from-cyber-glow/20 to-cyber-blue/10' },
                 { path: '/terminal', title: 'Terminal', subtitle: 'Activity', icon: Activity, gradient: 'from-cyber-cyan/20 to-cyber-glow/10' },
@@ -893,25 +892,8 @@ export default function Character() {
             {/* Strategy status: which strategies on, exposure, PnL (sim) — link to Terminal */}
             <StrategyStatusCard />
 
-            {/* ILP / operator settlement layer (demo; see Network page ILP lens for full view) */}
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <h3 className="font-cyber text-xs text-cyber-muted uppercase tracking-wider">ILP control room (demo)</h3>
-                <Link
-                  to="/network"
-                  className="text-[10px] text-cyber-cyan hover:underline"
-                >
-                  Open Network → ILP lens
-                </Link>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <SettlementQueueWidget useDemoData />
-                <CorridorExposurePanel viewMode="flow" compact />
-              </div>
-            </div>
-
             {/* 3) Profile & Portfolio section boxes (switch to that tab) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <button
                 type="button"
                 onClick={() => setSection('profile')}

@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, X } from 'lucide-react';
 
 const TEXT =
-  'Informational software & public market data only — not investment, legal, or tax advice. No custody of keys or funds. You approve any transaction in your own wallet. Comply with applicable law (including U.S. / FL as relevant).';
+  'Informational software & public market data only — not investment, legal, or tax advice. No custody of keys or funds. You approve any transaction in your own wallet. AI-assisted areas follow human-in-the-loop and transparency practices aligned with NIST’s voluntary AI Risk Management Framework (NIST.AI.100-1); see the agent drawer for a short mapping. Comply with applicable law (including U.S. / FL as relevant).';
 
 export function DisclaimerBanner() {
   const [dismissed, setDismissed] = useState(() => {

@@ -269,6 +269,19 @@ export function CostComparator({
         </table>
       </div>
 
+      {/* TigerBeetle vs public / channel stacks */}
+      <div className="px-3 py-2 border-t border-cyber-border/60 bg-cyber-darker/40 flex gap-2 items-start">
+        <Info size={12} className="text-cyber-cyan shrink-0 mt-0.5" aria-hidden />
+        <p className="text-[9px] text-cyber-muted leading-relaxed text-left">
+          <span className="text-cyber-text/90 font-cyber">TigerBeetle</span> is shown as a{' '}
+          <strong className="text-cyber-text/90 font-normal">high-throughput ledger database</strong> (OLTP-style
+          double-entry)—something you operate <em>alongside</em> payments or settlement. The other rows are mostly{' '}
+          <strong className="text-cyber-text/90 font-normal">public chains, L2s, or channel / routing protocols</strong>{' '}
+          (different designs, not the same product). Fee/TPS here stay <span className="text-cyber-cyan">reference</span>{' '}
+          benchmarks; TigerBeetle’s “fee” models marginal infra, not L1 gas.
+        </p>
+      </div>
+
       {/* Summary */}
       <div className="p-3 border-t border-cyber-border bg-cyber-darker/50">
         <div className="grid grid-cols-3 gap-2 text-center">
