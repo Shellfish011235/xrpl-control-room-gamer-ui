@@ -342,7 +342,7 @@ export async function getAccountNFTs(address: string): Promise<Array<{
 
   let marker: unknown = undefined;
   let pageCount = 0;
-  const maxPages = 20; // Safety limit to prevent infinite loops (20 pages * ~100 NFTs = 2000 max)
+  const maxPages = 100; // Safety limit: supports up to roughly 10,000 NFTs per wallet
 
   try {
     do {
