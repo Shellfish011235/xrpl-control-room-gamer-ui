@@ -1,4 +1,4 @@
-import { assetProxyUrl, extractIPFSPath, fetchIPFS, rewriteIPFSImage } from './nftIpfs.js';
+import { assetProxyUrl, extractIPFSPath, fetchIPFSBytes, rewriteIPFSImage } from './nftIpfs.js';
 
 const MAX_METADATA_BYTES = 2 * 1024 * 1024;
 
@@ -19,10 +19,7 @@ export default {
     if (!uri || !extractIPFSPath(uri)) return json({ error: 'A valid IPFS URI is required' }, 400);
 
     try {
-      const upstream = await fetchIPFS(uri);
-      const bytes = await upstream.arrayBuffer();
-      if (bytes.byteLength > MAX_METADATA_BYTES) return json({ error: 'NFT metadata is too large' }, 413);
-      const contentType = upstream.headers.get('content-type')?.toLowerCase() ?? '';
+      const { bytes, contentType } = await fetchIPFSBytes(uri, MAX_METADATA_BYTES);
       if (contentType.startsWith('image/')) return json({ image: assetProxyUrl(uri) }, 200, true);
 
       const metadata = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;

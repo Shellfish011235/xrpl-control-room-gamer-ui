@@ -19,6 +19,23 @@ import { useStrategyStore } from '../store/strategyStore'
 import { useAssetsStore } from '../store/assetsStore'
 import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/themeStore'
 import type { NFTAsset, MemeToken } from '../store/assetsStore'
+
+function retryNFTImage(event: React.SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget
+  const retries = Number(image.dataset.retries ?? '0')
+  if (retries >= 2) {
+    image.style.display = 'none'
+    return
+  }
+
+  image.dataset.retries = String(retries + 1)
+  const originalSrc = image.dataset.originalSrc || image.src
+  image.dataset.originalSrc = originalSrc
+  window.setTimeout(() => {
+    const separator = originalSrc.includes('?') ? '&' : '?'
+    image.src = `${originalSrc}${separator}retry=${retries + 1}`
+  }, 750 * (retries + 1))
+}
 import { BackgroundPreview } from '../modules/theme/BackgroundPreview'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
 
@@ -1024,8 +1041,10 @@ export default function Character() {
                                 <img
                                   src={nft.image}
                                   alt={nft.name || 'NFT'}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                  onError={retryNFTImage}
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-cyber-darker/90 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
                                   <p className="text-[10px] text-cyber-text truncate w-full">{nft.name || `#${nft.serial}`}</p>
