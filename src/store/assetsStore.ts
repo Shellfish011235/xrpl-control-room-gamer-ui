@@ -8,6 +8,7 @@ import {
   isMemeToken,
   formatCurrency 
 } from '../services/xrplService';
+import type { NFTMediaStatus } from '../services/nftMediaStatus';
 
 export interface NFTAsset {
   tokenId: string;
@@ -21,6 +22,7 @@ export interface NFTAsset {
   walletAddress: string;
   walletLabel: string;
   isLoading?: boolean;
+  mediaStatus?: NFTMediaStatus;
 }
 
 export interface MemeToken {
@@ -94,6 +96,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
               walletAddress: wallet.address,
               walletLabel: wallet.label,
               isLoading: Boolean(nft.uri), // NFTs without metadata still render as placeholders
+              mediaStatus: nft.uri ? 'loading' : 'no-uri',
             });
           }
 
@@ -186,6 +189,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
                 name: metadata.name || `NFT #${n.serial}`,
                 description: metadata.description,
                 isLoading: false,
+                mediaStatus: metadata.image ? 'loaded' : 'unavailable',
               }
             : n
         ),
@@ -193,7 +197,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
     } catch {
       set((state) => ({
         nfts: state.nfts.map(n =>
-          n.tokenId === tokenId ? { ...n, isLoading: false } : n
+          n.tokenId === tokenId ? { ...n, isLoading: false, mediaStatus: 'unavailable' } : n
         ),
       }));
     }
