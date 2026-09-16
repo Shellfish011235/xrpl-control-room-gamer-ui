@@ -343,6 +343,8 @@ export async function getAccountNFTs(address: string): Promise<Array<{
   let marker: unknown = undefined;
   let pageCount = 0;
   const maxPages = 100; // Safety limit: supports up to roughly 10,000 NFTs per wallet
+  const seenMarkers = new Set<string>();
+  const seenTokenIds = new Set<string>();
 
   try {
     do {
@@ -354,6 +356,12 @@ export async function getAccountNFTs(address: string): Promise<Array<{
 
       // Add marker for pagination if we have one
       if (marker) {
+        const markerKey = JSON.stringify(marker);
+        if (seenMarkers.has(markerKey)) {
+          console.warn(`[XRPL] Repeated NFT pagination marker detected; stopping safely.`);
+          break;
+        }
+        seenMarkers.add(markerKey);
         params.marker = marker;
       }
 
@@ -375,7 +383,12 @@ export async function getAccountNFTs(address: string): Promise<Array<{
         flags: nft.Flags,
       }));
 
-      allNFTs.push(...pageNFTs);
+      const uniquePageNFTs = pageNFTs.filter((nft) => {
+        if (seenTokenIds.has(nft.tokenId)) return false;
+        seenTokenIds.add(nft.tokenId);
+        return true;
+      });
+      allNFTs.push(...uniquePageNFTs);
       
       // Get marker for next page (if any)
       marker = result.marker;
