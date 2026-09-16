@@ -77,7 +77,7 @@ export default function NFTs() {
     if (viewTab === 'portfolio' && connectedWallets.length > 0) {
       useAssetsStore.getState().fetchAllAssets();
     }
-  }, [viewTab, connectedWallets.length]);
+  }, [viewTab, connectedWallets.length, portfolioAddress]);
 
   const galleryFiltered = filterNFTs(Array.isArray(galleryNfts) ? galleryNfts : [], {
     taxon: filterTaxon ?? undefined,
