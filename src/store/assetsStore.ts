@@ -77,6 +77,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
       const allNFTs: NFTAsset[] = [];
       const allMemeTokens: MemeToken[] = [];
       const allOtherTokens: AssetsState['otherTokens'] = [];
+      const walletErrors: string[] = [];
 
       // Fetch assets from all wallets in parallel
       await Promise.all(wallets.map(async (wallet) => {
@@ -92,7 +93,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
               uri: nft.uri,
               walletAddress: wallet.address,
               walletLabel: wallet.label,
-              isLoading: true, // Will load metadata
+              isLoading: Boolean(nft.uri), // NFTs without metadata still render as placeholders
             });
           }
 
@@ -127,6 +128,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
           }
         } catch (err) {
           console.error(`Error fetching assets for ${wallet.address}:`, err);
+          walletErrors.push(wallet.label || wallet.address);
         }
       }));
 
@@ -136,6 +138,9 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
         otherTokens: allOtherTokens,
         isLoading: false,
         lastUpdated: Date.now(),
+        error: walletErrors.length > 0
+          ? `Could not load assets for ${walletErrors.join(', ')}. Retry to avoid an incomplete portfolio.`
+          : null,
       });
 
       // Fetch NFT metadata in the background with batching to avoid rate limits

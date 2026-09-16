@@ -1,5 +1,7 @@
 // XRPL Service - Fetches real data from the XRP Ledger (uses configurable node via lib/xrplClient)
 import { xrplRequest } from '../lib/xrplClient';
+import { fetchAllAccountNFTPages } from './nftPagination';
+export { parseNFTUri } from './nftMetadata';
 
 const isProd = typeof import.meta !== 'undefined' && (import.meta as { env?: { PROD?: boolean } }).env?.PROD === true;
 
@@ -331,82 +333,21 @@ export async function getAccountNFTs(address: string): Promise<Array<{
   serial: number;
   flags: number;
 }>> {
-  const allNFTs: Array<{
-    tokenId: string;
-    issuer: string;
-    taxon: number;
-    uri?: string;
-    serial: number;
-    flags: number;
-  }> = [];
-
-  let marker: unknown = undefined;
-  let pageCount = 0;
-  const maxPages = 100; // Safety limit: supports up to roughly 10,000 NFTs per wallet
-  const seenMarkers = new Set<string>();
-  const seenTokenIds = new Set<string>();
-
   try {
-    do {
-      const params: Record<string, unknown> = {
-        account: address,
-        ledger_index: 'validated',
-        limit: 100, // Request max per page
-      };
-
-      // Add marker for pagination if we have one
-      if (marker) {
-        const markerKey = JSON.stringify(marker);
-        if (seenMarkers.has(markerKey)) {
-          console.warn(`[XRPL] Repeated NFT pagination marker detected; stopping safely.`);
-          break;
-        }
-        seenMarkers.add(markerKey);
-        params.marker = marker;
-      }
-
-      const result = await xrplRequest<AccountNFTsResult & { marker?: unknown }>('account_nfts', [params]);
-
-      const rawList = result?.account_nfts;
-      if (!Array.isArray(rawList)) {
-        console.warn('[XRPL] account_nfts response missing or invalid account_nfts array', result);
-        break;
-      }
-
-      // Map and add NFTs from this page
-      const pageNFTs = rawList.map((nft) => ({
-        tokenId: nft.NFTokenID,
-        issuer: nft.Issuer,
-        taxon: nft.NFTokenTaxon,
-        uri: nft.URI ? decodeHex(nft.URI) : undefined,
-        serial: nft.nft_serial,
-        flags: nft.Flags,
-      }));
-
-      const uniquePageNFTs = pageNFTs.filter((nft) => {
-        if (seenTokenIds.has(nft.tokenId)) return false;
-        seenTokenIds.add(nft.tokenId);
-        return true;
-      });
-      allNFTs.push(...uniquePageNFTs);
-      
-      // Get marker for next page (if any)
-      marker = result.marker;
-      pageCount++;
-
-      console.log(`[XRPL] Fetched NFT page ${pageCount}: ${pageNFTs.length} NFTs (total: ${allNFTs.length})`);
-
-    } while (marker && pageCount < maxPages);
-
-    if (marker) {
-      console.warn(`[XRPL] NFT fetch stopped at ${maxPages} pages. There may be more NFTs.`);
-    }
-
-    console.log(`[XRPL] Total NFTs fetched for ${address}: ${allNFTs.length}`);
-    return allNFTs;
+    const rawNFTs = await fetchAllAccountNFTPages(address, (params) =>
+      xrplRequest<AccountNFTsResult & { marker?: unknown }>('account_nfts', [params])
+    );
+    return rawNFTs.map((nft) => ({
+      tokenId: nft.NFTokenID,
+      issuer: nft.Issuer,
+      taxon: nft.NFTokenTaxon,
+      uri: nft.URI ? decodeHex(nft.URI) : undefined,
+      serial: nft.nft_serial,
+      flags: nft.Flags,
+    }));
   } catch (error) {
     console.error(`[XRPL] Error fetching NFTs:`, error);
-    return allNFTs; // Return whatever we got before the error
+    throw error;
   }
 }
 
@@ -479,66 +420,6 @@ export function getMemeTokenInfo(currency: string): { name: string; symbol: stri
   }
   
   return null;
-}
-
-// Parse NFT URI to get image/metadata
-export async function parseNFTUri(uri: string): Promise<{
-  image?: string;
-  name?: string;
-  description?: string;
-  attributes?: Array<{ trait_type: string; value: string }>;
-}> {
-  try {
-    // Handle IPFS URIs
-    let fetchUrl = uri;
-    if (uri.startsWith('ipfs://')) {
-      fetchUrl = `https://ipfs.io/ipfs/${uri.slice(7)}`;
-    } else if (uri.startsWith('https://') || uri.startsWith('http://')) {
-      fetchUrl = uri;
-    } else {
-      // Try to decode as base64 JSON
-      try {
-        const decoded = atob(uri);
-        const metadata = JSON.parse(decoded);
-        return {
-          image: metadata.image,
-          name: metadata.name,
-          description: metadata.description,
-          attributes: metadata.attributes,
-        };
-      } catch {
-        return { image: uri };
-      }
-    }
-
-    // Fetch metadata
-    const response = await fetch(fetchUrl);
-    if (response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        const metadata = await response.json();
-        let image = metadata.image;
-        
-        // Convert IPFS image URLs
-        if (image?.startsWith('ipfs://')) {
-          image = `https://ipfs.io/ipfs/${image.slice(7)}`;
-        }
-        
-        return {
-          image,
-          name: metadata.name,
-          description: metadata.description,
-          attributes: metadata.attributes,
-        };
-      } else if (contentType?.includes('image')) {
-        return { image: fetchUrl };
-      }
-    }
-    
-    return { image: uri };
-  } catch {
-    return { image: uri };
-  }
 }
 
 // Get recent transactions

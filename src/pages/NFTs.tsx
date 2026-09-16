@@ -3,7 +3,7 @@
  * Phase 1: Testnet-first; BETA badge.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
@@ -21,6 +21,7 @@ import { useNFTStore, type NFTViewTab } from '../store/nftStore';
 import { useWalletStore } from '../store/walletStore';
 import { useAssetsStore } from '../store/assetsStore';
 import { fetchAccountNFTs, filterNFTs } from '../services/nftService';
+import { loadNFTMetadata, type NFTMetadata } from '../services/nftMetadata';
 import { NFTCard, NFTMintForm } from '../components/nfts';
 import { xamanService } from '../services/xaman';
 
@@ -63,14 +64,35 @@ export default function NFTs() {
 
   const [mintSubmitting, setMintSubmitting] = useState(false);
   const [burnModalNft, setBurnModalNft] = useState<typeof selectedNFT>(null);
+  const [galleryMetadata, setGalleryMetadata] = useState<Record<string, NFTMetadata>>({});
 
   // Gallery: fetch by manual address
   const addressToFetch = viewTab === 'gallery' ? browseAddress : '';
-  const { data: galleryNfts = [], isLoading: galleryLoading, isError: galleryError, error: galleryErrorDetail, refetch } = useQuery({
+  const { data: galleryLedgerNfts, isLoading: galleryLoading, isError: galleryError, error: galleryErrorDetail, refetch } = useQuery({
     queryKey: ['nfts', addressToFetch],
     queryFn: () => fetchAccountNFTs(addressToFetch),
     enabled: !!addressToFetch && addressToFetch.length >= 25,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    setGalleryMetadata({});
+    if (galleryLedgerNfts?.length) {
+      void loadNFTMetadata(galleryLedgerNfts, (tokenId, metadata) => {
+        if (!cancelled) {
+          setGalleryMetadata((current) => ({ ...current, [tokenId]: metadata }));
+        }
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [galleryLedgerNfts, addressToFetch]);
+
+  const galleryNfts = useMemo(
+    () => (galleryLedgerNfts ?? []).map((nft) => ({ ...nft, ...galleryMetadata[nft.tokenId] })),
+    [galleryLedgerNfts, galleryMetadata]
+  );
 
   // Load portfolio from all connected wallets (same data as Home) when opening Portfolio tab
   useEffect(() => {
@@ -84,12 +106,8 @@ export default function NFTs() {
     issuer: filterIssuer ?? undefined,
   });
   const portfolioList = Array.isArray(portfolioNfts) ? portfolioNfts : [];
-  const portfolioFiltered = filterNFTs(portfolioList as unknown as Parameters<typeof filterNFTs>[0], {
-    taxon: filterTaxon ?? undefined,
-    issuer: filterIssuer ?? undefined,
-  });
   const isLoading = viewTab === 'gallery' ? galleryLoading : portfolioLoading;
-  const filtered = viewTab === 'gallery' ? galleryFiltered : portfolioFiltered;
+  const filtered = viewTab === 'gallery' ? galleryFiltered : portfolioList;
 
   const handleBrowse = useCallback(() => {
     if (!browseAddress.trim()) {
