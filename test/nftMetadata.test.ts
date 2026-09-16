@@ -13,32 +13,45 @@ test('recognizes ipfs URIs and bare CIDs as gateway candidates', () => {
   const fromScheme = resolveNFTUriCandidates(`ipfs://${CID}/metadata.json`);
   const fromBareCid = resolveNFTUriCandidates(`${CID}/metadata.json`);
 
-  assert.equal(fromScheme.length, 3);
-  assert.deepEqual(fromBareCid, fromScheme);
-  assert.ok(fromScheme.every((url) => url.endsWith(`/ipfs/${CID}/metadata.json`)));
+  assert.equal(fromScheme.length, 1);
+  assert.equal(
+    fromBareCid[0],
+    `/api/nft-metadata?uri=${encodeURIComponent(`${CID}/metadata.json`)}`
+  );
+  assert.equal(
+    fromScheme[0],
+    `/api/nft-metadata?uri=${encodeURIComponent(`ipfs://${CID}/metadata.json`)}`
+  );
 });
 
-test('falls back to another IPFS gateway and keeps the working gateway for the image', async () => {
+test('routes existing IPFS gateway URLs through the same-origin metadata proxy', () => {
+  const filebaseUri = `https://ipfs.filebase.io/ipfs/${CID}/6328.json`;
+
+  assert.deepEqual(resolveNFTUriCandidates(filebaseUri), [
+    `/api/nft-metadata?uri=${encodeURIComponent(filebaseUri)}`,
+  ]);
+});
+
+test('uses the same-origin proxy response for IPFS metadata and images', async () => {
   const requests: string[] = [];
   const fetcher: typeof fetch = async (input) => {
     const url = String(input);
     requests.push(url);
 
-    if (requests.length === 1) {
-      return new Response('gateway unavailable', { status: 502 });
-    }
-
     return Response.json({
       name: 'Dream Life NFT',
-      image: `ipfs://${CID}/image.png`,
+      image: `/api/nft-asset?uri=${encodeURIComponent(`ipfs://${CID}/image.png`)}`,
     });
   };
 
   const metadata = await parseNFTUri(`ipfs://${CID}/metadata.json`, fetcher);
 
-  assert.equal(requests.length, 2);
+  assert.equal(requests.length, 1);
   assert.equal(metadata.name, 'Dream Life NFT');
-  assert.equal(metadata.image, requests[1].replace('/metadata.json', '/image.png'));
+  assert.equal(
+    metadata.image,
+    `/api/nft-asset?uri=${encodeURIComponent(`ipfs://${CID}/image.png`)}`
+  );
 });
 
 test('returns no unusable image URL when every IPFS gateway fails', async () => {

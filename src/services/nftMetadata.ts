@@ -5,12 +5,6 @@ export interface NFTMetadata {
   attributes?: Array<{ trait_type: string; value: string }>;
 }
 
-const IPFS_GATEWAYS = [
-  'https://ipfs.io/ipfs/',
-  'https://dweb.link/ipfs/',
-  'https://cloudflare-ipfs.com/ipfs/',
-] as const;
-
 const BARE_CID_PATTERN = /^(?:Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z2-7][a-z2-7]{20,})(?:\/.*)?$/;
 const FETCH_TIMEOUT_MS = 8_000;
 
@@ -19,36 +13,46 @@ function getIPFSPath(uri: string): string | null {
   if (trimmed.startsWith('ipfs://')) {
     return trimmed.slice(7).replace(/^ipfs\//, '');
   }
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const url = new URL(trimmed);
+      const markerIndex = url.pathname.indexOf('/ipfs/');
+      if (markerIndex >= 0) return url.pathname.slice(markerIndex + 6);
+    } catch {
+      return null;
+    }
+  }
   return BARE_CID_PATTERN.test(trimmed) ? trimmed : null;
 }
 
 export function resolveNFTUriCandidates(uri: string): string[] {
   const ipfsPath = getIPFSPath(uri);
   if (ipfsPath) {
-    return IPFS_GATEWAYS.map((gateway) => `${gateway}${ipfsPath}`);
+    return [`/api/nft-metadata?uri=${encodeURIComponent(uri.trim())}`];
   }
 
   return /^https?:\/\//i.test(uri) ? [uri] : [];
 }
 
-function normalizeImageUri(image: unknown, workingMetadataUrl?: string): string | undefined {
+function normalizeImageUri(image: unknown): string | undefined {
   if (typeof image !== 'string' || image.trim().length === 0) return undefined;
 
   const ipfsPath = getIPFSPath(image);
   if (!ipfsPath) {
-    return /^https?:\/\//i.test(image) || image.startsWith('data:image/') ? image : undefined;
+    return /^https?:\/\//i.test(image) || image.startsWith('data:image/') || image.startsWith('/api/nft-asset?')
+      ? image
+      : undefined;
   }
 
-  const workingGateway = workingMetadataUrl?.match(/^(https?:\/\/[^/]+\/ipfs\/)/)?.[1];
-  return `${workingGateway ?? IPFS_GATEWAYS[0]}${ipfsPath}`;
+  return `/api/nft-asset?uri=${encodeURIComponent(image.trim())}`;
 }
 
-function normalizeMetadata(value: unknown, workingMetadataUrl?: string): NFTMetadata {
+function normalizeMetadata(value: unknown): NFTMetadata {
   if (!value || typeof value !== 'object') return {};
   const metadata = value as Record<string, unknown>;
 
   return {
-    image: normalizeImageUri(metadata.image, workingMetadataUrl),
+    image: normalizeImageUri(metadata.image),
     name: typeof metadata.name === 'string' ? metadata.name : undefined,
     description: typeof metadata.description === 'string' ? metadata.description : undefined,
     attributes: Array.isArray(metadata.attributes)
@@ -105,7 +109,7 @@ export async function parseNFTUri(
 
       const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
       if (contentType.includes('json')) {
-        return normalizeMetadata(await response.json(), candidate);
+        return normalizeMetadata(await response.json());
       }
       if (contentType.startsWith('image/')) {
         return { image: candidate };
