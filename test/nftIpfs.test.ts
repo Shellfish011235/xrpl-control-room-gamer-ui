@@ -7,6 +7,7 @@ import {
   fetchIPFSBytes,
   rewriteIPFSImage,
 } from '../api/nftIpfs.ts';
+import { getNFTMediaStatus } from '../src/services/nftMediaStatus.ts';
 
 const CID = 'bafybeiatzdnexbgd3mf4luibmikrnmbup4enyrr44g3erl3uozunxowa34';
 
@@ -55,4 +56,11 @@ test('rejects a streamed gateway response that exceeds the byte limit', async ()
   await assert.rejects(
     fetchIPFSBytes(`ipfs://${CID}/image.png`, 16, oversizedFetcher, ['https://gateway.test/ipfs/'])
   );
+});
+
+test('classifies NFT media states explicitly', () => {
+  assert.equal(getNFTMediaStatus({ uri: 'ipfs://cid', isLoading: true }), 'loading');
+  assert.equal(getNFTMediaStatus({ uri: 'ipfs://cid', image: '/api/nft-asset' }), 'loaded');
+  assert.equal(getNFTMediaStatus({ uri: 'ipfs://cid', isLoading: false }), 'unavailable');
+  assert.equal(getNFTMediaStatus({}), 'no-uri');
 });

@@ -19,12 +19,14 @@ import { useStrategyStore } from '../store/strategyStore'
 import { useAssetsStore } from '../store/assetsStore'
 import { useThemeStore, useIsNftApplied, useIsNftPreviewing } from '../store/themeStore'
 import type { NFTAsset, MemeToken } from '../store/assetsStore'
+import type { NFTMediaStatus } from '../services/nftMediaStatus'
 
 function retryNFTImage(event: React.SyntheticEvent<HTMLImageElement>) {
   const image = event.currentTarget
   const retries = Number(image.dataset.retries ?? '0')
   if (retries >= 2) {
     image.style.display = 'none'
+    image.parentElement?.querySelector('[data-image-fallback]')?.classList.remove('hidden')
     return
   }
 
@@ -35,6 +37,13 @@ function retryNFTImage(event: React.SyntheticEvent<HTMLImageElement>) {
     const separator = originalSrc.includes('?') ? '&' : '?'
     image.src = `${originalSrc}${separator}retry=${retries + 1}`
   }, 750 * (retries + 1))
+}
+
+function mediaStatusLabel(status: NFTMediaStatus | undefined, serial: number): string {
+  if (status === 'loading') return 'Loading artwork…'
+  if (status === 'no-uri') return 'No on-ledger metadata'
+  if (status === 'unavailable') return `Artwork unavailable · #${serial}`
+  return `#${serial}`
 }
 import { BackgroundPreview } from '../modules/theme/BackgroundPreview'
 import { LedgerImpactTool } from '../components/LedgerImpactTool'
@@ -1032,12 +1041,22 @@ export default function Character() {
                             transition={{ delay: Math.min(idx * 0.02, 0.4) }}
                             whileHover={{ scale: 1.05, y: -2 }}
                           >
-                            {nft.isLoading ? (
+                            {nft.mediaStatus === 'loading' || nft.isLoading ? (
                               <div className="w-full h-full flex items-center justify-center">
-                                <Loader2 size={20} className="animate-spin text-cyber-purple/50" />
+                                <div className="flex flex-col items-center gap-1 text-center">
+                                  <Loader2 size={20} className="animate-spin text-cyber-purple/50" />
+                                  <span className="text-[9px] text-cyber-muted">Loading artwork…</span>
+                                </div>
                               </div>
                             ) : nft.image ? (
                               <div className="relative w-full h-full">
+                                <div
+                                  data-image-fallback
+                                  className="hidden absolute inset-0 flex-col items-center justify-center p-2 text-center"
+                                >
+                                  <ImageIcon size={20} className="text-cyber-purple/50 mb-1" />
+                                  <span className="text-[9px] text-cyber-muted">Artwork unavailable · #{nft.serial}</span>
+                                </div>
                                 <img
                                   src={nft.image}
                                   alt={nft.name || 'NFT'}
@@ -1053,7 +1072,9 @@ export default function Character() {
                             ) : (
                               <div className="w-full h-full flex flex-col items-center justify-center p-2">
                                 <ImageIcon size={20} className="text-cyber-purple/50 mb-1" />
-                                <span className="text-[9px] text-cyber-muted text-center">#{nft.serial}</span>
+                                <span className="text-[9px] text-cyber-muted text-center">
+                                  {mediaStatusLabel(nft.mediaStatus, nft.serial)}
+                                </span>
                               </div>
                             )}
                           </motion.div>
