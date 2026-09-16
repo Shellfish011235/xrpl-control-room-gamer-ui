@@ -145,8 +145,8 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
 
       // Fetch NFT metadata in the background with batching to avoid rate limits
       const nftsWithUri = allNFTs.filter(nft => nft.uri);
-      const batchSize = 5; // Fetch 5 at a time
-      const delayBetweenBatches = 200; // 200ms between batches
+      const batchSize = 3; // Keep mobile browsers and serverless gateway work bounded
+      const delayBetweenBatches = 350;
 
       const fetchBatch = async (startIndex: number) => {
         const batch = nftsWithUri.slice(startIndex, startIndex + batchSize);
@@ -159,7 +159,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
       };
 
       if (nftsWithUri.length > 0) {
-        console.log(`[Assets] Starting metadata fetch for ${nftsWithUri.length} NFTs in batches of ${batchSize}`);
+        console.info(`[Assets] Starting metadata fetch for ${nftsWithUri.length} NFTs in batches of ${batchSize}`);
         fetchBatch(0);
       }
     } catch (error) {

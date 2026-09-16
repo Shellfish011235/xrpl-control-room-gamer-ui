@@ -1,4 +1,4 @@
-import { extractIPFSPath, fetchIPFS } from './nftIpfs.js';
+import { extractIPFSPath, fetchIPFSBytes } from './nftIpfs.js';
 
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
@@ -25,10 +25,8 @@ export default {
     if (!uri || !extractIPFSPath(uri)) return errorResponse('A valid IPFS URI is required', 400);
 
     try {
-      const upstream = await fetchIPFS(uri);
-      const bytes = new Uint8Array(await upstream.arrayBuffer());
-      if (bytes.byteLength > MAX_IMAGE_BYTES) return errorResponse('NFT image is too large', 413);
-      const type = inferImageType(bytes, upstream.headers.get('content-type')?.toLowerCase() ?? '');
+      const { bytes, contentType } = await fetchIPFSBytes(uri, MAX_IMAGE_BYTES);
+      const type = inferImageType(bytes, contentType);
       if (!type) return errorResponse('IPFS asset is not a supported image', 415);
 
       return new Response(bytes, {

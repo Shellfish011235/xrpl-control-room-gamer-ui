@@ -6,7 +6,7 @@ export interface NFTMetadata {
 }
 
 const BARE_CID_PATTERN = /^(?:Qm[1-9A-HJ-NP-Za-km-z]{44}|baf[a-z2-7][a-z2-7]{20,})(?:\/.*)?$/;
-const FETCH_TIMEOUT_MS = 8_000;
+const FETCH_TIMEOUT_MS = 12_000;
 
 function getIPFSPath(uri: string): string | null {
   const trimmed = uri.trim();
@@ -18,6 +18,8 @@ function getIPFSPath(uri: string): string | null {
       const url = new URL(trimmed);
       const markerIndex = url.pathname.indexOf('/ipfs/');
       if (markerIndex >= 0) return url.pathname.slice(markerIndex + 6);
+      const subdomainCid = url.hostname.match(/^([^.]+)\.ipfs\./i)?.[1];
+      if (subdomainCid) return `${subdomainCid}${url.pathname}`;
     } catch {
       return null;
     }

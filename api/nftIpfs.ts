@@ -19,8 +19,13 @@ export function extractIPFSPath(uri: string): string | null {
     try {
       const url = new URL(path);
       const index = url.pathname.indexOf('/ipfs/');
-      if (index < 0) return null;
-      path = url.pathname.slice(index + 6);
+      if (index >= 0) {
+        path = url.pathname.slice(index + 6);
+      } else {
+        const subdomainCid = url.hostname.match(/^([^.]+)\.ipfs\./i)?.[1];
+        if (!subdomainCid) return null;
+        path = `${subdomainCid}${url.pathname}`;
+      }
     } catch {
       return null;
     }
@@ -34,25 +39,86 @@ export function extractIPFSPath(uri: string): string | null {
   return path;
 }
 
-async function fetchGateway(gateway: string, path: string): Promise<Response> {
+export interface IPFSBytes {
+  bytes: Uint8Array;
+  contentType: string;
+}
+
+async function readBoundedBody(response: Response, maxBytes: number): Promise<Uint8Array> {
+  const contentLength = Number(response.headers.get('content-length') ?? 0);
+  if (contentLength > maxBytes) throw new Error('IPFS response exceeds size limit');
+  if (!response.body) return new Uint8Array();
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      throw new Error('IPFS response exceeds size limit');
+    }
+    chunks.push(value);
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+async function fetchGatewayBytes(
+  gateway: string,
+  path: string,
+  maxBytes: number,
+  fetcher: typeof fetch,
+  timeoutMs: number
+): Promise<IPFSBytes> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    const response = await fetch(`${gateway}${path}`, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json,image/*;q=0.9,*/*;q=0.5' },
+    const operation = (async () => {
+      const response = await fetcher(`${gateway}${path}`, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json,image/*;q=0.9,*/*;q=0.5' },
+      });
+      if (!response.ok) throw new Error(`Gateway returned ${response.status}`);
+      const bytes = await readBoundedBody(response, maxBytes);
+      return {
+        bytes,
+        contentType: response.headers.get('content-type')?.toLowerCase() ?? '',
+      };
+    })();
+
+    const deadline = new Promise<never>((_, reject) => {
+      timeout = setTimeout(() => {
+        controller.abort();
+        reject(new Error('IPFS gateway timed out'));
+      }, timeoutMs);
     });
-    if (!response.ok) throw new Error(`Gateway returned ${response.status}`);
-    return response;
+    return await Promise.race([operation, deadline]);
   } finally {
-    clearTimeout(timeout);
+    if (timeout) clearTimeout(timeout);
   }
 }
 
-export async function fetchIPFS(uri: string): Promise<Response> {
+export async function fetchIPFSBytes(
+  uri: string,
+  maxBytes: number,
+  fetcher: typeof fetch = fetch,
+  gateways: readonly string[] = IPFS_GATEWAYS,
+  timeoutMs = UPSTREAM_TIMEOUT_MS
+): Promise<IPFSBytes> {
   const path = extractIPFSPath(uri);
   if (!path) throw new Error('Unsupported IPFS URI');
-  return Promise.any(IPFS_GATEWAYS.map((gateway) => fetchGateway(gateway, path)));
+  return Promise.any(
+    gateways.map((gateway) => fetchGatewayBytes(gateway, path, maxBytes, fetcher, timeoutMs))
+  );
 }
 
 export function assetProxyUrl(uri: string): string {
