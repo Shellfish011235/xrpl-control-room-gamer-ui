@@ -8,6 +8,7 @@ import {
   isMemeToken,
   formatCurrency 
 } from '../services/xrplService';
+import { fetchIndexedNFTMetadata } from '../services/nftIndexerRecovery';
 import type { NFTMediaStatus } from '../services/nftMediaStatus';
 
 export interface NFTAsset {
@@ -23,6 +24,7 @@ export interface NFTAsset {
   walletLabel: string;
   isLoading?: boolean;
   mediaStatus?: NFTMediaStatus;
+  mediaSource?: 'ledger-uri' | 'xmagnetic-indexer';
 }
 
 export interface MemeToken {
@@ -95,8 +97,9 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
               uri: nft.uri,
               walletAddress: wallet.address,
               walletLabel: wallet.label,
-              isLoading: Boolean(nft.uri), // NFTs without metadata still render as placeholders
-              mediaStatus: nft.uri ? 'loading' : 'no-uri',
+              isLoading: true,
+              mediaStatus: 'loading',
+              mediaSource: nft.uri ? 'ledger-uri' : undefined,
             });
           }
 
@@ -147,7 +150,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
       });
 
       // Fetch NFT metadata in the background with batching to avoid rate limits
-      const nftsWithUri = allNFTs.filter(nft => nft.uri);
+      const nftsWithUri = allNFTs;
       const batchSize = 3; // Keep mobile browsers and serverless gateway work bounded
       const delayBetweenBatches = 350;
 
@@ -162,7 +165,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
       };
 
       if (nftsWithUri.length > 0) {
-        console.info(`[Assets] Starting metadata fetch for ${nftsWithUri.length} NFTs in batches of ${batchSize}`);
+        console.info(`[Assets] Starting metadata and artwork recovery for ${nftsWithUri.length} NFTs in batches of ${batchSize}`);
         fetchBatch(0);
       }
     } catch (error) {
@@ -175,29 +178,51 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
 
   fetchNFTMetadata: async (tokenId: string) => {
     const nft = get().nfts.find(n => n.tokenId === tokenId);
-    if (!nft || !nft.uri) return;
+    if (!nft) return;
 
     try {
-      const metadata = await parseNFTUri(nft.uri);
+      const metadata = nft.uri ? await parseNFTUri(nft.uri) : {};
+      const recovered = metadata.image ? null : await fetchIndexedNFTMetadata(tokenId);
+      const resolved = recovered ?? metadata;
       
       set((state) => ({
         nfts: state.nfts.map(n =>
           n.tokenId === tokenId
             ? {
                 ...n,
-                image: metadata.image,
-                name: metadata.name || `NFT #${n.serial}`,
-                description: metadata.description,
+                image: resolved.image,
+                name: resolved.name || `NFT #${n.serial}`,
+                description: resolved.description,
                 isLoading: false,
-                mediaStatus: metadata.image ? 'loaded' : 'unavailable',
+                mediaStatus: resolved.image ? 'loaded' : n.uri ? 'unavailable' : 'no-uri',
+                mediaSource: recovered ? 'xmagnetic-indexer' : n.uri ? 'ledger-uri' : undefined,
               }
             : n
         ),
       }));
     } catch {
+      const recovered = await fetchIndexedNFTMetadata(tokenId);
+      if (recovered?.image) {
+        set((state) => ({
+          nfts: state.nfts.map(n => n.tokenId === tokenId
+            ? {
+                ...n,
+                image: recovered.image,
+                name: recovered.name || `NFT #${n.serial}`,
+                description: recovered.description,
+                isLoading: false,
+                mediaStatus: 'loaded',
+                mediaSource: 'xmagnetic-indexer',
+              }
+            : n),
+        }));
+        return;
+      }
       set((state) => ({
-        nfts: state.nfts.map(n =>
-          n.tokenId === tokenId ? { ...n, isLoading: false, mediaStatus: 'unavailable' } : n
+          nfts: state.nfts.map(n =>
+          n.tokenId === tokenId
+            ? { ...n, isLoading: false, mediaStatus: n.uri ? 'unavailable' : 'no-uri' }
+            : n
         ),
       }));
     }
