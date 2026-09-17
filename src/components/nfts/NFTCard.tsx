@@ -2,10 +2,11 @@
  * NFT card for Arena grid – image, taxon, issuer, actions.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ImageIcon, Flame, ExternalLink, Loader2 } from 'lucide-react';
 import type { NFTRecord } from '../../services/nftService';
+import { fetchIndexedNFTMetadata } from '../../services/nftIndexerRecovery';
 
 function truncate(str: string, len: number) {
   return str.length <= len ? str : `${str.slice(0, len)}...`;
@@ -22,8 +23,29 @@ interface NFTCardProps {
 
 export function NFTCard({ nft, onSelect, onBurn, showActions = true, walletLabel: walletLabelProp }: NFTCardProps) {
   const walletLabel = walletLabelProp ?? nft.walletLabel;
-  const imgUrl = nft.image || (nft.uri?.startsWith('http') ? nft.uri : undefined);
+  const primaryImgUrl = nft.image || (nft.uri?.startsWith('http') ? nft.uri : undefined);
+  const [imgUrl, setImgUrl] = useState(primaryImgUrl);
   const [imgState, setImgState] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [recoveryAttempted, setRecoveryAttempted] = useState(false);
+
+  useEffect(() => {
+    setImgUrl(primaryImgUrl);
+    setImgState('loading');
+    setRecoveryAttempted(false);
+  }, [primaryImgUrl]);
+
+  const handleImageError = async () => {
+    if (!recoveryAttempted) {
+      setRecoveryAttempted(true);
+      setImgState('loading');
+      const recovered = await fetchIndexedNFTMetadata(nft.tokenId);
+      if (recovered?.image && recovered.image !== imgUrl) {
+        setImgUrl(recovered.image);
+        return;
+      }
+    }
+    setImgState('error');
+  };
 
   return (
     <motion.div
@@ -55,7 +77,7 @@ export function NFTCard({ nft, onSelect, onBurn, showActions = true, walletLabel
                 className={`w-full h-full object-cover ${imgState !== 'ok' ? 'opacity-0' : 'opacity-100'} transition-opacity`}
                 loading="lazy"
                 onLoad={() => setImgState('ok')}
-                onError={() => setImgState('error')}
+                onError={() => { void handleImageError(); }}
               />
             </>
           ) : (
@@ -83,6 +105,17 @@ export function NFTCard({ nft, onSelect, onBurn, showActions = true, walletLabel
           </p>
         </div>
       </button>
+      {imgState === 'error' && (
+        <a
+          href={`https://xrpscan.com/nft/${nft.tokenId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block px-3 pb-2 text-[10px] text-cyber-cyan hover:underline"
+          onClick={(event) => event.stopPropagation()}
+        >
+          Open NFT record on XRPScan
+        </a>
+      )}
       {showActions && (
         <div className="flex gap-1 p-2 border-t border-cyber-border">
           {onSelect && (

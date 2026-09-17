@@ -4,6 +4,8 @@
  */
 
 import { getAccountNFTs } from './xrplService';
+import { mergeNFTRecords } from './nftReconciliation';
+export { mergeNFTRecords } from './nftReconciliation';
 
 export type NFTRecord = Awaited<ReturnType<typeof getAccountNFTs>>[number] & {
   image?: string;
@@ -13,10 +15,82 @@ export type NFTRecord = Awaited<ReturnType<typeof getAccountNFTs>>[number] & {
 
 const XRPSCAN_NFT_API = 'https://api.xrpscan.com/api/v1';
 
+type XRPScanNFT = {
+  NFTokenID?: unknown;
+  nft_id?: unknown;
+  Issuer?: unknown;
+  issuer?: unknown;
+  NFTokenTaxon?: unknown;
+  nft_taxon?: unknown;
+  nft_serial?: unknown;
+  URI?: unknown;
+  uri?: unknown;
+  Flags?: unknown;
+  flags?: unknown;
+};
+
+function normalizeXRPScanNFT(value: XRPScanNFT): NFTRecord | null {
+  const tokenId = typeof value.NFTokenID === 'string'
+    ? value.NFTokenID
+    : typeof value.nft_id === 'string' ? value.nft_id : '';
+  if (!tokenId) return null;
+
+  const issuer = typeof value.Issuer === 'string'
+    ? value.Issuer
+    : typeof value.issuer === 'string' ? value.issuer : '';
+  const taxon = Number(value.NFTokenTaxon ?? value.nft_taxon ?? 0);
+  const serial = Number(value.nft_serial ?? 0);
+  const uri = typeof value.URI === 'string'
+    ? value.URI
+    : typeof value.uri === 'string' ? value.uri : undefined;
+
+  return {
+    tokenId,
+    issuer,
+    taxon: Number.isFinite(taxon) ? taxon : 0,
+    serial: Number.isFinite(serial) ? serial : 0,
+    ...(uri ? { uri } : {}),
+    flags: Number(value.Flags ?? value.flags ?? 0),
+  } as NFTRecord;
+}
+
+async function fetchXRPScanAccountNFTs(address: string): Promise<NFTRecord[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  try {
+    const response = await fetch(`${XRPSCAN_NFT_API}/account/${encodeURIComponent(address)}/nfts?limit=400`, {
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) return [];
+    const payload = await response.json() as unknown;
+    if (!Array.isArray(payload)) return [];
+    return payload
+      .filter((value): value is XRPScanNFT => Boolean(value) && typeof value === 'object')
+      .map(normalizeXRPScanNFT)
+      .filter((value): value is NFTRecord => value !== null);
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /** Fetch the ledger list immediately. The page streams metadata separately. */
 export async function fetchAccountNFTs(address: string): Promise<NFTRecord[]> {
-  const list = await getAccountNFTs(address);
-  return list.map((nft) => ({ ...nft } as NFTRecord));
+  let primaryRecords: NFTRecord[] = [];
+  let primaryError: unknown;
+  try {
+    const primary = await getAccountNFTs(address);
+    primaryRecords = primary.map((nft) => ({ ...nft } as NFTRecord));
+  } catch (error) {
+    primaryError = error;
+  }
+  // XRPScan is used as a reconciliation source so a lagging/partial public node
+  // cannot hide NFTs that are already visible through an independent indexer.
+  const secondary = await fetchXRPScanAccountNFTs(address);
+  if (primaryError && secondary.length === 0) throw primaryError;
+  return mergeNFTRecords(primaryRecords, secondary);
 }
 
 /** Filter by taxon and/or issuer (client-side). */

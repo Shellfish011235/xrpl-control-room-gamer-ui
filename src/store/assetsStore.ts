@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import { useWalletStore } from './walletStore';
 import { 
-  getAccountNFTs, 
   getAccountLines, 
   parseNFTUri, 
   getMemeTokenInfo,
   isMemeToken,
   formatCurrency 
 } from '../services/xrplService';
+import { fetchAccountNFTs } from '../services/nftService';
 import { fetchIndexedNFTMetadata } from '../services/nftIndexerRecovery';
 import type { NFTMediaStatus } from '../services/nftMediaStatus';
 
@@ -87,7 +87,7 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
       await Promise.all(wallets.map(async (wallet) => {
         try {
           // Fetch NFTs
-          const nfts = await getAccountNFTs(wallet.address);
+          const nfts = await fetchAccountNFTs(wallet.address);
           for (const nft of nfts) {
             allNFTs.push({
               tokenId: nft.tokenId,
