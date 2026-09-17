@@ -24,7 +24,7 @@ export interface NFTAsset {
   walletLabel: string;
   isLoading?: boolean;
   mediaStatus?: NFTMediaStatus;
-  mediaSource?: 'ledger-uri' | 'xmagnetic-indexer' | 'recovered-uri';
+  mediaSource?: 'ledger-uri' | 'xmagnetic-indexer' | 'xrpscan-indexer' | 'recovery-registry' | 'recovered-uri';
 }
 
 export interface MemeToken {
@@ -195,7 +195,15 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
                 description: resolved.description,
                 isLoading: false,
                 mediaStatus: resolved.image ? 'loaded' : n.uri ? 'unavailable' : 'no-uri',
-                mediaSource: recovered ? 'xmagnetic-indexer' : n.uri ? 'ledger-uri' : undefined,
+                mediaSource: recovered?.source === 'verified-registry'
+                  ? 'recovery-registry'
+                  : recovered?.source === 'xrpscan'
+                    ? 'xrpscan-indexer'
+                  : recovered
+                    ? 'xmagnetic-indexer'
+                    : n.uri
+                      ? 'ledger-uri'
+                      : undefined,
               }
             : n
         ),
@@ -212,7 +220,11 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
                 description: recovered.description,
                 isLoading: false,
                 mediaStatus: 'loaded',
-                mediaSource: 'xmagnetic-indexer',
+                mediaSource: recovered.source === 'verified-registry'
+                  ? 'recovery-registry'
+                  : recovered.source === 'xrpscan'
+                    ? 'xrpscan-indexer'
+                  : 'xmagnetic-indexer',
               }
             : n),
         }));

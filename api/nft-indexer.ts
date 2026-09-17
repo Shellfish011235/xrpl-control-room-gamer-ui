@@ -1,4 +1,5 @@
 import { extractIndexedNFTMetadata } from '../src/services/nftIndexerRecovery.js';
+import { getVerifiedNFTRecovery } from '../src/data/nftRecoveryRegistry.js';
 
 const INDEXER_ORIGIN = 'https://xmagnetic.org/nfts/asset/';
 const XRPSCAN_NFT_ORIGIN = 'https://api.xrpscan.com/api/v1/nft/';
@@ -52,7 +53,7 @@ function extractXRPSCanRecovery(value: unknown, tokenId: string): Record<string,
     ...(image ? { image } : {}),
     ...(name ? { name } : {}),
     ...(description ? { description } : {}),
-    source: 'xmagnetic',
+    source: 'xrpscan',
   };
 }
 
@@ -71,6 +72,9 @@ export default {
     if (request.method !== 'GET') return json({ error: 'Method not allowed' }, 405);
     const tokenId = new URL(request.url).searchParams.get('tokenId')?.trim() ?? '';
     if (!/^[A-F0-9]{64}$/i.test(tokenId)) return json({ error: 'A valid NFTokenID is required' }, 400);
+
+    const verifiedRecovery = getVerifiedNFTRecovery(tokenId);
+    if (verifiedRecovery) return json(verifiedRecovery);
 
     try {
       const upstream = await fetchWithTimeout(`${INDEXER_ORIGIN}${tokenId}`, {
