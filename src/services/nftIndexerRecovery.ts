@@ -13,6 +13,19 @@ function isUsableUrl(value: unknown): value is string {
   return /^https?:\/\//i.test(value) || value.startsWith('data:image/');
 }
 
+function normalizeRecoveredImage(image: string): string {
+  try {
+    const url = new URL(image);
+    const host = url.hostname.toLowerCase();
+    if (url.protocol === 'https:' && (host === 'arweave.net' || host.endsWith('.arweave.net') || host.endsWith('.xmagnetic.org'))) {
+      return `/api/nft-image?url=${encodeURIComponent(image)}`;
+    }
+  } catch {
+    // Keep the original value for non-URL image data.
+  }
+  return image;
+}
+
 function readNextData(html: string): unknown | null {
   const match = html.match(/<script[^>]+id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
   if (!match) return null;
@@ -45,7 +58,7 @@ export function extractIndexedNFTMetadata(html: string, tokenId: string): Indexe
   if (!image) return null;
 
   return {
-    image,
+    image: normalizeRecoveredImage(image),
     ...(typeof metadata.name === 'string' ? { name: metadata.name } : {}),
     ...(typeof metadata.description === 'string' ? { description: metadata.description } : {}),
     source: 'xmagnetic',
@@ -70,7 +83,7 @@ export async function fetchIndexedNFTMetadata(
     const record = payload as Record<string, unknown>;
     return isUsableUrl(record.image)
       ? {
-          image: record.image,
+              image: normalizeRecoveredImage(record.image),
           ...(typeof record.name === 'string' ? { name: record.name } : {}),
           ...(typeof record.description === 'string' ? { description: record.description } : {}),
           source: 'xmagnetic',

@@ -151,8 +151,8 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
 
       // Fetch NFT metadata in the background with batching to avoid rate limits
       const nftsWithUri = allNFTs;
-      const batchSize = 3; // Keep mobile browsers and serverless gateway work bounded
-      const delayBetweenBatches = 350;
+      const batchSize = 8; // Bounded concurrency, but fast enough for larger portfolios
+      const delayBetweenBatches = 150;
 
       const fetchBatch = async (startIndex: number) => {
         const batch = nftsWithUri.slice(startIndex, startIndex + batchSize);
