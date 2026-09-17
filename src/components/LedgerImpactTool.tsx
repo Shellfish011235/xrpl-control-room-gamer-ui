@@ -329,17 +329,58 @@ const amendmentMetadata: Record<string, {
   'fixPayChanCancelAfter': { summary: 'Fixes payment channel cancel timing', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix for payment channel timing.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Correct payment channel lifecycle for streaming and high-throughput payment apps.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['Payment channels', 'Streaming payments', 'Micropayment apps'], estimatedReviewMinutes: 5 },
   'fixNFTokenPageLinks': { summary: 'Fixes NFToken page linking issues', tier: 'A', impact: 'Low', areas: ['Disk IO'], rationale: 'Bug fix for NFToken pagination.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves NFToken directory and pagination reliability for marketplaces and wallets.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['NFT marketplaces', 'Wallet providers', 'Indexing services'], estimatedReviewMinutes: 5 },
   'fixNFTokenRemint': { summary: 'Fixes NFToken reminting edge cases', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Bug fix amendment with negligible performance impact.', author: 'Ripple Engineering', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Improves NFToken burn-and-remint reliability for creators and marketplaces.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['NFT marketplaces', 'Gaming platforms', 'Collectible services'], estimatedReviewMinutes: 5 },
+
+  // Current live amendments that use versioned names in the XRPScan feed.
+  'BatchV1_1': { summary: 'Safer replacement for atomic transaction batching (XLS-56)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Fee pressure'], rationale: 'Adds bounded validation for atomic transaction batches. It increases validation complexity while reducing the number of transactions needed for multi-step operations.', author: 'XRPLF', github: 'https://opensource.ripple.com/docs/xls-56-batch-transactions', whoBenefits: 'Lets wallets, exchanges, and builders complete related operations atomically with fewer fees and less partial-failure risk.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Public Infrastructure'], whoBenefitsExamples: ['DEX aggregators', 'Batch payments', 'Multi-step DeFi flows'], estimatedReviewMinutes: 25 },
+  'Sponsor': { summary: 'Allows sponsored transaction fees for supported accounts (XLS-68)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Fee pressure'], rationale: 'Adds sponsor authorization and fee-balance checks to transaction validation. The cost is bounded and may reduce friction for users who do not hold the native asset.', author: 'XRPLF', github: 'https://opensource.ripple.com/docs/xls-68-sponsor', whoBenefits: 'Helps applications and custodians onboard users by covering transaction fees under explicit limits.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Wallet Users'], whoBenefitsExamples: ['Wallet onboarding', 'Institutional accounts', 'Sponsored payments'], estimatedReviewMinutes: 20 },
+  'PermissionDelegationV1_1': { summary: 'Versioned permission delegation for limited account authority (XLS-75)', tier: 'B', impact: 'Low', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'Adds bounded delegation checks and stores delegation rules on-ledger. It improves operational security without requiring master-key sharing.', author: 'XRPLF', github: 'https://opensource.ripple.com/docs/xls-75-permission-delegation', whoBenefits: 'Allows wallets, custodians, and businesses to grant limited permissions without exposing a master key.', whoBenefitsCategories: ['Enterprise', 'Builders', 'Security/Stability'], whoBenefitsExamples: ['Custody controls', 'Service accounts', 'Delegated wallet actions'], estimatedReviewMinutes: 20 },
+  'ConfidentialTransfer': { summary: 'Adds privacy-preserving transfer capabilities (XLS-96)', tier: 'B', impact: 'High', areas: ['CPU', 'Memory', 'Network'], rationale: 'Privacy-preserving transfer proofs add cryptographic verification and larger transaction data. Validators and clients should benchmark proof size and verification cost before production use.', author: 'XRPLF', github: 'https://opensource.ripple.com/docs/xls-96-confidential-transfers', whoBenefits: 'Supports users and institutions that need transaction privacy while retaining ledger-based settlement.', whoBenefitsCategories: ['Enterprise', 'Security/Stability', 'Builders'], whoBenefitsExamples: ['Private business payments', 'Institutional settlement', 'Privacy-aware applications'], estimatedReviewMinutes: 35 },
+  'DynamicMPT': { summary: 'Supports mutable metadata and controls for Multi-Purpose Tokens (XLS-94)', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'Adds validation and ledger updates for changing MPT properties. Resource use depends on how frequently token metadata is updated.', author: 'XRPLF', github: 'https://opensource.ripple.com/docs/xls-94-dynamic-mpt', whoBenefits: 'Gives token issuers and applications controlled flexibility to update token state over time.', whoBenefitsCategories: ['Enterprise', 'Builders', 'Exchanges/Liquidity'], whoBenefitsExamples: ['Stablecoins', 'Tokenized assets', 'Programmable loyalty systems'], estimatedReviewMinutes: 25 },
+  'SingleAssetVault': { summary: 'Adds native single-asset vault functionality', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO'], rationale: 'Introduces vault state and validation for managing a single deposited asset. The impact is bounded by the number of vault operations and stored vault entries.', author: 'XRPLF', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Enables builders and asset platforms to create simpler, more auditable single-asset custody and DeFi flows.', whoBenefitsCategories: ['Builders', 'Enterprise', 'Exchanges/Liquidity'], whoBenefitsExamples: ['Asset vaults', 'Treasury controls', 'Single-asset DeFi services'], estimatedReviewMinutes: 25 },
+  'LendingProtocol': { summary: 'Adds native lending protocol primitives', tier: 'B', impact: 'Medium', areas: ['CPU', 'Memory', 'Disk IO', 'Fee pressure'], rationale: 'Adds lending-related validation and ledger state. Usage volume, collateral updates, and liquidations determine the operational load.', author: 'XRPLF', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Provides builders and liquidity providers with more native, transparent lending and collateral workflows.', whoBenefitsCategories: ['Builders', 'Exchanges/Liquidity', 'Enterprise'], whoBenefitsExamples: ['Collateralized lending', 'Treasury financing', 'Liquidity markets'], estimatedReviewMinutes: 30 },
+  'fixBatchInnerSigs': { summary: 'Corrects inner-signature validation in transaction batches', tier: 'A', impact: 'Low', areas: ['CPU'], rationale: 'Correctness and security fix for batch signature validation. It improves rejection of invalid inner signatures with limited additional validation work.', author: 'XRPLF', github: 'https://github.com/XRPLF/rippled/labels/amendment', whoBenefits: 'Protects validators, wallets, and batch users from incorrect signature handling.', whoBenefitsCategories: ['Security/Stability', 'Builders', 'Public Infrastructure'], whoBenefitsExamples: ['Wallets', 'DEX aggregators', 'Validator operators'], estimatedReviewMinutes: 10 },
 };
+
+type AmendmentMetadata = (typeof amendmentMetadata)[string];
+
+const amendmentMetadataAliases: Record<string, string> = {
+  BatchV1_1: 'Batch',
+  PermissionDelegationV1_1: 'PermissionDelegation',
+};
+
+function getAmendmentMetadata(xrpAmendment: XRPLAmendment): { metadata: AmendmentMetadata; curated: boolean } {
+  const direct = amendmentMetadata[xrpAmendment.name];
+  if (direct) return { metadata: direct, curated: true };
+
+  const alias = amendmentMetadataAliases[xrpAmendment.name];
+  if (alias && amendmentMetadata[alias]) return { metadata: amendmentMetadata[alias], curated: true };
+
+  const isFix = /^fix/i.test(xrpAmendment.name);
+  return {
+    curated: false,
+    metadata: {
+      summary: isFix
+        ? `Correctness and safety fix for ${xrpAmendment.name}.`
+        : `${xrpAmendment.name}${xrpAmendment.xls ? ` (${xrpAmendment.xls})` : ''} adds protocol functionality to the XRPL.`,
+      tier: isFix ? 'A' : 'B',
+      impact: isFix ? 'Low' : 'Medium',
+      areas: isFix ? ['CPU'] : ['CPU', 'Memory'],
+      rationale: isFix
+        ? 'This amendment is categorized as a bounded correctness or safety fix; implementation-level benchmarking should confirm node impact.'
+        : 'This amendment adds bounded validation or ledger behavior; implementation-level benchmarking should confirm its operational impact.',
+      whoBenefits: isFix
+        ? 'Improves correctness and safety for XRPL users, builders, and validator operators.'
+        : 'Benefits XRPL users, builders, businesses, and validator operators by adding a native ledger capability.',
+      whoBenefitsCategories: ['Builders', 'Public Infrastructure', 'Enterprise'],
+      whoBenefitsExamples: ['Wallets', 'Applications', 'Validator operators'],
+      estimatedReviewMinutes: isFix ? 10 : 20,
+    },
+  };
+}
 
 // Helper to convert XRPScan amendment to our Amendment type
 function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
-  const metadata = amendmentMetadata[xrpAmendment.name] || {
-    summary: `XRPL amendment: ${xrpAmendment.name}`,
-    tier: 'C' as Tier,
-    impact: 'Unknown' as PerformanceImpact,
-    areas: ['CPU'] as AffectedArea[],
-    rationale: 'Performance impact not yet assessed.'
-  };
+  const { metadata, curated } = getAmendmentMetadata(xrpAmendment);
 
   // Use API-provided days (each amendment has its own individual countdown)
   const waitingDays = xrpAmendment.daysUntilEnabled || 0;
@@ -361,7 +402,7 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     waitingDays: waitingDays,
     ledgerImpact: {
       estimatedImpact: metadata.impact,
-      confidence: amendmentMetadata[xrpAmendment.name] ? 'High' : 'Low',
+      confidence: curated ? 'High' : 'Medium',
       affectedAreas: metadata.areas,
       rationale: metadata.rationale,
       evidenceLinks
