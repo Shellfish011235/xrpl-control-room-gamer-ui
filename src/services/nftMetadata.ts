@@ -28,57 +28,48 @@ function getIPFSPath(uri: string): string | null {
 }
 
 export function resolveNFTUriCandidates(uri: string): string[] {
-  const ipfsPath = getIPFSPath(uri);
+  const trimmed = uri.trim();
+  const ipfsPath = getIPFSPath(trimmed);
   if (ipfsPath) {
-    return [`/api/nft-metadata?uri=${encodeURIComponent(uri.trim())}`];
+    return [`/api/nft-metadata?uri=${encodeURIComponent(trimmed)}`];
   }
 
-  return /^https?:\/\//i.test(uri) ? [uri] : [];
+  return /^https?:\/\//i.test(trimmed) ? [trimmed] : [];
 }
 
 function normalizeImageUri(image: unknown): string | undefined {
   if (typeof image !== 'string' || image.trim().length === 0) return undefined;
-
-  const ipfsPath = getIPFSPath(image);
-  if (!ipfsPath) {
-    return /^https?:\/\//i.test(image) || image.startsWith('data:image/') || image.startsWith('/api/nft-asset?')
-      ? image
-      : undefined;
+  const trimmed = image.trim();
+  const ipfsPath = getIPFSPath(trimmed);
+  if (ipfsPath) return `/api/nft-asset?uri=${encodeURIComponent(trimmed)}`;
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('data:image/') || trimmed.startsWith('/api/nft-asset?')) {
+    return trimmed;
   }
-
-  return `/api/nft-asset?uri=${encodeURIComponent(image.trim())}`;
-}
-
-function shouldProxyImageUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    return url.protocol === 'https:' && (
-      host === 'arweave.net' || host.endsWith('.arweave.net') ||
-      host === 'cdn.xmagnetic.org' || host.endsWith('.xmagnetic.org')
-    );
-  } catch {
-    return false;
-  }
-}
-
-function normalizeExternalImageUri(image: string): string {
-  return shouldProxyImageUrl(image)
-    ? `/api/nft-image?url=${encodeURIComponent(image.trim())}`
-    : image;
+  return undefined;
 }
 
 function normalizeMetadata(value: unknown): NFTMetadata {
   if (!value || typeof value !== 'object') return {};
   const metadata = value as Record<string, unknown>;
+  const nested = metadata.metadata && typeof metadata.metadata === 'object'
+    ? metadata.metadata as Record<string, unknown>
+    : {};
+  const media = metadata.media && typeof metadata.media === 'object'
+    ? metadata.media as Record<string, unknown>
+    : {};
+
+  const image = normalizeImageUri(
+    metadata.image ?? metadata.image_url ?? metadata.imageUrl ??
+    nested.image ?? nested.image_url ?? nested.imageUrl ??
+    media.image ?? media.content
+  );
 
   return {
-    image: (() => {
-      const image = normalizeImageUri(metadata.image);
-      return image && /^https?:\/\//i.test(image) ? normalizeExternalImageUri(image) : image;
-    })(),
-    name: typeof metadata.name === 'string' ? metadata.name : undefined,
-    description: typeof metadata.description === 'string' ? metadata.description : undefined,
+    ...(image ? { image } : {}),
+    name: typeof (metadata.name ?? nested.name) === 'string' ? String(metadata.name ?? nested.name) : undefined,
+    description: typeof (metadata.description ?? nested.description) === 'string'
+      ? String(metadata.description ?? nested.description)
+      : undefined,
     attributes: Array.isArray(metadata.attributes)
       ? metadata.attributes.filter(
           (attribute): attribute is { trait_type: string; value: string } =>
@@ -137,6 +128,12 @@ export async function parseNFTUri(
       }
       if (contentType.startsWith('image/')) {
         return { image: candidate };
+      }
+      const text = await response.text();
+      try {
+        return normalizeMetadata(JSON.parse(text));
+      } catch {
+        // Continue when an HTTP metadata endpoint returns non-JSON content.
       }
     } catch {
       // Try the next gateway candidate.

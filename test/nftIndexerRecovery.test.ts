@@ -46,3 +46,19 @@ test('fetches indexed NFT metadata through the recovery client', async () => {
   })));
   assert.equal(result?.image, 'https://cdn.example/image.webp');
 });
+    
+test('extracts artwork from nested indexer records', () => {
+  const nestedTokenId = 'A'.repeat(64);
+  const html = '<script id="__NEXT_DATA__" type="application/json">' + JSON.stringify({
+    props: { pageProps: { nft: {
+      nftokenId: nestedTokenId,
+      metadata: { image_url: 'https://cdn.example/image.png', name: 'Recovered NFT' },
+    } } },
+  }) + '</script>';
+
+  assert.deepEqual(extractIndexedNFTMetadata(html, nestedTokenId), {
+    image: 'https://cdn.example/image.png',
+    name: 'Recovered NFT',
+    source: 'xmagnetic',
+  });
+});

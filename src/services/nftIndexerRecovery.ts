@@ -1,5 +1,6 @@
 export interface IndexedNFTMetadata {
   image?: string;
+  uri?: string;
   name?: string;
   description?: string;
   source: 'xmagnetic';
@@ -36,31 +37,78 @@ function readNextData(html: string): unknown | null {
   }
 }
 
+function readString(record: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return undefined;
+}
+
+function findNFTRecord(value: unknown, tokenId: string): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object') return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findNFTRecord(item, tokenId);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const id = readString(record, 'nftokenID', 'nftokenId', 'NFTokenID', 'nft_id', 'id');
+  if (id && id.toUpperCase() === tokenId.toUpperCase()) return record;
+
+  for (const child of Object.values(record)) {
+    if (child && typeof child === 'object') {
+      const found = findNFTRecord(child, tokenId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function findFirstUrl(value: unknown): string | undefined {
+  if (isUsableUrl(value)) return value;
+  if (!value || typeof value !== 'object') return undefined;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findFirstUrl(item);
+      if (found) return found;
+    }
+    return undefined;
+  }
+  for (const child of Object.values(value as Record<string, unknown>)) {
+    const found = findFirstUrl(child);
+    if (found) return found;
+  }
+  return undefined;
+}
+
 export function extractIndexedNFTMetadata(html: string, tokenId: string): IndexedNFTMetadata | null {
   const root = readNextData(html);
-  if (!root || typeof root !== 'object') return null;
-  const pageProps = (root as { props?: { pageProps?: { nft?: unknown } } }).props?.pageProps;
-  const nft = pageProps?.nft;
-  if (!nft || typeof nft !== 'object') return null;
-  const record = nft as Record<string, unknown>;
-  if (record.nftokenID !== tokenId && record.nftokenId !== tokenId && record.id !== tokenId) return null;
+  if (!root) return null;
+  const record = findNFTRecord(root, tokenId);
+  if (!record) return null;
 
   const metadata = record.metadata && typeof record.metadata === 'object'
     ? record.metadata as Record<string, unknown>
     : {};
-  const media = metadata.media && typeof metadata.media === 'object'
-    ? metadata.media as Record<string, unknown>
-    : {};
-  const assets = record.assets && typeof record.assets === 'object'
-    ? record.assets as Record<string, unknown>
-    : {};
-  const image = [assets.image, media.content, metadata.image, metadata.thumbnail].find(isUsableUrl);
-  if (!image) return null;
+  const image = findFirstUrl(
+    metadata.image ?? metadata.image_url ?? metadata.imageUrl ??
+    (metadata.media && typeof metadata.media === 'object' ? metadata.media : undefined) ??
+    record.assets ?? record.image
+  );
+  const uri = readString(record, 'URI', 'uri', 'metadata_uri', 'metadataUri');
+  const name = readString(metadata, 'name') ?? readString(record, 'name');
+  const description = readString(metadata, 'description') ?? readString(record, 'description');
 
+  if (!image && !uri && !name && !description) return null;
   return {
-    image: normalizeRecoveredImage(image),
-    ...(typeof metadata.name === 'string' ? { name: metadata.name } : {}),
-    ...(typeof metadata.description === 'string' ? { description: metadata.description } : {}),
+    ...(image ? { image: normalizeRecoveredImage(image) } : {}),
+    ...(uri ? { uri } : {}),
+    ...(name ? { name } : {}),
+    ...(description ? { description } : {}),
     source: 'xmagnetic',
   };
 }
@@ -81,14 +129,20 @@ export async function fetchIndexedNFTMetadata(
     const payload = await response.json() as unknown;
     if (!payload || typeof payload !== 'object') return null;
     const record = payload as Record<string, unknown>;
-    return isUsableUrl(record.image)
-      ? {
-              image: normalizeRecoveredImage(record.image),
-          ...(typeof record.name === 'string' ? { name: record.name } : {}),
-          ...(typeof record.description === 'string' ? { description: record.description } : {}),
-          source: 'xmagnetic',
-        }
-      : null;
+    const image = typeof record.image === 'string' && isUsableUrl(record.image)
+      ? normalizeRecoveredImage(record.image)
+      : undefined;
+    const uri = typeof record.uri === 'string' && record.uri.trim()
+      ? record.uri.trim()
+      : undefined;
+    if (!image && !uri) return null;
+    return {
+      ...(image ? { image } : {}),
+      ...(uri ? { uri } : {}),
+      ...(typeof record.name === 'string' ? { name: record.name } : {}),
+      ...(typeof record.description === 'string' ? { description: record.description } : {}),
+      source: 'xmagnetic',
+    };
   } catch {
     return null;
   } finally {
