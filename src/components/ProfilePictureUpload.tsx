@@ -76,7 +76,7 @@ export function ProfilePictureUpload({ size = 'lg', className = '' }: ProfilePic
       >
         {/* Profile image: custom upload or default XRPL Control Room logo (light blue bg) */}
         {isDefaultLogo(profileImage) ? (
-          <div className="w-full h-full bg-[#00d4ff] flex items-center justify-center p-0 ring-2 ring-cyber-glow/40 profile-default-logo-wrap overflow-hidden">
+          <div className="w-full h-full bg-[#07152b] flex items-center justify-center p-0 ring-2 ring-cyber-purple/50 profile-default-logo-wrap overflow-hidden">
             <img 
               src={defaultLogo} 
               alt="Profile" 
