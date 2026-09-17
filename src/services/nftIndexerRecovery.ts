@@ -3,7 +3,7 @@ export interface IndexedNFTMetadata {
   uri?: string;
   name?: string;
   description?: string;
-  source: 'xmagnetic';
+  source: 'xmagnetic' | 'xrpscan' | 'verified-registry';
 }
 
 const TOKEN_ID_PATTERN = /^[A-F0-9]{64}$/i;
@@ -68,19 +68,13 @@ function findNFTRecord(value: unknown, tokenId: string): Record<string, unknown>
   return null;
 }
 
-function findFirstUrl(value: unknown): string | undefined {
+function findKnownImageUrl(value: unknown, keys: string[]): string | undefined {
   if (isUsableUrl(value)) return value;
-  if (!value || typeof value !== 'object') return undefined;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findFirstUrl(item);
-      if (found) return found;
-    }
-    return undefined;
-  }
-  for (const child of Object.values(value as Record<string, unknown>)) {
-    const found = findFirstUrl(child);
-    if (found) return found;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  for (const key of keys) {
+    const candidate = record[key];
+    if (isUsableUrl(candidate)) return candidate;
   }
   return undefined;
 }
@@ -94,11 +88,15 @@ export function extractIndexedNFTMetadata(html: string, tokenId: string): Indexe
   const metadata = record.metadata && typeof record.metadata === 'object'
     ? record.metadata as Record<string, unknown>
     : {};
-  const image = findFirstUrl(
-    metadata.image ?? metadata.image_url ?? metadata.imageUrl ??
-    (metadata.media && typeof metadata.media === 'object' ? metadata.media : undefined) ??
-    record.assets ?? record.image
-  );
+  // Prefer an indexer's retained media copy. Original IPFS/Arweave links in
+  // metadata may have expired even though the indexer still has the artwork.
+  const image =
+    findKnownImageUrl(record.assets, ['image', 'preview', 'thumbnail']) ??
+    findKnownImageUrl(record.image, []) ??
+    findKnownImageUrl(metadata.image, ['content', 'url', 'src']) ??
+    findKnownImageUrl(metadata.image_url, []) ??
+    findKnownImageUrl(metadata.imageUrl, []) ??
+    findKnownImageUrl(metadata.media, ['content', 'image', 'url', 'src']);
   const uri = readString(record, 'URI', 'uri', 'metadata_uri', 'metadataUri');
   const name = readString(metadata, 'name') ?? readString(record, 'name');
   const description = readString(metadata, 'description') ?? readString(record, 'description');
@@ -136,12 +134,15 @@ export async function fetchIndexedNFTMetadata(
       ? record.uri.trim()
       : undefined;
     if (!image && !uri) return null;
+    const source = record.source === 'verified-registry' || record.source === 'xrpscan'
+      ? record.source
+      : 'xmagnetic';
     return {
       ...(image ? { image } : {}),
       ...(uri ? { uri } : {}),
       ...(typeof record.name === 'string' ? { name: record.name } : {}),
       ...(typeof record.description === 'string' ? { description: record.description } : {}),
-      source: 'xmagnetic',
+      source,
     };
   } catch {
     return null;
