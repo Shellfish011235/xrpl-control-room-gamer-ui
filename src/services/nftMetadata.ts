@@ -49,12 +49,34 @@ function normalizeImageUri(image: unknown): string | undefined {
   return `/api/nft-asset?uri=${encodeURIComponent(image.trim())}`;
 }
 
+function shouldProxyImageUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === 'https:' && (
+      host === 'arweave.net' || host.endsWith('.arweave.net') ||
+      host === 'cdn.xmagnetic.org' || host.endsWith('.xmagnetic.org')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function normalizeExternalImageUri(image: string): string {
+  return shouldProxyImageUrl(image)
+    ? `/api/nft-image?url=${encodeURIComponent(image.trim())}`
+    : image;
+}
+
 function normalizeMetadata(value: unknown): NFTMetadata {
   if (!value || typeof value !== 'object') return {};
   const metadata = value as Record<string, unknown>;
 
   return {
-    image: normalizeImageUri(metadata.image),
+    image: (() => {
+      const image = normalizeImageUri(metadata.image);
+      return image && /^https?:\/\//i.test(image) ? normalizeExternalImageUri(image) : image;
+    })(),
     name: typeof metadata.name === 'string' ? metadata.name : undefined,
     description: typeof metadata.description === 'string' ? metadata.description : undefined,
     attributes: Array.isArray(metadata.attributes)
@@ -121,7 +143,7 @@ export async function parseNFTUri(
     }
   }
 
-  return /^https?:\/\//i.test(uri) ? { image: uri } : {};
+  return {};
 }
 
 export async function loadNFTMetadata<T extends { tokenId: string; uri?: string }>(
