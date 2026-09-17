@@ -82,9 +82,9 @@ export default function Navigation() {
       
       <nav className="cyber-panel border-t-0 rounded-t-none px-4 lg:px-8">
         <div className="max-w-7xl mx-auto flex items-center justify-between h-14 flex-nowrap">
-          {/* Logo - XRPL Control Room logo (matches profile default) */}
+          {/* Hibiscus-X brand mark */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#00d4ff] flex items-center justify-center p-0 ring-1 ring-cyber-glow/40 profile-default-logo-wrap">
+            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-[#07152b] flex items-center justify-center p-0 ring-1 ring-cyber-purple/50 profile-default-logo-wrap">
               <img
                 src={defaultLogo}
                 alt="XRPL Control Room"
