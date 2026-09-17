@@ -24,7 +24,7 @@ export interface NFTAsset {
   walletLabel: string;
   isLoading?: boolean;
   mediaStatus?: NFTMediaStatus;
-  mediaSource?: 'ledger-uri' | 'xmagnetic-indexer';
+  mediaSource?: 'ledger-uri' | 'xmagnetic-indexer' | 'recovered-uri';
 }
 
 export interface MemeToken {
