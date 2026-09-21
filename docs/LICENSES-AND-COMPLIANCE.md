@@ -13,6 +13,18 @@ For a quick **“Am I compliant with what we have now?”** checklist, see [COMP
 
 ---
 
+## Public redistribution and downstream use
+
+The MIT software license permits reuse subject to its terms, but it does **not** grant regulatory approval, a financial-services license, investment-adviser status, broker/dealer status, money-transmitter status, or a guarantee that a downstream deployment is lawful or safe.
+
+Anyone who forks, deploys, modifies, monetizes, or combines this software with live trading, custody, wallet control, payment routing, or advisory functionality is responsible for evaluating the laws, licenses, disclosures, security controls, and contractual obligations that apply to that deployment.
+
+Project documentation describing the original repository's intended non-custodial or experimental architecture should not be treated as a legal conclusion for a downstream user's modified system.
+
+See [../PUBLIC-RISK-BOUNDARIES.md](../PUBLIC-RISK-BOUNDARIES.md).
+
+---
+
 ## 2. Regulatory / business licenses (your responsibility)
 
 The app is designed to be **non-custodial** (user signs in Xaman; we don’t hold funds). That **does not by itself** mean you need no licenses. Whether you need any of the following depends on your exact use case and jurisdiction. **Get qualified legal advice** (e.g. Florida-licensed attorney, US crypto/fintech counsel) before:
