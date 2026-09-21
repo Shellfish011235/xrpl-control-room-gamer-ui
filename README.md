@@ -1,6 +1,6 @@
 # 🎮 XRPL Control Room - Gamer UI
 
-A cyberpunk-inspired **institutional-grade trading terminal** for monitoring the XRP Ledger ecosystem. Built with React 19, TypeScript, and Tailwind CSS.
+A cyberpunk-inspired **experimental XRPL research, simulation, and market-analysis interface** for monitoring the XRP Ledger ecosystem. Built with React 19, TypeScript, and Tailwind CSS.
 
 **Florida-based, non-custodial XRPL dashboard – experimental. Educational/sim only. All execution via Xaman (user signs). No custody.**
 
@@ -9,9 +9,26 @@ A cyberpunk-inspired **institutional-grade trading terminal** for monitoring the
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-5.4-646CFF?style=flat-square&logo=vite)
 
+## Public-use boundary
+
+**This repository is experimental software and research tooling. It is not financial, investment, legal, tax, brokerage, fiduciary, or money-transmission advice or service.**
+
+- Market data, analytics, scores, alerts, AI outputs, simulations, and trade ideas may be incomplete, delayed, incorrect, or unsuitable for a user's circumstances.
+- Nothing in the project is a recommendation or solicitation to buy, sell, hold, or trade any asset.
+- The project does not guarantee returns, execution quality, availability, security, or fitness for production financial use.
+- The project does not take custody of user funds or private keys.
+- Real value movement must remain under the wallet owner's control. Where transaction preparation is supported, the user independently reviews and signs in their own wallet.
+- No pooled funds, discretionary management of other users' assets, public copy-trading, or autonomous signing is part of the approved public architecture.
+- Forks and downstream users are responsible for their own deployment, security review, compliance, licensing, and use.
+- Descriptive phrases in the UI are product/design language and must not be interpreted as regulatory approval, certification, audit status, professional advice, or a representation that the software is suitable for institutional or production use.
+
+See [PUBLIC-RISK-BOUNDARIES.md](./PUBLIC-RISK-BOUNDARIES.md), [COMPLIANCE-GLOBAL-US-FLORIDA.md](./COMPLIANCE-GLOBAL-US-FLORIDA.md), and [SAFETY-AUDIT.md](./SAFETY-AUDIT.md).
+
+---
+
 ## ✨ Features
 
-### 📊 Terminal (NEW - Institutional Trading)
+### 📊 Terminal (Research / Simulation)
 - **Real-Time Price Feeds** - WebSocket connection to Binance for live BTC, ETH, XRP, SOL, DOGE prices
 - **Liquidation Heatmap** - Visualize leveraged position liquidation zones with risk scoring
 - **Order Book Depth** - Live bid/ask ladders with spread analysis and imbalance detection
@@ -19,7 +36,7 @@ A cyberpunk-inspired **institutional-grade trading terminal** for monitoring the
 - **Position Sizing Tools** - Kelly Criterion, Fixed Fractional, Volatility-Adjusted, Risk Parity
 - **Stress Testing** - Predefined scenarios (Black Monday, COVID crash, Flash crash, Rate hike)
 - **Multi-Channel Alerts** - Telegram, Discord, browser push notifications
-- **Paper Trading** - Risk-free practice with 24 crypto pairs and auto-trader bot
+- **Paper Trading** - Simulated practice with 24 crypto pairs and an experimental auto-trader; no guarantee of performance
 
 ### 🧠 Memetic Lab
 - **Game Theory Scenarios** - Prisoner's Dilemma, Stag Hunt, Pump & Dump detection
