@@ -6,6 +6,27 @@
 
 ---
 
+## Public Product Guardrail
+
+The public roadmap does **not** authorize live discretionary trading or autonomous control of user funds.
+
+Unless a later phase receives its own technical, security, and legal review:
+
+- trading agents remain paper/simulation or testnet-first;
+- live transaction features may prepare bounded intents but the wallet owner reviews and signs;
+- no pooled funds;
+- no custody;
+- no performance guarantees;
+- no personalized investment recommendations;
+- no autonomous signing for other users;
+- no public copy-trading or managed-account behavior.
+
+The XRPL fly/zebrafish trading experiment, if added, starts as a **paper-mode research system** using read-only XRPL DEX market observations and simulated execution. Promotion beyond that boundary requires a separate review.
+
+See [PUBLIC-RISK-BOUNDARIES.md](./PUBLIC-RISK-BOUNDARIES.md).
+
+---
+
 ## Overview
 
 | Phase | Focus | Risk level | Timeline |
