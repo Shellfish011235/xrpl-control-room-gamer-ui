@@ -1,8 +1,30 @@
 # Florida / US: Staying Within Non–Money-Transmitter Capabilities
 
-**Purpose:** Keep the XRPL Control Room app clearly within Florida and US regulations. **You are not a money transmitter.** This doc defines capability boundaries so the product does not stray into activities that could require a money transmitter license (Florida Ch. 560, F.S., or FinCEN/state equivalents).
+**Purpose:** Document the XRPL Control Room's intended non-custodial capability boundaries and identify changes that could require renewed Florida/US legal analysis. This document does **not** determine or guarantee regulatory status.
 
 **This is not legal advice.** Have a Florida-licensed attorney (and US crypto/fintech counsel) confirm these boundaries for your exact product and any fee flows. See also **[LICENSES-AND-COMPLIANCE.md](./LICENSES-AND-COMPLIANCE.md)** for what licenses you need in place before monetizing.
+
+---
+
+## Public-facing trading boundary
+
+For public trading or agent features, remain on the tool side of the boundary unless qualified counsel approves a different model:
+
+- analytics, education, alerts, backtesting, and paper trading;
+- read-only market and ledger observation;
+- preparation of bounded transaction intents;
+- wallet-owner review and signature for any real value movement.
+
+Do not treat this document as permission to:
+
+- manage or control other users' assets;
+- pool customer funds;
+- sign transactions for users;
+- promise or guarantee investment results;
+- market the system as a regulated adviser, broker, exchange, custodian, or money transmitter;
+- assume that a fork or modified deployment has the same regulatory posture as this repository.
+
+See [../PUBLIC-RISK-BOUNDARIES.md](../PUBLIC-RISK-BOUNDARIES.md).
 
 ---
 
