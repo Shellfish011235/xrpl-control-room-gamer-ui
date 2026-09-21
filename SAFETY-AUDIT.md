@@ -16,6 +16,27 @@
 
 ---
 
+## Public Deployment Safety Boundary
+
+The repository and any public demo should be treated as an **experimental research interface**, not as a production financial system.
+
+Required public-surface controls:
+
+- clearly label paper/simulation features;
+- do not imply guaranteed profitability, safety, regulatory approval, certification, or institutional suitability;
+- do not place private keys, seeds, signing secrets, or privileged API secrets in the public repository or client bundle;
+- do not permit an AI/agent to autonomously sign or move user value;
+- require the wallet owner to independently review and authorize real transactions;
+- keep simulated strategy output distinguishable from live market execution;
+- fail closed when authorization, evidence, or transaction state is missing or ambiguous;
+- document that forks and third-party deployments require their own security and compliance review.
+
+Any future change that introduces live autonomous execution, pooled funds, custody, performance-fee logic, or discretionary trading for others requires a new security and compliance review before public deployment.
+
+See `PUBLIC-RISK-BOUNDARIES.md`.
+
+---
+
 ## 1. Dependencies
 
 | Check | Result |
