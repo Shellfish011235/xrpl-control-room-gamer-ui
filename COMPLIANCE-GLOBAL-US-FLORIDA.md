@@ -15,6 +15,28 @@ These design choices are commonly cited to argue that a product is **not** actin
 
 ---
 
+## Public Repository and Trading/Agent Boundary
+
+Because this repository and deployed UI may be publicly visible, the project must be understandable as **experimental software and research tooling**, not as a managed trading or advisory service.
+
+Current public boundary:
+
+- no custody of user funds or keys;
+- no pooled capital;
+- no discretionary control over another person's wallet or brokerage account;
+- no autonomous signing on behalf of users;
+- no guarantee of profit, return, execution quality, or safety;
+- no personalized recommendation to buy, sell, or hold an asset;
+- AI or agent outputs are proposals, simulations, analytics, or transaction-preparation aids only;
+- any real transaction must be independently reviewed and authorized by the wallet owner;
+- public forks and downstream deployments are operated at the downstream user's own responsibility and may require different licensing, disclosures, security controls, or legal review.
+
+**Disclaimers do not replace substantive compliance.** If a future feature changes what the platform actually does—for example, managing other people's assets, pooling funds, executing transactions without user review, charging performance-based compensation, or intermediating payments—the legal and regulatory analysis must be revisited before launch.
+
+See [PUBLIC-RISK-BOUNDARIES.md](./PUBLIC-RISK-BOUNDARIES.md).
+
+---
+
 ## Global (Crypto + AI)
 
 - **Crypto:** Rules differ by country (e.g. EU MiCA, UK FCA, APAC regimes). Many jurisdictions regulate “virtual asset service providers” (VASPs), money transmission, and custody. Your **no-custody, user-signs-only** model is often distinguished from custodial or intermediary services, but each jurisdiction must be checked.
