@@ -382,8 +382,9 @@ function getAmendmentMetadata(xrpAmendment: XRPLAmendment): { metadata: Amendmen
 function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
   const { metadata, curated } = getAmendmentMetadata(xrpAmendment);
 
-  // Use API-provided days (each amendment has its own individual countdown)
-  const waitingDays = xrpAmendment.daysUntilEnabled || 0;
+  // Only show waiting days when the API supplied a real ledger-derived countdown.
+  // Threshold support without a majority timestamp must not appear as a 14-day wait.
+  const waitingDays = xrpAmendment.daysUntilEnabled ?? 0;
   
   // Build evidence links - include GitHub if available
   const evidenceLinks: { label: string; url: string }[] = [
@@ -814,7 +815,7 @@ export function LedgerImpactTool() {
                       {amendment.tier}
                     </span>
                     <span className="text-xs text-cyber-text font-medium truncate">{amendment.name}</span>
-                    {amendment.status === 'majority' && (
+                    {amendment.status === 'majority' && amendment.activationDate && (
                       <CountdownTimer
                         majorityDate={amendment.majorityDate}
                         daysUntilEnabled={amendment.daysUntilEnabled}
@@ -824,6 +825,11 @@ export function LedgerImpactTool() {
                         activationDate={amendment.activationDate}
                         compact
                       />
+                    )}
+                    {!amendment.enabled && !amendment.activationDate && (amendment.percentSupport ?? 0) >= 80 && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/15 text-cyber-yellow border border-cyber-yellow/30">
+                        THRESHOLD — AWAITING MAJORITY
+                      </span>
                     )}
                     {amendment.status === 'enabled' && amendment.enabledOn && (
                       <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
@@ -1121,8 +1127,8 @@ export function LedgerImpactTool() {
                   </div>
                 </div>
 
-                {/* Countdown: show when amendment has reached majority (2-week wait) or we have countdown data */}
-                {(selectedAmendment.status === 'majority' || selectedAmendment.activationDate || (selectedAmendment.daysUntilEnabled != null && !selectedAmendment.enabled)) && (
+                {/* Countdown only when we have a ledger-derived activation target. */}
+                {selectedAmendment.activationDate && (
                   <div style={{ padding: 10, borderRadius: 8, backgroundColor: 'rgba(88,28,135,0.35)', border: '1px solid rgba(168,85,247,0.5)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
                       <Timer size={14} style={{ color: '#c4b5fd' }} />
@@ -1144,6 +1150,18 @@ export function LedgerImpactTool() {
                   </div>
                 )}
 
+                {!selectedAmendment.enabled && !selectedAmendment.activationDate && (selectedAmendment.percentSupport ?? 0) >= 80 && (
+                  <div style={{ padding: 10, borderRadius: 8, backgroundColor: 'rgba(202,138,4,0.12)', border: '1px solid rgba(234,179,8,0.45)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                      <Clock size={14} style={{ color: '#facc15' }} />
+                      <span style={{ fontSize: 12, color: '#fde047', fontWeight: 600 }}>AT THRESHOLD — AWAITING LEDGER MAJORITY CONFIRMATION</span>
+                    </div>
+                    <p style={{ margin: '6px 0 0', fontSize: 10, color: '#cbd5e1', textAlign: 'center', lineHeight: 1.4 }}>
+                      The 2-week activation clock will appear only after a majority timestamp is recorded on-ledger.
+                    </p>
+                  </div>
+                )}
+
                 {selectedAmendment.status === 'enabled' && selectedAmendment.enabledOn && (
                   <div style={{ padding: 8, borderRadius: 4, backgroundColor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Clock size={12} style={{ color: '#22c55e' }} />
@@ -1157,7 +1175,9 @@ export function LedgerImpactTool() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
                   <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }}>
                     <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Waiting</p>
-                    <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>{selectedAmendment.waitingDays}d</p>
+                    <p style={{ margin: 0, fontSize: 12, color: '#e2e8f0', fontWeight: 600 }}>
+                      {selectedAmendment.activationDate ? `${selectedAmendment.waitingDays}d` : ((selectedAmendment.percentSupport ?? 0) >= 80 && !selectedAmendment.enabled ? 'Awaiting' : '—')}
+                    </p>
                   </div>
                   <div style={{ padding: 6, borderRadius: 4, backgroundColor: 'rgba(15,23,42,0.8)', border: '1px solid #334155', textAlign: 'center' }} title="Validators supporting (reviewing / voting)">
                     <p style={{ margin: 0, fontSize: 9, color: '#94a3b8' }}>Validators</p>
