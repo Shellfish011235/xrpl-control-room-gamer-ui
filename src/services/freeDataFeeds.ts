@@ -245,13 +245,10 @@ export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
         console.log(`[FreeFeeds] ${amendment.name}: Majority at ${rippleEpochToDate(amendment.majority).toISOString()}, Activates: ${activationDate.toISOString()}, Countdown: ${daysUntilEnabled}d ${hoursUntilEnabled}h ${minutesUntilEnabled}m ${secondsUntilEnabled}s`);
         
       } else if (percentSupport >= 80) {
-        // High support but no majority timestamp yet - unusual case
-        status = 'majority';
-        // Default to 14 days if we have high support but no majority date
-        daysUntilEnabled = 14;
-        hoursUntilEnabled = 0;
-        minutesUntilEnabled = 0;
-        secondsUntilEnabled = 0;
+        // Vote threshold is met, but there is no ledger-recorded majority timestamp yet.
+        // Do NOT fabricate a 14-day activation countdown from page/app load.
+        // The ledger's majority timestamp is authoritative for the two-week window.
+        status = 'pending';
       } else if (!amendment.supported) {
         status = 'unsupported';
       }
