@@ -111,6 +111,7 @@ import {
 } from '../services/dataAccuracyClassifier'
 import { getIlpConnectorsWithSourceMeta } from '../services/ilpStaticDataSourceAdapter'
 import InnovationRadar from '../components/InnovationRadar'
+import SecurityIncidentRegistry from '../components/community/SecurityIncidentRegistry'
 import LedgerHeartbeat from '../modules/visualization/LedgerHeartbeat'
 import ReactorCoreView from '../modules/visualization/ReactorCoreView'
 
@@ -2992,7 +2993,10 @@ export default function Network() {
 
         {/* When Community lens: Innovation Radar; when Regulation lens: Regulations content; otherwise Ledger Topology */}
         {activeLens === 'community' ? (
-          <InnovationRadarSection />
+          <>
+            <SecurityIncidentRegistry />
+            <InnovationRadarSection />
+          </>
         ) : activeLens === 'regulation' ? (
           <motion.section
             className="w-full block pb-8"
