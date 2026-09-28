@@ -824,7 +824,7 @@ export const amendmentImpactData: Record<string, AmendmentImpactEntry> = {
   },
   PermissionDelegation: {
     name: 'PermissionDelegation',
-    summary: 'Allows delegation of account permissions (XLS-82).',
+    summary: 'Allows delegation of account permissions (XLS-75; current amendment: PermissionDelegationV1_1).',
     impactAnalysis: {
       performance:
         'Low overhead. The amendment introduces a permission model where an account can delegate a subset of its capabilities (e.g. sign for certain transaction types or up to a limit) to another key or account. Validation requires checking delegation rules in addition to normal signature verification; cost is bounded and scales with the number of delegations in use.',
