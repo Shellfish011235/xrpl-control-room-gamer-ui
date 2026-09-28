@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, type CSSProperties } from 'react';
 import {
   ComposableMap,
   Geographies,
@@ -42,13 +42,6 @@ import { clsx } from 'clsx';
 import type { GlobeHub, GlobeCorridor, LiveValidatorMarker, LiveNodeMarker } from '../../types/globe';
 import { getValidatorStatusColor, getNodeStatusColor } from '../../services/xrpScanService';
 import type { LivePulse } from '../../hooks/useLiveLedgerStream';
-
-// Geography type from react-simple-maps
-interface GeoFeature {
-  rsmKey: string;
-  properties: { ISO_A2?: string; name?: string };
-  geometry: object;
-}
 
 // World topology - multiple CDN sources for fallback
 const GEO_URLS = [
@@ -401,8 +394,8 @@ export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: 
         <ZoomableGroup
           center={position.coordinates}
           zoom={position.zoom}
-          onMoveEnd={({ coordinates, zoom }: { coordinates: [number, number]; zoom: number }) => {
-            if (!mapLocked) {
+          onMoveEnd={({ coordinates, zoom }) => {
+            if (!mapLocked && coordinates && zoom !== undefined) {
               setPosition({ coordinates, zoom });
             }
           }}
@@ -411,34 +404,16 @@ export function WorldGlobe({ className, livePulses = [], liveStreamConnected }: 
         >
           {/* Countries */}
           <Geographies geography={currentGeoUrl}>
-            {({ geographies }: { geographies: GeoFeature[] }) =>
-              geographies.map((geo: GeoFeature) => (
+            {({ geographies }) =>
+              geographies.map((geo) => (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
                   onClick={(e) => handleCountryClick(geo, e)}
+                  className="xrpl-world-geography"
                   style={{
-                    default: {
-                      fill: getCountryFill(geo),
-                      stroke: '#1e3a5f',
-                      strokeWidth: 0.5,
-                      outline: 'none',
-                      cursor: 'pointer'
-                    },
-                    hover: {
-                      fill: 'rgba(0, 212, 255, 0.4)',
-                      stroke: '#00d4ff',
-                      strokeWidth: 1,
-                      outline: 'none',
-                      cursor: 'pointer'
-                    },
-                    pressed: {
-                      fill: 'rgba(0, 212, 255, 0.5)',
-                      stroke: '#00d4ff',
-                      strokeWidth: 1,
-                      outline: 'none'
-                    }
-                  }}
+                    '--xrpl-country-fill': getCountryFill(geo)
+                  } as CSSProperties}
                 />
               ))
             }
