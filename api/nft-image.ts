@@ -93,7 +93,8 @@ export default {
       const imageType = inferImageType(bytes, contentType);
       if (!imageType) return errorResponse('Upstream response is not an image', 415);
 
-      return new Response(bytes, {
+      const body = new Uint8Array(bytes).buffer;
+      return new Response(body, {
         headers: {
           'Content-Type': imageType,
           'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400',

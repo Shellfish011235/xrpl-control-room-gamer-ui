@@ -49,3 +49,6 @@ coverage
 
 # Separate project — not part of control-room repo
 xrpledgeramericas-site/
+
+.vercel
+.env*.local

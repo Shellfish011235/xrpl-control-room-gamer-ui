@@ -29,7 +29,8 @@ export default {
       const type = inferImageType(bytes, contentType);
       if (!type) return errorResponse('IPFS asset is not a supported image', 415);
 
-      return new Response(bytes, {
+      const body = new Uint8Array(bytes).buffer;
+      return new Response(body, {
         headers: {
           'Content-Type': type,
           'Cache-Control': 'public, max-age=31536000, immutable',
