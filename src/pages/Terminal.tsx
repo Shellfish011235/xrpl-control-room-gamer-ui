@@ -20,7 +20,7 @@ import { LedgerImpactTool } from '../components/LedgerImpactTool';
 import { LedgerImpactAnalyzer } from '../components/LedgerImpactAnalyzer';
 import { PathfindingTool } from '../components/PathfindingTool';
 import { StrategiesPanel } from '../components/strategies';
-import { useOrchestra, publishToControlRoom } from '../orchestra';
+import { useOrchestra, publishToControlRoom, reconcileAfterExecute } from '../orchestra';
 import { xamanService } from '../services/xaman';
 import { useStrategyStore } from '../store/strategyStore';
 import { useWalletStore } from '../store/walletStore';
@@ -256,7 +256,6 @@ export default function Terminal() {
                   xamanService.off('signingExpired', onExpired);
                   if (txHashes?.length) {
                     try {
-                      const { reconcileAfterExecute } = await import('../orchestra/execution');
                       const result = await reconcileAfterExecute(plan, txHashes);
                       if (result.ok) setReconciledSuccess(true);
                     } catch (_) {
