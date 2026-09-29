@@ -19,5 +19,16 @@ export default defineConfig({
       '@lib': path.resolve(__dirname, './src/lib'),
       '@types': path.resolve(__dirname, './src/types'),
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/recharts/')) {
+            return 'recharts'
+          }
+        },
+      },
+    },
   }
 })
