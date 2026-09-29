@@ -24,7 +24,8 @@ export interface IncidentSource {
   sourceType: 'law-enforcement' | 'project' | 'government' | 'security-research'
 }
 
-export interface SecurityIncident {  id: string
+export interface SecurityIncident {
+  id: string
   name: string
   date: string
   affectedChains: string[]
@@ -52,7 +53,8 @@ export const securityIncidents: SecurityIncident[] = [
     name: 'Bybit Safe Wallet incident',
     date: '2025-02-21',
     affectedChains: ['Ethereum'],
-    affectedProjects: ['Bybit', 'Safe{Wallet}'],    category: 'supply-chain',
+    affectedProjects: ['Bybit', 'Safe{Wallet}'],
+    category: 'supply-chain',
     amountUsd: 1_500_000_000,
     assets: ['ETH', 'stETH', 'cmETH', 'mETH'],
     summary: 'A targeted compromise of the signing workflow for one Bybit Ethereum cold wallet led to the theft of approximately $1.5 billion in virtual assets.',
@@ -77,7 +79,8 @@ export const securityIncidents: SecurityIncident[] = [
         role: 'laundering',
         confidence: 'confirmed',
         sourceUrl: 'https://www.fbi.gov/investigate/cyber/alerts/2025/north-korea-responsible-for-1-5-billion-bybit-hack',
-      },      {
+      },
+      {
         chain: 'Ethereum',
         address: '0x83c7678492D623fb98834F0fbcb2E7b7f5Af8950',
         role: 'laundering',
@@ -106,7 +109,8 @@ export const securityIncidents: SecurityIncident[] = [
     affectedChains: ['Ronin', 'Ethereum'],
     affectedProjects: ['Ronin Network', 'Sky Mavis', 'Axie Infinity'],
     category: 'private-key-compromise',
-    amountUsd: 620_000_000,    assets: ['ETH', 'USDC'],
+    amountUsd: 620_000_000,
+    assets: ['ETH', 'USDC'],
     summary: 'Attackers stole roughly $620 million in virtual assets from the Ronin bridge.',
     attackVector: 'The incident involved compromise of validator authority used to approve bridge withdrawals.',
     rootCause: 'Compromised validator keys and an insufficiently resilient approval threshold allowed unauthorized withdrawals.',
@@ -132,7 +136,8 @@ export const securityIncidents: SecurityIncident[] = [
       },
     ],
     status: 'closed',
-    sources: [      {
+    sources: [
+      {
         title: 'FBI attribution of Ronin theft to DPRK',
         url: 'https://www.fbi.gov/news/press-releases/fbi-statement-on-attribution-of-malicious-cyber-activity-posed-by-the-democratic-peoples-republic-of-korea',
         sourceType: 'law-enforcement',
@@ -189,7 +194,8 @@ export const securityIncidents: SecurityIncident[] = [
         sourceType: 'project',
       },
     ],
-  },  {
+  },
+  {
     id: 'dmm-bitcoin-2024',
     name: 'DMM Bitcoin theft',
     date: '2024-05-31',

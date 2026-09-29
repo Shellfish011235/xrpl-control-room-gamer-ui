@@ -25,7 +25,8 @@ function confidenceClass(confidence: string): string {
   return 'text-cyber-muted border-cyber-border/50 bg-cyber-darker/50'
 }
 
-export default function SecurityIncidentRegistry() {  const [query, setQuery] = useState('')
+export default function SecurityIncidentRegistry() {
+  const [query, setQuery] = useState('')
   const [chain, setChain] = useState('all')
   const [category, setCategory] = useState<'all' | IncidentCategory>('all')
   const [selected, setSelected] = useState<SecurityIncident | null>(null)
@@ -58,7 +59,8 @@ export default function SecurityIncidentRegistry() {  const [query, setQuery] = 
 
   return (
     <section className="w-full pb-8">
-      <div className="cyber-panel p-4 md:p-5 border border-cyber-red/25">        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+      <div className="cyber-panel p-4 md:p-5 border border-cyber-red/25">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-2">
               <ShieldAlert size={18} className="text-cyber-red" />
@@ -90,7 +92,8 @@ export default function SecurityIncidentRegistry() {  const [query, setQuery] = 
               placeholder="Search incident, project, actor, or wallet address…"
               className="w-full rounded border border-cyber-border bg-cyber-darker/70 py-2 pl-8 pr-3 text-xs text-cyber-text placeholder:text-cyber-muted/60"
             />
-          </label>          <select
+          </label>
+          <select
             value={chain}
             onChange={(event) => setChain(event.target.value)}
             className="rounded border border-cyber-border bg-cyber-darker/70 px-2 py-2 text-xs text-cyber-text"
@@ -129,7 +132,8 @@ export default function SecurityIncidentRegistry() {  const [query, setQuery] = 
                   <p className="font-cyber text-sm text-cyber-red">{formatUsd(incident.amountUsd)}</p>
                   <p className="text-[9px] text-cyber-muted">{incidentCategories[incident.category]}</p>
                 </div>
-              </div>              <p className="mt-2 line-clamp-2 text-[10px] leading-relaxed text-cyber-muted">{incident.summary}</p>
+              </div>
+              <p className="mt-2 line-clamp-2 text-[10px] leading-relaxed text-cyber-muted">{incident.summary}</p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {incident.affectedProjects.map((project) => (
                   <span key={project} className="rounded bg-cyber-cyan/10 px-1.5 py-0.5 text-[9px] text-cyber-cyan">
@@ -159,7 +163,8 @@ export default function SecurityIncidentRegistry() {  const [query, setQuery] = 
               </div>
             </div>
 
-            <div className="mt-3 grid gap-3 lg:grid-cols-2">              <div className="space-y-2">
+            <div className="mt-3 grid gap-3 lg:grid-cols-2">
+              <div className="space-y-2">
                 <div>
                   <p className="text-[9px] font-semibold uppercase tracking-wider text-cyber-muted">How it happened</p>
                   <p className="mt-1 text-[10px] leading-relaxed text-cyber-text">{selected.attackVector}</p>
@@ -201,7 +206,8 @@ export default function SecurityIncidentRegistry() {  const [query, setQuery] = 
                   )}
                 </div>
               </div>
-            </div>            <div className="mt-3 border-t border-cyber-border/40 pt-3">
+            </div>
+            <div className="mt-3 border-t border-cyber-border/40 pt-3">
               <p className="text-[9px] font-semibold uppercase tracking-wider text-cyber-muted">Sources</p>
               <div className="mt-1 flex flex-wrap gap-2">
                 {selected.sources.map((source) => (
