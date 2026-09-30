@@ -188,6 +188,18 @@ export const xrplCommunityConnectors: XRPLProject[] = [
     location: "Netherlands",
     coordinates: { lat: 52.1326, lng: 5.2913 },
   },
+  {
+    name: "XAO DAO",
+    description: "Governance & coordination — community-led on-chain governance for XRPL ecosystem proposals, voting, resource allocation, and member participation.",
+    links: ["https://www.xaodao.io/"],
+    location: "Global",
+  },
+  {
+    name: "LuckyHash",
+    description: "Gaming & experimentation — XRPL-powered provably fair games that use ledger hashes for transparent game outcomes and direct wallet payouts.",
+    links: ["https://www.luckyhashxrp.com/", "https://linktr.ee/luckyhash"],
+    location: "Global",
+  },
 ];
 
 // ==================== EVENTS & HACKATHONS ====================
@@ -493,6 +505,36 @@ export const xrplMemeProjects: XRPLProject[] = [
     links: ["https://twitter.com/ATM_xrpl", "https://xpmarket.com/"],
     location: "Global",
   },
+  {
+    name: "Casino Society",
+    description: "NFT culture & identity — XRPL-native community built around collectible identity, participation, progression, and community experiences.",
+    links: ["https://casinosociety.io/", "https://xrpl.to/nfts/casino-society"],
+    location: "Global",
+  },
+  {
+    name: "Seal on XRP",
+    description: "Creator & builder culture — community-owned XRPL token/NFT ecosystem with creator tools, education, marketplace activity, and community governance.",
+    links: ["https://sealonxrp.com/"],
+    location: "Global",
+  },
+  {
+    name: "FUZZY / Fuzzybear",
+    description: "Meme culture & XRPL history — community meme project built around early-ledger Fuzzybear lore, meme creation, and XRPL participation.",
+    links: ["https://fuzzyxrp.com/", "https://xrpl.to/view/memes"],
+    location: "Global",
+  },
+  {
+    name: "METH",
+    description: "Meme trading culture — an early First Ledger-era XRPL meme token/community included as part of the ledger's grassroots meme scene.",
+    links: ["https://firstledger.net/"],
+    location: "Global",
+  },
+  {
+    name: "CULT",
+    description: "Meme culture & community — XRPL-native CULT token/community representing the meme and collectible culture layer of the ecosystem.",
+    links: ["https://cultxrpl.net/", "https://xrpl.to/token/rCULtAKrKbQjk1Tpmg5hkw4dpcf9S9KCs-43554C5400000000000000000000000000000000"],
+    location: "Global",
+  },
 ];
 
 // ==================== WALLETS ====================
@@ -635,17 +677,71 @@ export const xrplEducation: XRPLProject[] = [
     links: ["https://github.com/AMMaboratory/awesome-xrpl"],
     location: "Global (Online)",
   },
+  {
+    name: "On The Chain — Chip & Jeff",
+    description: "News, interviews & community discussion — long-running XRP/XRPL-focused show covering ecosystem development, adoption, regulation, and digital-asset news.",
+    links: ["https://onthechain.io/", "https://www.youtube.com/c/OnTheChainLIVE"],
+    location: "Global (Online)",
+  },
+  {
+    name: "Blockchain Backer",
+    description: "Market-cycle education — chart-based XRP, Bitcoin, altcoin, and broader crypto market-structure analysis for the retail community.",
+    links: ["https://www.youtube.com/@BCBacker", "https://twitter.com/BCBacker"],
+    location: "Global (Online)",
+  },
+  {
+    name: "Dip A Toe Show",
+    description: "Community interviews & beginner education — conversations with XRPL builders, community members, and digital-asset participants, with a strong grassroots focus.",
+    links: ["https://www.youtube.com/@dipatoe", "https://twitter.com/dipatoeshow"],
+    location: "Global (Online)",
+  },
+  {
+    name: "Mickle",
+    description: "XRP market commentary & education — frequent coverage of XRP, Ripple, RLUSD, crypto markets, and institutional adoption themes.",
+    links: ["https://www.youtube.com/@Mickle"],
+    location: "Global (Online)",
+  },
+  {
+    name: "Digital Ascension Group (DAG) — Jake Claver",
+    description: "Digital-asset wealth education & professional community — family-office, custody, tokenization, entity-structure, and digital-asset strategy content led by Jake Claver.",
+    links: ["https://dag.com/", "https://www.jakeclaver.com/"],
+    location: "United States / Global",
+  },
+  {
+    name: "Digital Asset Investor",
+    description: "XRP news & community commentary — high-frequency coverage of Ripple, XRP, XRPL, payments, regulation, and broader digital-asset developments.",
+    links: ["https://www.youtube.com/@digitalassetinvestor"],
+    location: "Global (Online)",
+  },
+  {
+    name: "Digital Perspectives — Brad Kimes",
+    description: "Interviews, news & ecosystem interpretation — XRP/Ripple-focused discussions connecting regulation, market infrastructure, tokenization, and community events.",
+    links: ["https://twitter.com/DigPerspectives", "https://xrplasvegas.com/"],
+    location: "United States / Global",
+  },
+  {
+    name: "Crypto Eri / Onami Press",
+    description: "Research, international ecosystem coverage & interviews — reporting on XRP/XRPL, Ripple, digital assets, tokenization, DeFi, and global market infrastructure; Crypto Eri is a co-founder of Onami Press.",
+    links: ["https://twitter.com/sentosumosaba"],
+    location: "Japan / Global",
+  },
+  {
+    name: "Moon Lambo",
+    description: "High-frequency XRP news & market commentary — long-running retail-focused coverage of XRP, Ripple, regulation, sentiment, and crypto-market developments.",
+    links: ["https://www.youtube.com/@moonlambo2376", "https://twitter.com/moonlamboio"],
+    location: "Global (Online)",
+  },
 ];
 
 // ==================== COMBINED CATEGORIES ====================
 export const xrplCategories = {
   marketplaces: { name: 'Marketplaces', data: xrplMarketplaces, icon: '🏪', color: 'cyber-green' },
-  community: { name: 'Community', data: xrplCommunityConnectors, icon: '🤝', color: 'cyber-magenta' },
+  community: { name: 'Community & Governance', data: xrplCommunityConnectors, icon: '🤝', color: 'cyber-magenta' },
   events: { name: 'Events & Hackathons', data: xrplCommunityEvents, icon: '📅', color: 'cyber-cyan' },
   nfts: { name: 'NFT Projects', data: xrplNftProjects, icon: '🎨', color: 'cyber-purple' },
-  memes: { name: 'Meme Coins', data: xrplMemeProjects, icon: '🐸', color: 'cyber-yellow' },
+  memes: { name: 'Meme & Culture', data: xrplMemeProjects, icon: '🐸', color: 'cyber-yellow' },
   wallets: { name: 'Wallets', data: xrplWallets, icon: '👛', color: 'cyber-blue' },
-  education: { name: 'Education', data: xrplEducation, icon: '📚', color: 'cyber-orange' },
+  education: { name: 'Education / Research / Media', data: xrplEducation, icon: '📚', color: 'cyber-orange' },
 };
 
 // Get all projects with location data for map markers
