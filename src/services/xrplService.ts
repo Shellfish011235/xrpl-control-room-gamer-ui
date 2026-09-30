@@ -468,63 +468,252 @@ export function getMemeTokenInfo(currency: string): { name: string; symbol: stri
   return null;
 }
 
-// Parse NFT URI to get image/metadata
-export async function parseNFTUri(uri: string): Promise<{
+// Parse NFT URI to get image/metadata.
+//
+// IPFS content is retrieved with @helia/verified-fetch instead of depending
+// directly on the public ipfs.io gateway. All remote retrieval is bounded by
+// a timeout so a stalled provider cannot leave the UI loading forever.
+type NFTMetadata = {
   image?: string;
   name?: string;
   description?: string;
   attributes?: Array<{ trait_type: string; value: string }>;
-}> {
+};
+
+async function withTimeout<T>(
+  timeoutMs: number,
+  operation: (signal: AbortSignal) => Promise<T>
+): Promise<T> {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
+
   try {
-    // Handle IPFS URIs
-    let fetchUrl = uri;
-    if (uri.startsWith('ipfs://')) {
-      fetchUrl = `https://ipfs.io/ipfs/${uri.slice(7)}`;
-    } else if (uri.startsWith('https://') || uri.startsWith('http://')) {
-      fetchUrl = uri;
-    } else {
-      // Try to decode as base64 JSON
-      try {
-        const decoded = atob(uri);
-        const metadata = JSON.parse(decoded);
-        return {
-          image: metadata.image,
-          name: metadata.name,
-          description: metadata.description,
-          attributes: metadata.attributes,
-        };
-      } catch {
-        return { image: uri };
-      }
+    return await operation(controller.signal)
+  } finally {
+    window.clearTimeout(timeout)
+  }
+}
+
+function normalizeNFTResourceUri(uri: string): string {
+  const value = uri.trim()
+
+  if (value.startsWith('ipfs://')) {
+    return value
+  }
+
+  try {
+    const parsed = new URL(value)
+
+    const pathMatch = parsed.pathname.match(/^\/ipfs\/(.+)$/i)
+    if (pathMatch?.[1]) {
+      return `ipfs://${pathMatch[1]}`
     }
 
-    // Fetch metadata
-    const response = await fetch(fetchUrl);
-    if (response.ok) {
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        const metadata = await response.json();
-        let image = metadata.image;
-        
-        // Convert IPFS image URLs
-        if (image?.startsWith('ipfs://')) {
-          image = `https://ipfs.io/ipfs/${image.slice(7)}`;
-        }
-        
-        return {
-          image,
-          name: metadata.name,
-          description: metadata.description,
-          attributes: metadata.attributes,
-        };
-      } else if (contentType?.includes('image')) {
-        return { image: fetchUrl };
-      }
+    const subdomainMatch = parsed.hostname.match(/^([^./]+)\.ipfs\./i)
+    if (subdomainMatch?.[1]) {
+      const suffix = parsed.pathname.replace(/^\/+/, '')
+      return suffix
+        ? `ipfs://${subdomainMatch[1]}/${suffix}`
+        : `ipfs://${subdomainMatch[1]}`
     }
-    
-    return { image: uri };
   } catch {
-    return { image: uri };
+    return value
+  }
+
+  return value
+}
+
+function buildNFTProxyCandidates(uri: string): string[] {
+  const normalized = normalizeNFTResourceUri(uri)
+
+  if (normalized.startsWith('ipfs://')) {
+    const ipfsPath = normalized.slice(7).replace(/^\/+/, '')
+
+    return [
+      `/__nft_ipfs/${ipfsPath}`,
+      `/__nft_ipfs_fallback/${ipfsPath}`,
+    ]
+  }
+
+  try {
+    const parsed = new URL(normalized)
+    const host = parsed.hostname.toLowerCase()
+
+    if (
+      host === 'arweave.net' ||
+      host.endsWith('.arweave.net') ||
+      host === 'turbo-gateway.com'
+    ) {
+      const arweavePath =
+        `${parsed.pathname}${parsed.search}`
+
+      return [
+        `/__nft_arweave${arweavePath}`,
+        `/__nft_arweave_fallback${arweavePath}`,
+      ]
+    }
+  } catch {
+    // Non-URL values are handled elsewhere by parseNFTUri.
+  }
+
+  return [normalized]
+}
+
+async function fetchNFTResource(
+  uri: string,
+  timeoutMs: number = 12_000
+): Promise<Response> {
+  const candidates = buildNFTProxyCandidates(uri)
+
+  let lastResponse: Response | null = null
+  let lastError: unknown = null
+
+  for (const candidate of candidates) {
+    try {
+      const response = await withTimeout(
+        timeoutMs,
+        (signal) =>
+          fetch(candidate, {
+            signal,
+            redirect: 'follow',
+          })
+      )
+
+      if (response.ok) {
+        return response
+      }
+
+      lastResponse = response
+    } catch (error) {
+      lastError = error
+    }
+  }
+
+  if (lastResponse) {
+    return lastResponse
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError
+  }
+
+  throw new Error('NFT resource unavailable')
+}
+
+async function resolveNFTImage(
+  image: unknown,
+  timeoutMs: number = 12_000
+): Promise<string | undefined> {
+  if (typeof image !== 'string') return undefined;
+
+  const value = image.trim();
+  if (!value) return undefined;
+
+  if (value.startsWith('ipfs://')) {
+    try {
+      const response = await fetchNFTResource(value, timeoutMs);
+      if (!response.ok) {
+        throw new Error(`IPFS image request failed: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      return URL.createObjectURL(blob);
+    } catch (error) {
+      console.warn('[XRPL] Unable to resolve IPFS NFT image:', value, error);
+      return undefined;
+    }
+  }
+
+  if (
+    value.startsWith('https://') ||
+    value.startsWith('http://') ||
+    value.startsWith('data:') ||
+    value.startsWith('blob:')
+  ) {
+    return value;
+  }
+
+  return value;
+}
+
+export async function parseNFTUri(uri: string): Promise<NFTMetadata> {
+  const normalizedUri = uri.trim();
+  if (!normalizedUri) return {};
+
+  // Preserve support for NFTs whose URI directly contains base64 JSON.
+  if (
+    !normalizedUri.startsWith('ipfs://') &&
+    !normalizedUri.startsWith('https://') &&
+    !normalizedUri.startsWith('http://')
+  ) {
+    try {
+      const encoded = normalizedUri.startsWith('data:application/json;base64,')
+        ? normalizedUri.slice('data:application/json;base64,'.length)
+        : normalizedUri;
+
+      const metadata = JSON.parse(atob(encoded));
+
+      return {
+        image: await resolveNFTImage(metadata.image),
+        name: metadata.name,
+        description: metadata.description,
+        attributes: metadata.attributes,
+      };
+    } catch {
+      // Some XRPL NFTs use a direct non-HTTP image URI.
+      return { image: normalizedUri };
+    }
+  }
+
+  try {
+    const response = await fetchNFTResource(normalizedUri);
+
+    if (!response.ok) {
+      throw new Error(
+        `NFT metadata request failed: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+
+    // URI points directly to image content.
+    if (contentType.startsWith('image/')) {
+      if (normalizedUri.startsWith('ipfs://')) {
+        const blob = await response.blob();
+        return { image: URL.createObjectURL(blob) };
+      }
+
+      return { image: normalizedUri };
+    }
+
+    // verified-fetch identifies JSON where possible. For older HTTP metadata
+    // servers with incomplete headers, also attempt JSON parsing as fallback.
+    let metadata: Record<string, unknown>;
+
+    if (contentType.includes('json')) {
+      metadata = (await response.json()) as Record<string, unknown>;
+    } else {
+      const body = await response.text();
+      metadata = JSON.parse(body) as Record<string, unknown>;
+    }
+
+    return {
+      image: await resolveNFTImage(metadata.image),
+      name: typeof metadata.name === 'string' ? metadata.name : undefined,
+      description:
+        typeof metadata.description === 'string'
+          ? metadata.description
+          : undefined,
+      attributes: Array.isArray(metadata.attributes)
+        ? (metadata.attributes as NFTMetadata['attributes'])
+        : undefined,
+    };
+  } catch (error) {
+    console.warn('[XRPL] NFT metadata unavailable:', normalizedUri, error);
+
+    // Fail closed to an unavailable/placeholder state instead of returning an
+    // unusable ipfs:// URI or leaving the NFT stuck in a loading state.
+    return {};
   }
 }
 

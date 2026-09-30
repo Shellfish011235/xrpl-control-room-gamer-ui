@@ -92,7 +92,9 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
               uri: nft.uri,
               walletAddress: wallet.address,
               walletLabel: wallet.label,
-              isLoading: true, // Will load metadata
+              // Only enter metadata-loading state when the ledger actually
+              // supplied a URI that can be resolved.
+              isLoading: Boolean(nft.uri),
             });
           }
 
@@ -167,7 +169,16 @@ export const useAssetsStore = create<AssetsState>((set, get) => ({
 
   fetchNFTMetadata: async (tokenId: string) => {
     const nft = get().nfts.find(n => n.tokenId === tokenId);
-    if (!nft || !nft.uri) return;
+    if (!nft) return;
+
+    if (!nft.uri) {
+      set((state) => ({
+        nfts: state.nfts.map(n =>
+          n.tokenId === tokenId ? { ...n, isLoading: false } : n
+        ),
+      }));
+      return;
+    }
 
     try {
       const metadata = await parseNFTUri(nft.uri);
