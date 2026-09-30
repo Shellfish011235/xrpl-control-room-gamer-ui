@@ -2764,7 +2764,7 @@ export default function Network() {
                 
                 {/* Projects List */}
                 <div className="max-h-[300px] overflow-y-auto space-y-2 custom-scrollbar">
-                  {filteredCommunityItems.slice(0, 15).map((project, idx) => {
+                  {filteredCommunityItems.slice(0, 50).map((project, idx) => {
                     const category = xrplCategories[project.category as keyof typeof xrplCategories]
                     return (
                       <motion.div
@@ -2806,9 +2806,9 @@ export default function Network() {
                       </motion.div>
                     )
                   })}
-                  {filteredCommunityItems.length > 15 && (
+                  {filteredCommunityItems.length > 50 && (
                     <p className="text-[10px] text-cyber-muted text-center pt-2">
-                      +{filteredCommunityItems.length - 15} more items...
+                      +{filteredCommunityItems.length - 50} more items...
                     </p>
                   )}
                 </div>
