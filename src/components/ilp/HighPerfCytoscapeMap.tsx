@@ -14,7 +14,7 @@ import { useILPStore } from '../../store/ilpStore';
 import type { Ledger, Corridor, UILens } from '../../services/ilp/types';
 
 // Register cola layout once
-if (!cytoscape.prototype.hasOwnProperty('cola')) {
+if (!Object.prototype.hasOwnProperty.call(cytoscape.prototype, 'cola')) {
   cytoscape.use(cola);
 }
 
@@ -604,11 +604,12 @@ function getLedgerColor(ledger: Ledger, lens: UILens, connectors: any[]): string
   switch (lens) {
     case 'domain':
       return DOMAIN_COLORS[ledger.domain] || '#888';
-    case 'trust':
+    case 'trust': {
       const related = connectors.filter(c => c.from === ledger.id || c.to === ledger.id);
       if (related.length === 0) return '#888';
       const avg = related.reduce((s, c) => s + c.trust_score, 0) / related.length;
       return avg > 0.7 ? '#00FF88' : avg > 0.4 ? '#FFD700' : '#FF4444';
+    }
     case 'flow':
       return ledger.supports_ilp_adapter ? '#00FF88' : '#666';
     default:

@@ -605,7 +605,7 @@ export function SecureAgentPanel() {
             onClick={() => {
               setVoiceEnabled((v) => {
                 const next = !v;
-                try { localStorage.setItem('agent-voice-enabled', String(next)); } catch {}
+                try { localStorage.setItem('agent-voice-enabled', String(next)); } catch { /* intentionally ignored */ }
                 if (!next) stopAgentVoice();
                 return next;
               });
@@ -622,7 +622,7 @@ export function SecureAgentPanel() {
               onClick={() => {
                 setTelegramForwardEnabled((v) => {
                   const next = !v;
-                  try { localStorage.setItem('agent-telegram-forward', String(next)); } catch {}
+                  try { localStorage.setItem('agent-telegram-forward', String(next)); } catch { /* intentionally ignored */ }
                   return next;
                 });
               }}

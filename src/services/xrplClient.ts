@@ -40,7 +40,7 @@ export async function getXRPLClient(useTestnet?: boolean): Promise<Client> {
   if (clientInstance) {
     try {
       await clientInstance.disconnect();
-    } catch (_) {}
+    } catch (_) { /* intentionally ignored */ }
     clientInstance = null;
     connectedUrl = null;
     connecting = null;

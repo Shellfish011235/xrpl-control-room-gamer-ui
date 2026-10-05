@@ -22,7 +22,7 @@ export function DisclaimerBanner() {
   const dismiss = () => {
     try {
       sessionStorage.setItem('xrpl-disclaimer-dismissed', '1');
-    } catch {}
+    } catch { /* intentionally ignored */ }
     setDismissed(true);
   };
 

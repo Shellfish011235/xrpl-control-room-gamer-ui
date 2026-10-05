@@ -280,7 +280,7 @@ ${contextJson}
           xamanSend: coerceXamanSendDraft(json.xamanSend),
         };
       }
-    } catch (_) {}
+    } catch (_) { /* intentionally ignored */ }
     return null;
   }
 
@@ -325,7 +325,7 @@ ${contextJson}
     if (xrplClient) {
       try {
         await xrplClient.disconnect();
-      } catch (_) {}
+      } catch (_) { /* intentionally ignored */ }
       xrplClient = null;
     }
   }

@@ -28,6 +28,12 @@ export default defineConfig([
       // React best practices
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/purity': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/static-components': 'warn',
+      'react-hooks/error-boundaries': 'warn',
+      'react-refresh/only-export-components': 'warn',
       
       // Code quality
       'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
