@@ -380,6 +380,23 @@ The workflow **`.github/workflows/cline-review.yml`** runs on pull requests and 
 - [ ] PostgreSQL/TimescaleDB for tick data
 - [ ] Mobile responsive optimization
 
+## Verification and demo-readiness
+
+This repository is independently verifiable with its documented local toolchain.
+
+Recommended verification before a demo or release candidate:
+
+```bash
+npm run type-check
+npm test
+npm run lint
+npm run build
+```
+
+The project targets Node.js `24.x` as declared in `package.json`. Read-only verification tooling may capture runtime, git, test, lint, and build evidence, but it must not modify source files, install fixes, reset repository state, sign transactions, or expand wallet authority.
+
+This README intentionally describes only the public behavior, interfaces, setup, and verification steps present in this repository.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
