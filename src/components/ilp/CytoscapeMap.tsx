@@ -448,7 +448,7 @@ function getLedgerColor(ledger: Ledger, lens: UILens, connectors: any[]): string
     case 'domain':
       return DOMAIN_COLORS[ledger.domain] || '#888888';
     
-    case 'trust':
+    case 'trust': {
       const relatedConnectors = connectors.filter(
         c => c.from === ledger.id || c.to === ledger.id
       );
@@ -458,12 +458,14 @@ function getLedgerColor(ledger: Ledger, lens: UILens, connectors: any[]): string
       if (avgTrust > 0.4) return TRUST_COLORS.medium;
       return TRUST_COLORS.low;
     
-    case 'fog':
+    }
+    case 'fog': {
       const riskCount = ledger.risk_flags.length;
       if (riskCount > 2) return '#FF4444';
       if (riskCount > 0) return '#FFD700';
       return '#888888';
     
+    }
     case 'flow':
       return ledger.supports_ilp_adapter ? '#00FF88' : '#666666';
     

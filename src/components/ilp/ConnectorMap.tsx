@@ -46,7 +46,7 @@ function getLedgerColor(ledger: Ledger, lens: UILens, connectors: any[]): string
     case 'domain':
       return DOMAIN_COLORS[ledger.domain] || '#888888';
     
-    case 'trust':
+    case 'trust': {
       const relatedConnectors = connectors.filter(c => c.from === ledger.id || c.to === ledger.id);
       if (relatedConnectors.length === 0) return '#888888';
       const avgTrust = relatedConnectors.reduce((sum, c) => sum + c.trust_score, 0) / relatedConnectors.length;
@@ -54,11 +54,13 @@ function getLedgerColor(ledger: Ledger, lens: UILens, connectors: any[]): string
       if (avgTrust > 0.4) return TRUST_COLORS.medium;
       return TRUST_COLORS.low;
     
-    case 'fog':
+    }
+    case 'fog': {
       const riskCount = ledger.risk_flags.length;
       const fogOpacity = Math.max(0.3, 1 - riskCount * 0.15);
       return `rgba(200, 200, 200, ${fogOpacity})`;
     
+    }
     case 'flow':
       return ledger.supports_ilp_adapter ? '#00FF88' : '#666666';
     
@@ -80,7 +82,7 @@ function getCorridorStyle(
   const toLedger = ledgers.find(l => l.id === corridor.to_ledger);
   
   switch (lens) {
-    case 'domain':
+    case 'domain': {
       // In Domain lens, color based on the connecting ledgers' domains
       // If both same domain = solid that color, if different = gradient/blend
       const fromColor = fromLedger ? DOMAIN_COLORS[fromLedger.domain] : '#888888';
@@ -94,7 +96,8 @@ function getCorridorStyle(
         dashArray: fromLedger?.domain !== toLedger?.domain ? '6,3' : 'none', // Dashed if cross-domain
       };
     
-    case 'trust':
+    }
+    case 'trust': {
       const trustColor = trust > 0.7 ? TRUST_COLORS.high : trust > 0.4 ? TRUST_COLORS.medium : TRUST_COLORS.low;
       return {
         color: trustColor,
@@ -104,7 +107,8 @@ function getCorridorStyle(
         dashArray: trust < 0.3 ? '2,2' : 'none',
       };
     
-    case 'fog':
+    }
+    case 'fog': {
       const riskLevel = corridor.risk_fog.length / 5;
       const fogColor = riskLevel > 0.5 ? '#FF4444' : riskLevel > 0.2 ? '#FFD700' : '#888888';
       return {
@@ -115,7 +119,8 @@ function getCorridorStyle(
         dashArray: riskLevel > 0.3 ? '3,3' : 'none',
       };
     
-    case 'flow':
+    }
+    case 'flow': {
       const flowColor = corridor.bidirectional ? '#00D4FF' : '#00FF88';
       return {
         color: flowColor,
@@ -125,6 +130,7 @@ function getCorridorStyle(
         dashArray: 'none',
       };
     
+    }
     default:
       return { color: '#666666', toColor: '#666666', width: 1, opacity: 0.5, dashArray: 'none' };
   }

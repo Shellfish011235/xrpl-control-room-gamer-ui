@@ -62,7 +62,7 @@ export class XRPLConnector {
   private ws: WebSocket | null = null;
   private connected: boolean = false;
   private requestId: number = 0;
-  private pendingRequests: Map<number, { resolve: Function; reject: Function }> = new Map();
+  private pendingRequests: Map<number, { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }> = new Map();
   private eventHandlers: Set<CARVEventHandler> = new Set();
   private wallet: XRPLWallet | null = null;
 
