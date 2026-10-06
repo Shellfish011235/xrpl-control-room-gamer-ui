@@ -49,37 +49,38 @@ export function toGatewayViewState(input: GatewayViewInput): GatewayViewState {
     }
   }
 
-  if (!result.ok) {
-    if (result.error.kind === 'network' || result.error.kind === 'timeout') {
+  if (result.ok === false) {
+    const error = result.error
+    if (error.kind === 'network' || error.kind === 'timeout') {
       return {
         state: 'dependency_down',
         label: 'Backend unavailable',
-        detail: result.error.message,
+        detail: error.message,
       }
     }
-    if (result.error.kind === 'malformed') {
+    if (error.kind === 'malformed') {
       return {
         state: 'malformed',
         label: 'Malformed response',
-        detail: result.error.message,
+        detail: error.message,
       }
     }
     if (
-      result.error.code === 'DEPENDENCY_UNAVAILABLE' ||
-      result.error.code === 'TIMEOUT' ||
-      result.error.httpStatus === 503 ||
-      result.error.httpStatus === 504
+      error.code === 'DEPENDENCY_UNAVAILABLE' ||
+      error.code === 'TIMEOUT' ||
+      error.httpStatus === 503 ||
+      error.httpStatus === 504
     ) {
       return {
         state: 'dependency_down',
         label: 'Dependency unavailable',
-        detail: result.error.message,
+        detail: error.message,
       }
     }
     return {
       state: 'blocked',
       label: 'Request blocked',
-      detail: result.error.message,
+      detail: error.message,
     }
   }
 
