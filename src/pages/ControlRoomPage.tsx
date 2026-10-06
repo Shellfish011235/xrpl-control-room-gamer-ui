@@ -26,6 +26,7 @@ import { PrivateQuantLabPanel } from '../components/control-room/PrivateQuantLab
 import { ComplianceGuardPanel } from '../components/control-room/ComplianceGuardPanel';
 import { SecurityOpsPanel } from '../components/control-room/SecurityOpsPanel';
 import { TaskReceiptsPanel } from '../components/control-room/TaskReceiptsPanel';
+import { IntegrationSpinePanel } from '../components/control-room/IntegrationSpinePanel';
 
 const TOP_BAR_H = 56;
 const APP_NAV_H = 64;
@@ -73,6 +74,9 @@ export default function ControlRoomPage() {
 
       {!hasWallet ? (
         <div className="pt-[calc(3.5rem+4rem)] flex flex-col items-center justify-center min-h-[60vh] px-6 pb-12">
+          <div className="max-w-4xl w-full mb-6">
+            <IntegrationSpinePanel />
+          </div>
           <p className="text-sm text-cyber-muted mb-2">Control Room – XRPL Mission Control</p>
           <div className="max-w-md neon-panel text-center space-y-4">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto bg-cyber-glow/20">
@@ -170,6 +174,9 @@ export default function ControlRoomPage() {
                   transition={{ duration: 0.2 }}
                   className="space-y-8"
                 >
+                  <div className={panelClass}>
+                    <IntegrationSpinePanel />
+                  </div>
                   <div className={panelClass}>
                     <MissionControlPanel />
                   </div>
