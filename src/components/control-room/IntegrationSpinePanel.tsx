@@ -29,6 +29,8 @@ export function IntegrationSpinePanel() {
 
   const refreshHealth = useCallback(async () => {
     setHealthPending(true)
+    setOperationResult(undefined)
+    setReceiptResult(undefined)
     const result = await getShellfishHealth()
     setHealthResult(result)
     setHealthPending(false)
@@ -50,7 +52,8 @@ export function IntegrationSpinePanel() {
     [operationPending, operationResult]
   )
   const response = operationResult?.ok ? operationResult.data : undefined
-  const model = buildIntegrationPanelModel({ health: healthView, operation: operationView, response })
+  const receiptView = receiptResult ? toGatewayViewState({ result: receiptResult }) : undefined
+  const model = buildIntegrationPanelModel({ health: healthView, operation: operationView, response, receipt: receiptView })
 
   const buildTask = useCallback(() => {
     const taskId = makeCorrelationId('TASK_UI')
@@ -74,11 +77,11 @@ export function IntegrationSpinePanel() {
     setReceiptResult(undefined)
     const result = await requestShellfishQuote(buildTask())
     setOperationResult(result)
-    setOperationPending(false)
 
     if (result.ok && result.data.receipt_id) {
       setReceiptResult(await getShellfishReceipt(result.data.receipt_id))
     }
+    setOperationPending(false)
   }, [buildTask, objective])
 
   const queueJob = useCallback(async () => {
@@ -101,7 +104,7 @@ export function IntegrationSpinePanel() {
             it does not grant signing, payment, custody, or autonomous execution authority.
           </p>
         </div>
-        <button type="button" className="neon-button text-xs" onClick={() => void refreshHealth()}>
+        <button type="button" className="neon-button text-xs" disabled={operationPending || healthPending} onClick={() => void refreshHealth()}>
           Refresh health
         </button>
       </div>
@@ -132,13 +135,13 @@ export function IntegrationSpinePanel() {
           className="min-h-20 w-full rounded-lg border border-[var(--cyber-border)] bg-[var(--cyber-darker)] p-3 text-sm text-cyber-text outline-none focus:border-cyber-cyan"
         />
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="neon-button text-sm" disabled={operationPending} onClick={() => void runQuote()}>
+          <button type="button" className="neon-button text-sm" disabled={operationPending || healthPending} onClick={() => void runQuote()}>
             Request generic quote
           </button>
           <button
             type="button"
             className="rounded-lg border border-cyber-cyan/40 px-3 py-1.5 text-sm text-cyber-cyan hover:bg-cyber-cyan/10 disabled:opacity-50"
-            disabled={operationPending}
+            disabled={operationPending || healthPending}
             onClick={() => void queueJob()}
           >
             Queue generic job
@@ -154,7 +157,13 @@ export function IntegrationSpinePanel() {
         )}
       </div>
 
-      {receiptResult?.ok && (
+      {model.receiptError && (
+        <p role="alert" className="rounded-lg border border-amber-500/30 p-3 text-xs text-amber-200">
+          Receipt lookup failed: {model.receiptError}
+        </p>
+      )}
+
+      {model.showReceiptDetails && receiptResult?.ok && (
         <details className="rounded-lg border border-[var(--cyber-border)] p-3 text-xs">
           <summary className="cursor-pointer font-cyber text-cyber-cyan">Receipt details</summary>
           <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap break-all text-[10px] text-cyber-muted">

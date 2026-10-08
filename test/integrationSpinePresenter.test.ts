@@ -62,3 +62,30 @@ test('does not introduce hackathon verdict language', () => {
   assert.equal(serialized.includes('SIMULATION_ONLY'), false)
   assert.equal(serialized.includes('DENY'), false)
 })
+
+for (const state of ['dependency_down', 'pending', 'malformed'] as const) {
+  test(`suppresses prior quote and receipt when health is ${state}`, () => {
+    const model = buildIntegrationPanelModel({
+      health: { state, label: 'Health unavailable', detail: 'Current health is not confirmed.' },
+      operation: { state: 'success', label: 'QUOTED', detail: 'Previous quote succeeded.' },
+      response: { status: 'QUOTED', receipt_id: 'OLD_RECEIPT', authorization_state: { execution_authorized: false } },
+      receipt: { state: 'success', label: 'FOUND', detail: 'Previous receipt.' },
+    })
+    assert.equal(model.showSuccess, false)
+    assert.equal(model.receiptId, null)
+    assert.equal(model.showReceiptDetails, false)
+    assert.equal(model.operationLabel, 'Health unavailable')
+  })
+}
+
+test('exposes receipt lookup failure after a successful quote', () => {
+  const model = buildIntegrationPanelModel({
+    health: { state: 'healthy', label: 'Healthy', detail: 'Wave healthy.' },
+    operation: { state: 'success', label: 'QUOTED', detail: 'Quote succeeded.' },
+    response: { status: 'QUOTED', receipt_id: 'RECEIPT_1' },
+    receipt: { state: 'dependency_down', label: 'Backend unavailable', detail: 'Receipt request timed out.' },
+  })
+  assert.equal(model.receiptError, 'Backend unavailable: Receipt request timed out.')
+  assert.equal(model.showReceiptDetails, false)
+  assert.equal(model.receiptId, 'RECEIPT_1')
+})
