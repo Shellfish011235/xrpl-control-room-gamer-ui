@@ -33,7 +33,7 @@ function obligationToPaymentTx(obl: NettedObligation, seq: number): PlannedTx {
       value: obl.amount,
       issuer: obl.asset.kind === 'IOU' ? obl.asset.issuer : obl.asset.issuer,
     },
-    Memo: { MemoData: Buffer.from(JSON.stringify({ batch: true, seq })).toString('hex') },
+    Memo: { MemoData: stringToHex(JSON.stringify({ batch: true, seq })) },
   };
   return {
     kind: 'XRPL_TX',
