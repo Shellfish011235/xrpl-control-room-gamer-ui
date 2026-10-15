@@ -82,3 +82,13 @@ Return to the lending-track investigation at the exact prior checkpoint:
 2. distinguish vault lifecycle phase from account subscription/credential eligibility;
 3. determine whether our disposable Devnet account has any actual access/credential relationship (currently **not established**);
 4. map verified ledger fields into proposed Shellfish policy inputs without implementing the judged autonomous execution path early.
+
+## Follow-up: retired amendment labels
+A second regression case covers legacy amendments whose replacements are already enabled. `Batch`, `fixBatchInnerSigs`, and `PermissionDelegation` are now marked as superseded when their live replacement is enabled, so they no longer inflate pending/needs-review counts or appear as if they are current activation candidates.
+
+Live check on 2026-10-15 confirmed:
+- `Batch` -> superseded by `BatchV1_1`
+- `fixBatchInnerSigs` -> superseded by `BatchV1_1`
+- `PermissionDelegation` -> superseded by `PermissionDelegationV1_1`
+
+The UI shows a `SUPERSEDED` badge and keeps historical security context separate from the current replacement status.
