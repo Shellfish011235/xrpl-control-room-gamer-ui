@@ -1,7 +1,7 @@
 /**
  * Amendment Impact Data – expanded impact analysis and known projects
  * Kept in sync with xrpl.org/resources/known-amendments and XRPScan.
- * Last updated: March 2026. Batch/fixBatchInnerSigs blocked (Feb 2026); BatchV1_1 in review.
+ * Last reviewed: October 15, 2026. Live enabled/supported status comes from XRPL Mainnet feature RPC; this file holds impact context and legacy notes.
  */
 
 export type AmendmentStatusNote = 'enabled' | 'majority' | 'pending' | 'unsupported' | 'blocked';
@@ -477,19 +477,19 @@ export const amendmentImpactData: Record<string, AmendmentImpactEntry> = {
       ecosystem:
         'DEX aggregators, batch payment apps, and multi-step DeFi (e.g. flash-loan-style flows, conditional swaps) gain a native primitive. Lowers the barrier to building sophisticated on-ledger applications without off-chain coordination.',
       riskConsiderations:
-        'Original Batch and fixBatchInnerSigs were blocked (Feb 2026) due to a vulnerability in inner transaction signature validation. BatchV1_1 is the planned replacement. When enabled, batch size and composition should be monitored to avoid resource exhaustion.',
+        'Original Batch and fixBatchInnerSigs were disabled after the February 2026 security finding. BatchV1_1 replaced the original feature and is enabled on Mainnet; fixBatchV1_2 is also enabled and tightens inner-transaction wrapper validation. Batch size and composition should still be monitored for resource cost.',
       validatorImpact:
         'Validators must support atomic batch validation and enforce inner-transaction rules; implementations need to handle batch-specific resource limits.',
       developerImpact:
-        'SDKs and wallets will need to support constructing and signing batches; UX for “multi-step in one click” becomes possible once BatchV1_1 is live.',
+        'SDKs and wallets can now support constructing and signing BatchV1_1 transactions on Mainnet. UX should distinguish the retired original Batch amendment from the active replacement and enforce current inner-transaction wrapper rules.',
     },
     knownProjects: [
-      { ...PROJECTS.xrplLabs, howBenefit: 'Atomic multi-step flows in Xaman and future dApps (once BatchV1_1 enabled).' },
+      { ...PROJECTS.xrplLabs, howBenefit: 'Atomic multi-step flows in Xaman and dApps using the active BatchV1_1 amendment.' },
       { ...PROJECTS.anodos, howBenefit: 'Atomic swap and aggregator flows with lower cost.' },
       { name: 'DEX aggregators', description: 'Multi-hop swap apps', howBenefit: 'Single atomic batch instead of multiple txs; no partial fill.' },
     ],
     statusNote: 'blocked',
-    statusNoteText: 'Original Batch and fixBatchInnerSigs were blocked (Feb 2026) due to security finding. BatchV1_1 replacement under review. No user funds at risk.',
+    statusNoteText: 'Legacy status only: original Batch and fixBatchInnerSigs were disabled after the February 2026 security finding. BatchV1_1 is the active replacement on Mainnet, and fixBatchV1_2 is enabled.',
     statusNoteLinks: [
       { label: 'Vulnerability disclosure (Feb 2026)', url: 'https://xrpl.org/blog/2026/vulnerabilitydisclosurereport-bug-feb2026' },
       { label: 'Report a vulnerability (XRPLF)', url: 'https://github.com/XRPLF/rippled/security' },
