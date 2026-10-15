@@ -540,7 +540,7 @@ export function LedgerImpactTool() {
   // Modals often render blank in X/Twitter WebView; full page always shows content.
   const useFullPageLink = isInAppBrowser || isMinimized || isSmallHeight;
 
-  // Fetch live amendments from XRPScan; on failure keep showing static list so the box always has info
+  // Fetch vote metadata from XRPScan and authoritative enabled/supported state from XRPL Mainnet; on failure keep static impact metadata visible
   const fetchAmendments = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -559,7 +559,7 @@ export function LedgerImpactTool() {
         setAmendments(sorted);
         setDataSource('live');
         setLastUpdate(new Date());
-        console.log('[LedgerImpact] Loaded', sorted.length, 'amendments from XRPScan');
+        console.log('[LedgerImpact] Loaded', sorted.length, 'amendments from XRPL Mainnet + XRPScan');
       }
     } catch (error) {
       console.error('[LedgerImpact] Failed to fetch amendments:', error);
@@ -629,7 +629,7 @@ export function LedgerImpactTool() {
           onClick={handleRefresh}
           disabled={isLoading}
           className="p-1.5 hover:bg-cyber-glow/10 rounded transition-colors"
-          title="Refresh amendments from XRPScan"
+          title="Refresh amendments from XRPL Mainnet + XRPScan"
         >
           <RefreshCw size={14} className={`text-cyber-muted hover:text-cyber-glow ${isLoading ? 'animate-spin' : ''}`} />
         </button>
@@ -638,7 +638,7 @@ export function LedgerImpactTool() {
       {/* When live fetch failed we show cached list; small note to refresh for live data */}
       {dataSource === 'fallback' && (
         <div className="mb-3 p-2 rounded bg-cyber-glow/10 border border-cyber-glow/30 flex items-center justify-between gap-2">
-          <p className="text-[10px] text-cyber-muted">Showing cached amendments. Tap refresh for live vote counts.</p>
+          <p className="text-[10px] text-cyber-muted">Showing cached impact metadata. Live amendment status is unavailable; tap refresh to retry.</p>
           <button
             type="button"
             onClick={() => fetchAmendments()}
@@ -890,7 +890,7 @@ export function LedgerImpactTool() {
       {/* Quick Links + Data source */}
       <div className="mt-4 pt-3 border-t border-cyber-border space-y-1.5">
         <p className="text-[9px] text-cyber-muted text-right" aria-label="Ledger impact data source">
-          Data: {dataSource === 'live' ? 'XRPScan (live)' : 'Fallback'}
+          Data: {dataSource === 'live' ? 'XRPL Mainnet feature RPC + XRPScan' : 'Cached impact metadata'}
         </p>
         <a
           href="https://xrpl.org/amendments.html"

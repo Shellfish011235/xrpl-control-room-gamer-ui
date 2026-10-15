@@ -130,6 +130,45 @@ export async function fetchCryptoSentiment(): Promise<{
 // Free XRPL data - https://docs.xrpscan.com/
 
 const XRPSCAN_API = 'https://api.xrpscan.com/api/v1';
+const XRPL_MAINNET_RPC = 'https://xrplcluster.com';
+
+type XRPLFeatureState = {
+  enabled: boolean;
+  supported: boolean;
+};
+
+async function fetchXRPLMainnetFeatureState(): Promise<Map<string, XRPLFeatureState>> {
+  const response = await fetch(XRPL_MAINNET_RPC, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ method: 'feature', params: [{}] }),
+  });
+
+  if (!response.ok) {
+    throw new Error('XRPL feature RPC error: ' + response.status);
+  }
+
+  const payload = await response.json() as {
+    result?: {
+      status?: string;
+      features?: Record<string, { name?: string; enabled?: boolean; supported?: boolean }>;
+    };
+  };
+
+  if (payload.result?.status !== 'success' || !payload.result.features) {
+    throw new Error('XRPL feature RPC returned no feature map');
+  }
+
+  const byName = new Map<string, XRPLFeatureState>();
+  for (const feature of Object.values(payload.result.features)) {
+    if (!feature.name) continue;
+    byName.set(feature.name, {
+      enabled: feature.enabled === true,
+      supported: feature.supported === true,
+    });
+  }
+  return byName;
+}
 
 // Ripple epoch starts January 1, 2000 00:00:00 UTC
 // Unix epoch offset for Ripple = 946684800 seconds
@@ -206,65 +245,69 @@ function calculateIndividualCountdown(majorityTimestamp: number): {
  */
 export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
   try {
-    const response = await fetch(`${XRPSCAN_API}/amendments`);
-    
+    const response = await fetch(XRPSCAN_API + '/amendments');
+
     if (!response.ok) {
-      throw new Error(`XRPScan API error: ${response.status}`);
+      throw new Error('XRPScan API error: ' + response.status);
     }
-    
+
     const amendments: XRPLAmendment[] = await response.json();
-    
-    // Enhance with calculated fields - INDIVIDUAL countdown per amendment
+
+    let featureState = new Map<string, XRPLFeatureState>();
+    try {
+      featureState = await fetchXRPLMainnetFeatureState();
+    } catch (featureError) {
+      console.warn('[FreeFeeds] XRPL feature RPC unavailable; using XRPScan status:', featureError);
+    }
+
+    // XRPScan supplies vote/majority details; live Mainnet feature RPC is authoritative
+    // for whether a feature is enabled/supported right now.
     return amendments.map(amendment => {
-      const percentSupport = amendment.validations > 0 
-        ? (amendment.count / amendment.validations) * 100 
+      const liveFeature = featureState.get(amendment.name);
+      const enabled = liveFeature?.enabled ?? amendment.enabled;
+      const supported = liveFeature?.supported ?? amendment.supported;
+      const percentSupport = amendment.validations > 0
+        ? (amendment.count / amendment.validations) * 100
         : 0;
-      
+
       let status: XRPLAmendment['status'] = 'pending';
       let daysUntilEnabled: number | undefined;
       let hoursUntilEnabled: number | undefined;
       let minutesUntilEnabled: number | undefined;
       let secondsUntilEnabled: number | undefined;
       let activationDate: Date | undefined;
-      
-      if (amendment.enabled) {
-        // Amendment is already active on the network
+
+      if (enabled) {
         status = 'enabled';
       } else if (amendment.majority && typeof amendment.majority === 'number') {
-        // Amendment has reached majority - calculate individual countdown
         status = 'majority';
-        
-        // Calculate countdown from THIS amendment's specific majority timestamp
         const countdown = calculateIndividualCountdown(amendment.majority);
         daysUntilEnabled = countdown.daysUntilEnabled;
         hoursUntilEnabled = countdown.hoursUntilEnabled;
         minutesUntilEnabled = countdown.minutesUntilEnabled;
         secondsUntilEnabled = countdown.secondsUntilEnabled;
         activationDate = countdown.activationDate;
-        
-        console.log(`[FreeFeeds] ${amendment.name}: Majority at ${rippleEpochToDate(amendment.majority).toISOString()}, Activates: ${activationDate.toISOString()}, Countdown: ${daysUntilEnabled}d ${hoursUntilEnabled}h ${minutesUntilEnabled}m ${secondsUntilEnabled}s`);
-        
       } else if (percentSupport >= 80) {
-        // High support but no majority timestamp yet - unusual case
         status = 'majority';
-        // Default to 14 days if we have high support but no majority date
         daysUntilEnabled = 14;
         hoursUntilEnabled = 0;
         minutesUntilEnabled = 0;
         secondsUntilEnabled = 0;
-      } else if (!amendment.supported) {
+      } else if (!supported) {
         status = 'unsupported';
       }
-      
+
       return {
         ...amendment,
+        enabled,
+        supported,
         percentSupport: Math.round(percentSupport * 10) / 10,
         status,
         daysUntilEnabled,
         hoursUntilEnabled,
         minutesUntilEnabled,
         secondsUntilEnabled,
-        activationDate
+        activationDate,
       };
     });
   } catch (error) {
