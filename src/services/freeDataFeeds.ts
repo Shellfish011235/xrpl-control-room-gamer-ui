@@ -39,6 +39,7 @@ export interface XRPLAmendment {
   minutesUntilEnabled?: number;
   secondsUntilEnabled?: number;
   activationDate?: Date;  // Calculated activation date (majority + 14 days)
+  supersededBy?: string;  // Replacement amendment when this legacy amendment has been retired
 }
 
 export interface WhaleTransaction {
@@ -135,6 +136,12 @@ const XRPL_MAINNET_RPC = 'https://xrplcluster.com';
 type XRPLFeatureState = {
   enabled: boolean;
   supported: boolean;
+};
+
+const AMENDMENT_REPLACEMENTS: Record<string, string> = {
+  Batch: 'BatchV1_1',
+  fixBatchInnerSigs: 'BatchV1_1',
+  PermissionDelegation: 'PermissionDelegationV1_1',
 };
 
 async function fetchXRPLMainnetFeatureState(): Promise<Map<string, XRPLFeatureState>> {
@@ -266,6 +273,9 @@ export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
       const liveFeature = featureState.get(amendment.name);
       const enabled = liveFeature?.enabled ?? amendment.enabled;
       const supported = liveFeature?.supported ?? amendment.supported;
+      const replacementName = AMENDMENT_REPLACEMENTS[amendment.name];
+      const replacementEnabled = replacementName ? featureState.get(replacementName)?.enabled === true : false;
+      const supersededBy = replacementEnabled ? replacementName : undefined;
       const percentSupport = amendment.validations > 0
         ? (amendment.count / amendment.validations) * 100
         : 0;
@@ -308,6 +318,7 @@ export async function fetchXRPLAmendments(): Promise<XRPLAmendment[]> {
         minutesUntilEnabled,
         secondsUntilEnabled,
         activationDate,
+        supersededBy,
       };
     });
   } catch (error) {

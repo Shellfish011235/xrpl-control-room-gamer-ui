@@ -249,6 +249,7 @@ interface Amendment {
   activationDate?: Date;  // Calculated activation date (majority + 14 days)
   majorityDate?: string | null; // Date when majority was reached
   enabledOn?: string | null; // Date when amendment was enabled
+  supersededBy?: string; // Legacy amendment replaced by an enabled successor
   author?: string;
   github?: string;
   /** Alias for companion: proposer name */
@@ -381,6 +382,7 @@ function convertToAmendment(xrpAmendment: XRPLAmendment): Amendment {
     activationDate: xrpAmendment.activationDate,  // Calculated from Ripple epoch majority timestamp
     majorityDate: xrpAmendment.majority ? String(xrpAmendment.majority) : null,
     enabledOn: xrpAmendment.enabled_on || null,
+    supersededBy: xrpAmendment.supersededBy,
     author: metadata.author,
     github: metadata.github,
     proposerName: metadata.author,
@@ -434,6 +436,12 @@ const impactStyles: Record<PerformanceImpact, string> = {
   Unknown: '#94a3b8',
 };
 
+const STATIC_AMENDMENT_REPLACEMENTS: Record<string, string> = {
+  Batch: 'BatchV1_1',
+  fixBatchInnerSigs: 'BatchV1_1',
+  PermissionDelegation: 'PermissionDelegationV1_1',
+};
+
 /** Get one amendment from static metadata (for AmendmentDetail when API fails, e.g. X in-app browser). */
 function getStaticAmendmentByName(name: string): Amendment | null {
   const meta = amendmentMetadata[name];
@@ -460,6 +468,7 @@ function getStaticAmendmentByName(name: string): Amendment | null {
     enabled: false,
     percentSupport: 0,
     status: 'pending',
+    supersededBy: STATIC_AMENDMENT_REPLACEMENTS[name],
     author: meta.author,
     github: meta.github,
     whoBenefits: meta.whoBenefits,
@@ -509,6 +518,7 @@ function getStaticAmendments(): Amendment[] {
       enabled: false,
       percentSupport: 0,
       status: 'pending',
+      supersededBy: STATIC_AMENDMENT_REPLACEMENTS[name],
       author: meta.author,
       github: meta.github,
       whoBenefits: meta.whoBenefits,
@@ -576,20 +586,20 @@ export function LedgerImpactTool() {
   }, [fetchAmendments]);
 
   const filteredAmendments = amendments.filter(a => {
-    if (filter === 'pending') return !a.enabled;
+    if (filter === 'pending') return !a.enabled && !a.supersededBy;
     if (filter === 'enabled') return a.enabled;
-    if (filter === 'needs_review') return !a.enabled && !isReviewed(a.name);
+    if (filter === 'needs_review') return !a.enabled && !a.supersededBy && !isReviewed(a.name);
     return true;
   });
 
-  const needsAttentionCount = amendments.filter(a => !a.enabled && !isReviewed(a.name)).length;
+  const needsAttentionCount = amendments.filter(a => !a.enabled && !a.supersededBy && !isReviewed(a.name)).length;
 
   const handleRefresh = async () => {
     await fetchAmendments();
   };
 
   // Count amendments in two-week activation period (at majority, not yet enabled)
-  const atMajority = amendments.filter(a => !a.enabled && a.status === 'majority').length;
+  const atMajority = amendments.filter(a => !a.enabled && !a.supersededBy && a.status === 'majority').length;
   const showPendingTab = atMajority > 0;
 
   // If user had PENDING selected but no amendments are in countdown, switch to needs_review
@@ -783,6 +793,11 @@ export function LedgerImpactTool() {
                         activationDate={amendment.activationDate}
                         compact
                       />
+                    )}
+                    {amendment.supersededBy && (
+                      <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-yellow/15 text-cyber-yellow border border-cyber-yellow/30">
+                        SUPERSEDED → {amendment.supersededBy}
+                      </span>
                     )}
                     {amendment.status === 'enabled' && amendment.enabledOn && (
                       <span className="px-1.5 py-0.5 rounded text-[8px] bg-cyber-green/20 text-cyber-green border border-cyber-green/30">
@@ -1163,8 +1178,16 @@ export function LedgerImpactTool() {
                     <p style={{ margin: 0, fontSize: 10, color: '#e2e8f0', lineHeight: 1.4 }}>{selectedAmendment.ledgerImpact.rationale}</p>
                   </div>
 
-                  {/* Blocked/unsupported warning */}
-                  {(BLOCKED_OR_OBSOLETE_AMENDMENTS.includes(selectedAmendment.name) || amendmentImpactData[selectedAmendment.name]?.statusNote === 'blocked') && (amendmentImpactData[selectedAmendment.name]?.statusNoteText || BLOCKED_OR_OBSOLETE_AMENDMENTS.includes(selectedAmendment.name)) && (
+                  {selectedAmendment.supersededBy && (
+                    <div style={{ marginTop: 8, padding: 8, borderRadius: 4, backgroundColor: 'rgba(161,98,7,0.18)', border: '1px solid #a16207' }}>
+                      <p style={{ margin: 0, fontSize: 10, color: '#fde68a' }}>
+                        <strong>Legacy amendment:</strong> replaced by <strong>{selectedAmendment.supersededBy}</strong>. The replacement's live Mainnet status is shown separately in this tool.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Blocked/unsupported warning for unresolved legacy items only */}
+                  {!selectedAmendment.supersededBy && (BLOCKED_OR_OBSOLETE_AMENDMENTS.includes(selectedAmendment.name) || amendmentImpactData[selectedAmendment.name]?.statusNote === 'blocked') && (amendmentImpactData[selectedAmendment.name]?.statusNoteText || BLOCKED_OR_OBSOLETE_AMENDMENTS.includes(selectedAmendment.name)) && (
                     <div style={{ marginTop: 8, padding: 8, borderRadius: 4, backgroundColor: 'rgba(185,28,28,0.2)', border: '1px solid #b91c1c' }}>
                       <p style={{ margin: 0, fontSize: 10, color: '#fecaca' }}>
                         <strong>Blocked / unsupported:</strong>{' '}
