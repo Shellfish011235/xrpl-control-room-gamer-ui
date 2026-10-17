@@ -104,10 +104,12 @@ export const useWalletStore = create<WalletState>()(
           const filtered = state.wallets.filter(w => w.id !== id);
           const wasActive = state.activeWalletId === id;
           const wasDefault = state.wallets.find(w => w.id === id)?.isDefault;
-          if (wasDefault && filtered.length > 0) filtered[0].isDefault = true;
+          const next = wasDefault && filtered.length > 0
+            ? filtered.map((w, i) => i === 0 ? { ...w, isDefault: true } : w)
+            : filtered;
           return {
-            wallets: filtered,
-            activeWalletId: wasActive ? (filtered[0]?.id || null) : state.activeWalletId,
+            wallets: next,
+            activeWalletId: wasActive ? (next[0]?.id || null) : state.activeWalletId,
           };
         });
         syncActiveWalletToStrategyStore(get().wallets, get().activeWalletId);

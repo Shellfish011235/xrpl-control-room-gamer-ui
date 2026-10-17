@@ -36,6 +36,102 @@ export interface FetchActivityResult {
   error?: string;
 }
 
+const MAX_BRIDGE_ITEMS = 200;
+const ACTIVITY_TYPES = new Set<DiscordActivityItem['type']>([
+  'bounty_post', 'bounty_accept', 'bounty_complete', 'agent_message', 'system',
+]);
+const BOUNTY_STATUSES = new Set<Bounty['status']>([
+  'open', 'claimed', 'in-progress', 'completed', 'expired',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function optionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function optionalFiniteNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+export function sanitizeDiscordActivityItems(value: unknown): DiscordActivityItem[] {
+  if (!Array.isArray(value)) return [];
+  const items: DiscordActivityItem[] = [];
+  for (const raw of value.slice(0, MAX_BRIDGE_ITEMS)) {
+    if (!isRecord(raw)) continue;
+    if (
+      typeof raw.id !== 'string' ||
+      typeof raw.type !== 'string' ||
+      !ACTIVITY_TYPES.has(raw.type as DiscordActivityItem['type']) ||
+      typeof raw.content !== 'string' ||
+      typeof raw.timestamp !== 'number' ||
+      !Number.isFinite(raw.timestamp)
+    ) continue;
+    items.push({
+      id: raw.id,
+      type: raw.type as DiscordActivityItem['type'],
+      content: raw.content,
+      timestamp: raw.timestamp,
+      ...(optionalString(raw.channelId) !== undefined && { channelId: raw.channelId as string }),
+      ...(optionalString(raw.messageId) !== undefined && { messageId: raw.messageId as string }),
+      ...(optionalString(raw.authorId) !== undefined && { authorId: raw.authorId as string }),
+      ...(optionalString(raw.authorName) !== undefined && { authorName: raw.authorName as string }),
+      ...(optionalString(raw.bountyId) !== undefined && { bountyId: raw.bountyId as string }),
+      ...(optionalString(raw.txHash) !== undefined && { txHash: raw.txHash as string }),
+    });
+  }
+  return items;
+}
+
+export function sanitizeBountyItems(value: unknown): Bounty[] {
+  if (!Array.isArray(value)) return [];
+  const items: Bounty[] = [];
+  for (const raw of value.slice(0, MAX_BRIDGE_ITEMS)) {
+    if (!isRecord(raw)) continue;
+    if (
+      typeof raw.id !== 'string' ||
+      typeof raw.title !== 'string' ||
+      typeof raw.description !== 'string' ||
+      typeof raw.rewardXRP !== 'number' ||
+      !Number.isFinite(raw.rewardXRP) ||
+      raw.rewardXRP < 0 ||
+      typeof raw.status !== 'string' ||
+      !BOUNTY_STATUSES.has(raw.status as Bounty['status']) ||
+      typeof raw.createdAt !== 'number' ||
+      !Number.isFinite(raw.createdAt) ||
+      typeof raw.updatedAt !== 'number' ||
+      !Number.isFinite(raw.updatedAt)
+    ) continue;
+    items.push({
+      id: raw.id,
+      title: raw.title,
+      description: raw.description,
+      rewardXRP: raw.rewardXRP,
+      status: raw.status as Bounty['status'],
+      createdAt: raw.createdAt,
+      updatedAt: raw.updatedAt,
+      ...(optionalString(raw.authorId) !== undefined && { authorId: raw.authorId as string }),
+      ...(optionalString(raw.authorName) !== undefined && { authorName: raw.authorName as string }),
+      ...(optionalString(raw.claimedBy) !== undefined && { claimedBy: raw.claimedBy as string }),
+      ...(optionalFiniteNumber(raw.claimedAt) !== undefined && { claimedAt: raw.claimedAt as number }),
+      ...(optionalFiniteNumber(raw.completedAt) !== undefined && { completedAt: raw.completedAt as number }),
+      ...(optionalString(raw.txHash) !== undefined && { txHash: raw.txHash as string }),
+      ...(optionalString(raw.discordMessageId) !== undefined && { discordMessageId: raw.discordMessageId as string }),
+    });
+  }
+  return items;
+}
+
+export function sanitizePostBountyResponse(value: unknown): Pick<PostBountyResult, 'bountyId' | 'discordMessageId'> {
+  if (!isRecord(value)) return {};
+  const result: Pick<PostBountyResult, 'bountyId' | 'discordMessageId'> = {};
+  if (typeof value.bountyId === 'string') result.bountyId = value.bountyId;
+  if (typeof value.discordMessageId === 'string') result.discordMessageId = value.discordMessageId;
+  return result;
+}
+
 // ==================== MOCK DATA (when bridge not configured) ====================
 
 function mockActivity(): DiscordActivityItem[] {
@@ -117,8 +213,7 @@ export async function postBounty(payload: PostBountyPayload): Promise<PostBounty
     }
     return {
       success: true,
-      bountyId: data.bountyId,
-      discordMessageId: data.discordMessageId,
+      ...sanitizePostBountyResponse(data),
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Network error';
@@ -146,8 +241,8 @@ export async function fetchDiscordActivity(): Promise<FetchActivityResult> {
     }
     return {
       success: true,
-      activity: Array.isArray(data.activity) ? data.activity : [],
-      bounties: Array.isArray(data.bounties) ? data.bounties : undefined,
+      activity: sanitizeDiscordActivityItems(data.activity),
+      bounties: Array.isArray(data.bounties) ? sanitizeBountyItems(data.bounties) : undefined,
     };
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Network error';

@@ -147,14 +147,17 @@ export const useBountyStore = create<BountyState>()((set) => ({
     })),
 
   addReputationCompletion: (xrpEarned) =>
-    set((state) => ({
-      reputation: {
-        ...state.reputation,
-        completedBounties: state.reputation.completedBounties + 1,
-        totalXRPEarned: state.reputation.totalXRPEarned + xrpEarned,
-        lastActivityAt: Date.now(),
-      },
-    })),
+    set((state) => {
+      const amount = Number.isFinite(xrpEarned) && xrpEarned >= 0 ? xrpEarned : 0;
+      return {
+        reputation: {
+          ...state.reputation,
+          completedBounties: state.reputation.completedBounties + 1,
+          totalXRPEarned: state.reputation.totalXRPEarned + amount,
+          lastActivityAt: Date.now(),
+        },
+      };
+    }),
 
   setBridgeConnected: (v) => set({ bridgeConnected: v }),
 

@@ -3,6 +3,14 @@
 **Scope:** Full codebase (wallet, Xaman, orchestra, stores, API/WS, UI).  
 **Treat as:** Bug bounty / security and correctness audit.
 
+## 2026-10-10 verification update
+
+- **Finding #1 (`Buffer`) ? CONFIRMED, narrowed, fixed on `security-bounty-20261010`.** At base commit `16e5bed`, only `src/orchestra/plan.ts` still contained a live `Buffer.from` under `src/`; the cited CARV/ILP connector occurrences were already gone. A browser-equivalent regression reproduced the crash with `globalThis.Buffer = undefined`; the fix uses the existing `stringToHex()` helper and the regression now passes.
+- **Finding #2 (Xaman `Account` override) ? ALREADY FIXED at base commit `16e5bed`.** `requestCustomTransactionSignature()` resolves the signer account and builds `{ ...tx, Account: account }`, so caller-supplied `tx.Account` cannot override the signer. No additional code change was made.
+- **Finding #3 (`removeWallet` state mutation) ? CONFIRMED and fixed.** Default reassignment now creates a new wallet object instead of mutating an object retained from prior Zustand state. A regression test holds the original object reference and proves it remains unchanged.
+- **Finding #4 (invalid `rewardXRP`) ? CONFIRMED and fixed.** Non-finite or negative rewards now contribute `0` to `totalXRPEarned`; regression coverage includes `NaN` and negative input.
+- **Finding #5 (Discord bridge response validation) ? CONFIRMED and fixed.** Activity and bounty payloads are reconstructed from validated known fields, lists are capped at 200, bounty reward/status/timestamps are checked, and post-bounty IDs are accepted only when strings.
+
 ---
 
 ## High severity
