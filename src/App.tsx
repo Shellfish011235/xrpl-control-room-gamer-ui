@@ -29,8 +29,13 @@ function getScrollableElement(el: HTMLElement | null): HTMLElement | null {
   return null
 }
 
+function isEmbeddedMapTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest('.map-panel'))
+}
+
 // Lazy-load pages so first load is fast (especially on mobile / in-app browsers like X)
 const Network = lazyWithRetry(() => import('./pages/Network'))
+const NetworkTopologyPage = lazyWithRetry(() => import('./pages/NetworkTopologyPage'))
 const Underworld = lazyWithRetry(() => import('./pages/Underworld'))
 const Character = lazyWithRetry(() => import('./pages/Character'))
 const MemeticLab = lazyWithRetry(() => import('./pages/MemeticLab'))
@@ -122,6 +127,12 @@ function App() {
 
   useEffect(() => {
     function onWheel(e: WheelEvent) {
+      // Embedded maps are intelligence canvases, not mini Google Maps. Keep the
+      // camera fixed so trackpads/wheels scroll the page instead of moving data.
+      if (isEmbeddedMapTarget(e.target)) {
+        e.stopPropagation()
+        return
+      }
       const scrollable = getScrollableElement(e.target as HTMLElement)
       if (!scrollable) return
       const deltaY = e.deltaY * SCROLL_SPEED_FACTOR
@@ -132,8 +143,27 @@ function App() {
         scrollable.scrollLeft += deltaX
       }
     }
+
+    function onMapPointerMove(e: PointerEvent) {
+      if (e.buttons !== 0 && isEmbeddedMapTarget(e.target)) {
+        e.stopPropagation()
+      }
+    }
+
+    function onMapTouchMove(e: TouchEvent) {
+      if (isEmbeddedMapTarget(e.target)) {
+        e.stopPropagation()
+      }
+    }
+
     document.addEventListener('wheel', onWheel, { passive: false, capture: true })
-    return () => document.removeEventListener('wheel', onWheel, { capture: true })
+    document.addEventListener('pointermove', onMapPointerMove, { capture: true })
+    document.addEventListener('touchmove', onMapTouchMove, { passive: true, capture: true })
+    return () => {
+      document.removeEventListener('wheel', onWheel, { capture: true })
+      document.removeEventListener('pointermove', onMapPointerMove, { capture: true })
+      document.removeEventListener('touchmove', onMapTouchMove, { capture: true })
+    }
   }, [])
 
   return (
@@ -163,6 +193,7 @@ function App() {
                   <Route path="/clinic" element={<Navigate to="/" replace />} />
                   <Route path="/intelligence" element={<IntelligencePage />} />
                   <Route path="/network" element={<Network />} />
+                  <Route path="/network/topology" element={<NetworkTopologyPage />} />
                   <Route path="/world" element={<Navigate to="/network" replace />} />
                   <Route path="/ilp-map" element={<Navigate to="/network" replace />} />
                   <Route path="/underworld" element={<Underworld />} />
