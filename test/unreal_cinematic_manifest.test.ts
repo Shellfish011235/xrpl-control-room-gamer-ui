@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { join } from 'node:path'
 
 const root = process.cwd()
@@ -61,4 +62,24 @@ test('topology manifest preserves evidence boundaries and avoids unsupported cla
   assert.match(manifest, /['"]unknown['"]/)
   assert.doesNotMatch(manifest, /\b(bank|institution|private route)\b/i)
   assert.doesNotMatch(manifest, /TopologyEdge\([^)]*evidence\s*=\s*['"]unknown['"]/s)
+})
+
+test('scene builder exposes deterministic build stages and refuses unsupported edges', () => {
+  const builderPath = join(cinematicRoot, 'Content/Python/build_cinematic.py')
+  const builder = read('Content/Python/build_cinematic.py')
+
+  assert.match(builder, /def create_materials\(\)\s*->\s*dict\[str, str\]/)
+  assert.match(builder, /def create_level\(\)\s*->\s*str/)
+  assert.match(builder, /def spawn_network\(nodes:\s*tuple\[TopologyNode, \.\.\.\], edges:\s*tuple\[TopologyEdge, \.\.\.\]\)\s*->\s*dict\[str, str\]/)
+  assert.match(builder, /def create_sequence\(actor_paths:\s*dict\[str, str\]\)\s*->\s*str/)
+  assert.match(builder, /def configure_render\(sequence_path:\s*str\)\s*->\s*str/)
+  assert.match(builder, /def build_all\(\)\s*->\s*dict\[str, str\]/)
+  assert.match(builder, /SHOT_TIMINGS/)
+  assert.match(builder, /NODES/)
+  assert.match(builder, /EDGES/)
+  assert.match(builder, /CR_/)
+  assert.match(builder, /\/Game\/XRPLControlRoomCinematic/)
+  assert.match(builder, /edge\.evidence\s+not\s+in\s+\("observed",\s*"inferred"\)/)
+
+  execFileSync('python3', ['-m', 'py_compile', builderPath], { stdio: 'pipe' })
 })
