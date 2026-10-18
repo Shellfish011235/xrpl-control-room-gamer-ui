@@ -11,7 +11,8 @@ const validatorPath = join(
 const validator = readFileSync(validatorPath, 'utf8')
 
 test('runtime validator requires the handoff actor and master camera cut', () => {
-  assert.match(validator, /CR_Handoff/)
+  assert.match(validator, /expected_handoff_label\s*=\s*f["']\{GENERATED_ACTOR_PREFIX\}Handoff["']/)
+  assert.match(validator, /Missing generated handoff actor/)
   assert.match(validator, /def _validate_sequence_structure\(errors:\s*list\[str\]\)\s*->\s*None/)
   assert.match(validator, /MovieSceneCameraCutTrack/)
   assert.match(validator, /MovieSceneCinematicShotTrack/)
