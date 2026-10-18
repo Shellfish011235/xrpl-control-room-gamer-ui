@@ -83,3 +83,23 @@ test('scene builder exposes deterministic build stages and refuses unsupported e
 
   execFileSync('python3', ['-m', 'py_compile', builderPath], { stdio: 'pipe' })
 })
+
+test('Unreal validator checks scene contract and reports a missing handoff reference', () => {
+  const validatorPath = join(cinematicRoot, 'Content/Python/validate_cinematic.py')
+  const validator = read('Content/Python/validate_cinematic.py')
+
+  assert.match(validator, /def validate_scene\(\)\s*->\s*list\[str\]/)
+  assert.match(validator, /LEVEL_PATH/)
+  assert.match(validator, /SEQUENCE_PATH/)
+  assert.match(validator, /RENDER_PRESET_PATH/)
+  assert.match(validator, /SHOT_TIMINGS/)
+  assert.match(validator, /OUTPUT_SETTINGS/)
+  assert.match(validator, /NODES/)
+  assert.match(validator, /EDGES/)
+  assert.match(validator, /topology-handoff\.png/)
+  assert.match(validator, /missing handoff reference/i)
+  assert.match(validator, /1920/)
+  assert.match(validator, /1080/)
+
+  execFileSync('python3', ['-m', 'py_compile', validatorPath], { stdio: 'pipe' })
+})
