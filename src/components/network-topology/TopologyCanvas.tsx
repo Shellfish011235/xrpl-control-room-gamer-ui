@@ -59,7 +59,7 @@ export function TopologyCanvas({ dataset, selectedId, onSelect }: TopologyCanvas
             'text-valign': 'bottom',
             'text-margin-y': 7,
             'text-wrap': 'ellipsis',
-            'text-max-width': 90,
+            'text-max-width': '90px',
             'width': '18px',
             'height': '18px',
           },
