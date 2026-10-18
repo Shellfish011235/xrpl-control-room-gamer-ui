@@ -60,8 +60,8 @@ export function TopologyCanvas({ dataset, selectedId, onSelect }: TopologyCanvas
             'text-margin-y': 7,
             'text-wrap': 'ellipsis',
             'text-max-width': 90,
-            'width': 18,
-            'height': 18,
+            'width': '18px',
+            'height': '18px',
           },
         },
         {
@@ -69,8 +69,8 @@ export function TopologyCanvas({ dataset, selectedId, onSelect }: TopologyCanvas
           style: {
             'background-color': '#00b8ff',
             'border-color': '#8cecff',
-            'width': 26,
-            'height': 26,
+            'width': '26px',
+            'height': '26px',
           },
         },
         {
