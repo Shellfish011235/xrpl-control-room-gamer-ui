@@ -20,12 +20,15 @@ except ImportError:  # Allows source validation outside Unreal Editor.
 ASSET_ROOT = "/Game/XRPLControlRoomCinematic"
 GENERATED_ROOT = f"{ASSET_ROOT}/Generated"
 MATERIAL_ROOT = f"{GENERATED_ROOT}/Materials"
+TEXTURE_ROOT = f"{GENERATED_ROOT}/Textures"
 SEQUENCE_ROOT = f"{GENERATED_ROOT}/Sequences"
 RENDER_ROOT = f"{GENERATED_ROOT}/Render"
 LEVEL_PATH = f"{ASSET_ROOT}/{LEVEL_NAME}"
 SEQUENCE_PATH = f"{SEQUENCE_ROOT}/{SEQUENCE_NAME}"
 RENDER_PRESET_PATH = f"{RENDER_ROOT}/MRQ_XRPL_ControlRoom_Opener"
 GENERATED_ACTOR_PREFIX = "CR_"
+HANDOFF_REFERENCE_NAME = "topology-handoff.png"
+HANDOFF_TEXTURE_NAME = "topology-handoff"
 
 
 def _require_unreal() -> Any:
@@ -194,6 +197,72 @@ def spawn_network(nodes: tuple[TopologyNode, ...], edges: tuple[TopologyEdge, ..
     return actor_paths
 
 
+def _handoff_reference_path() -> Path:
+    ue = _require_unreal()
+    return Path(str(ue.Paths.project_dir())) / "References" / HANDOFF_REFERENCE_NAME
+
+
+def _import_handoff_texture() -> str | None:
+    ue = _require_unreal()
+    source_path = _handoff_reference_path()
+    if not source_path.exists():
+        return None
+
+    _ensure_directory(TEXTURE_ROOT)
+    import_data = ue.AutomatedAssetImportData()
+    import_data.set_editor_property("destination_path", TEXTURE_ROOT)
+    import_data.set_editor_property("filenames", [str(source_path)])
+    import_data.set_editor_property("replace_existing", True)
+    imported_assets = _asset_tools().import_assets_automated(import_data)
+    if not imported_assets:
+        raise RuntimeError(f"Unable to import handoff reference: {source_path}")
+    return imported_assets[0].get_path_name()
+
+
+def _configure_handoff_material(material: Any, texture_path: str | None, placeholder_path: str) -> Any:
+    ue = _require_unreal()
+    if texture_path is None:
+        placeholder = ue.EditorAssetLibrary.load_asset(placeholder_path)
+        return placeholder
+
+    texture = ue.EditorAssetLibrary.load_asset(texture_path)
+    if texture is None:
+        raise RuntimeError(f"Imported handoff texture cannot be loaded: {texture_path}")
+
+    editing = ue.MaterialEditingLibrary
+    editing.delete_all_material_expressions(material)
+    sample = editing.create_material_expression(material, ue.MaterialExpressionTextureSample, -240, 0)
+    sample.set_editor_property("texture", texture)
+    editing.connect_material_property(sample, "RGB", ue.MaterialProperty.MP_EMISSIVE_COLOR)
+    editing.recompile_material(material)
+    ue.EditorAssetLibrary.save_loaded_asset(material)
+    return material
+
+
+def _create_handoff_plane(material_paths: dict[str, str]) -> str:
+    ue = _require_unreal()
+    texture_path = _import_handoff_texture()
+    placeholder_path = material_paths["inferred"]
+    if texture_path is None:
+        placeholder = _load_or_create_asset(
+            "M_CR_HandoffPlaceholder",
+            MATERIAL_ROOT,
+            ue.Material,
+            ue.MaterialFactoryNew(),
+        )
+        _configure_emissive_material(placeholder, "muted")
+        handoff_material = placeholder
+    else:
+        material = _load_or_create_asset("M_CR_Handoff", MATERIAL_ROOT, ue.Material, ue.MaterialFactoryNew())
+        handoff_material = _configure_handoff_material(material, texture_path, placeholder_path)
+
+    actor = _spawn_static_mesh("/Engine/BasicShapes/Plane.Plane", "Handoff", (900.0, 0.0, 70.0))
+    actor.set_actor_rotation(ue.Rotator(0.0, 90.0, 90.0), False)
+    actor.set_actor_scale3d(ue.Vector(7.2, 4.05, 1.0))
+    _apply_material(actor, handoff_material)
+    return actor.get_path_name()
+
+
 def _seconds_to_frame(seconds: float) -> int:
     return round(seconds * int(OUTPUT_SETTINGS["fps"]))
 
@@ -232,7 +301,7 @@ def _add_camera_motion(sequence: Any, camera_binding: Any) -> None:
         (0.0, (-1050.0, -780.0, 520.0), (-11.0, 35.0, 0.0)),
         (SHOT_TIMINGS["visibility_boundary"][0], (-720.0, -470.0, 310.0), (-8.0, 25.0, 0.0)),
         (SHOT_TIMINGS["control_room_handoff"][0], (-470.0, -210.0, 170.0), (-4.0, 13.0, 0.0)),
-        (SHOT_TIMINGS["control_room_handoff"][1], (-120.0, -40.0, 70.0), (0.0, 2.0, 0.0)),
+        (SHOT_TIMINGS["control_room_handoff"][1], (420.0, -20.0, 95.0), (0.0, 2.0, 0.0)),
     )
     for seconds, location, rotation in keyframes:
         frame = ue.FrameNumber(_seconds_to_frame(seconds))
@@ -283,10 +352,13 @@ def _program_storyboard(master_sequence: Any, actor_paths: dict[str, str], camer
     validator_reveal = SHOT_TIMINGS["validators"][0]
     relationship_reveal = SHOT_TIMINGS["relationships"][0]
     boundary_reveal = SHOT_TIMINGS["visibility_boundary"][0]
+    handoff_reveal = SHOT_TIMINGS["control_room_handoff"][0]
 
     for actor_id, actor_path in actor_paths.items():
         actor = _resolve_actor(actor_path)
-        if actor_id == "visibility_boundary":
+        if actor_id == "handoff":
+            reveal_seconds = handoff_reveal
+        elif actor_id == "visibility_boundary":
             reveal_seconds = boundary_reveal
         elif actor_id.startswith("edge:"):
             reveal_seconds = relationship_reveal + (0.45 if "relay_hint" in actor_id else 0.0)
@@ -338,6 +410,8 @@ def configure_render(sequence_path: str) -> str:
 def build_all() -> dict[str, str]:
     create_level()
     actor_paths = spawn_network(NODES, EDGES)
+    material_paths = create_materials()
+    actor_paths["handoff"] = _create_handoff_plane(material_paths)
     sequence_path = create_sequence(actor_paths)
     render_path = configure_render(sequence_path)
     return {
