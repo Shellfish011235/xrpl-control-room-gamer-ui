@@ -131,34 +131,38 @@ export function TopologyCanvas({ dataset, selectedId, onSelect }: TopologyCanvas
     const motion = getTopologyMotionConfig(reducedMotion)
     const target = selectedId ? cy.getElementById(selectedId) : cy.elements()
     const padding = selectedId ? 130 : 42
-    const viewport = cy.getFitViewport(target, padding)
 
     cy.elements().unselect()
     cy.nodes().removeStyle('border-width')
     cy.edges().removeStyle('width opacity')
 
+    const startingPan = cy.pan()
+    const startingZoom = cy.zoom()
+    cy.fit(target, padding)
+    const targetPan = cy.pan()
+    const targetZoom = cy.zoom()
+    cy.viewport({ zoom: startingZoom, pan: startingPan })
+
     const camera = {
-      x: cy.pan().x,
-      y: cy.pan().y,
-      zoom: cy.zoom(),
+      x: startingPan.x,
+      y: startingPan.y,
+      zoom: startingZoom,
     }
 
-    if (viewport) {
-      if (!motion.enabled) {
-        cy.viewport({ zoom: viewport.zoom, pan: viewport.pan })
-      } else {
-        gsap.to(camera, {
-          x: viewport.pan.x,
-          y: viewport.pan.y,
-          zoom: viewport.zoom,
-          duration: motion.focusDuration,
-          ease: 'power2.out',
-          overwrite: true,
-          onUpdate: () => {
-            cy.viewport({ zoom: camera.zoom, pan: { x: camera.x, y: camera.y } })
-          },
-        })
-      }
+    if (!motion.enabled) {
+      cy.viewport({ zoom: targetZoom, pan: targetPan })
+    } else {
+      gsap.to(camera, {
+        x: targetPan.x,
+        y: targetPan.y,
+        zoom: targetZoom,
+        duration: motion.focusDuration,
+        ease: 'power2.out',
+        overwrite: true,
+        onUpdate: () => {
+          cy.viewport({ zoom: camera.zoom, pan: { x: camera.x, y: camera.y } })
+        },
+      })
     }
 
     if (!selectedId) {
