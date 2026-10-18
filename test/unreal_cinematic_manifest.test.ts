@@ -50,3 +50,15 @@ test('cinematic spec defines five ordered shots totaling 5 to 15 seconds', () =>
   assert.ok(totalDuration >= 5 && totalDuration <= 15, `duration ${totalDuration}s should stay in 5–15s range`)
   assert.match(spec, /['"]resolution['"]\s*:\s*\(1920,\s*1080\)/)
 })
+
+test('topology manifest preserves evidence boundaries and avoids unsupported claims', () => {
+  const manifest = read('Content/Python/topology_manifest.py')
+
+  assert.match(manifest, /class TopologyNode/)
+  assert.match(manifest, /class TopologyEdge/)
+  assert.match(manifest, /['"]observed['"]/)
+  assert.match(manifest, /['"]inferred['"]/)
+  assert.match(manifest, /['"]unknown['"]/)
+  assert.doesNotMatch(manifest, /\b(bank|institution|private route)\b/i)
+  assert.doesNotMatch(manifest, /TopologyEdge\([^)]*evidence\s*=\s*['"]unknown['"]/s)
+})
