@@ -84,6 +84,22 @@ test('scene builder exposes deterministic build stages and refuses unsupported e
   execFileSync('python3', ['-m', 'py_compile', builderPath], { stdio: 'pipe' })
 })
 
+test('storyboard builder programs reveal tracks, deliberate camera motion, and a camera cut', () => {
+  const builder = read('Content/Python/build_cinematic.py')
+
+  assert.match(builder, /def _add_visibility_keys\([^)]*reveal_seconds:\s*float[^)]*\)\s*->\s*None/)
+  assert.match(builder, /MovieSceneVisibilityTrack/)
+  assert.match(builder, /add_key\(unreal\.FrameNumber\(/)
+  assert.match(builder, /def _add_camera_motion\([^)]*\)\s*->\s*None/)
+  assert.match(builder, /MovieScene3DTransformTrack/)
+  assert.match(builder, /SHOT_TIMINGS\["visibility_boundary"\]/)
+  assert.match(builder, /SHOT_TIMINGS\["control_room_handoff"\]/)
+  assert.match(builder, /def _add_camera_cut\([^)]*\)\s*->\s*None/)
+  assert.match(builder, /MovieSceneCameraCutTrack/)
+  assert.match(builder, /set_camera_binding_id/)
+  assert.match(builder, /def _program_storyboard\([^)]*\)\s*->\s*None/)
+})
+
 test('Unreal validator checks scene contract and reports a missing handoff reference', () => {
   const validatorPath = join(cinematicRoot, 'Content/Python/validate_cinematic.py')
   const validator = read('Content/Python/validate_cinematic.py')
