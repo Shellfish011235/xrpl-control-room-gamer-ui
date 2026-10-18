@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import cytoscape, { type Core } from 'cytoscape'
+import gsap from 'gsap'
+import { getTopologyMotionConfig } from '../../services/topology/topologyMotion'
 import type { TopologyDataset, TopologyNode } from '../../types/networkTopology'
 
 interface TopologyCanvasProps {
@@ -124,15 +126,81 @@ export function TopologyCanvas({ dataset, selectedId, onSelect }: TopologyCanvas
   useEffect(() => {
     const cy = cyRef.current
     if (!cy) return
+
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    const motion = getTopologyMotionConfig(reducedMotion)
+    const target = selectedId ? cy.getElementById(selectedId) : cy.elements()
+    const padding = selectedId ? 130 : 42
+    const viewport = cy.getFitViewport(target, padding)
+
     cy.elements().unselect()
-    if (!selectedId) {
-      cy.animate({ fit: { eles: cy.elements(), padding: 42 }, duration: 250 })
-      return
+    cy.nodes().removeStyle('border-width')
+    cy.edges().removeStyle('width opacity')
+
+    const camera = {
+      x: cy.pan().x,
+      y: cy.pan().y,
+      zoom: cy.zoom(),
     }
+
+    if (viewport) {
+      if (!motion.enabled) {
+        cy.viewport({ zoom: viewport.zoom, pan: viewport.pan })
+      } else {
+        gsap.to(camera, {
+          x: viewport.pan.x,
+          y: viewport.pan.y,
+          zoom: viewport.zoom,
+          duration: motion.focusDuration,
+          ease: 'power2.out',
+          overwrite: true,
+          onUpdate: () => {
+            cy.viewport({ zoom: camera.zoom, pan: { x: camera.x, y: camera.y } })
+          },
+        })
+      }
+    }
+
+    if (!selectedId) {
+      return () => gsap.killTweensOf(camera)
+    }
+
     const node = cy.getElementById(selectedId)
-    if (node.nonempty()) {
-      node.select()
-      cy.animate({ fit: { eles: node, padding: 130 }, duration: 250 })
+    if (node.empty()) {
+      return () => gsap.killTweensOf(camera)
+    }
+
+    node.select()
+    const incidentEdges = node.connectedEdges()
+
+    if (!motion.enabled) {
+      node.style('border-width', '5px')
+      incidentEdges.style('opacity', '0.85')
+      incidentEdges.style('width', '2px')
+      return undefined
+    }
+
+    const pulse = { border: 4, edgeOpacity: 0.55, edgeWidth: 1.4 }
+    const pulseTween = gsap.to(pulse, {
+      border: 6,
+      edgeOpacity: 0.9,
+      edgeWidth: 2.2,
+      duration: motion.pulseDuration / 2,
+      ease: 'sine.inOut',
+      repeat: -1,
+      yoyo: true,
+      onUpdate: () => {
+        node.style('border-width', `${pulse.border}px`)
+        incidentEdges.style('opacity', String(pulse.edgeOpacity))
+        incidentEdges.style('width', `${pulse.edgeWidth}px`)
+      },
+    })
+
+    return () => {
+      gsap.killTweensOf(camera)
+      pulseTween.kill()
+      node.removeStyle('border-width')
+      incidentEdges.removeStyle('width opacity')
     }
   }, [selectedId])
 
