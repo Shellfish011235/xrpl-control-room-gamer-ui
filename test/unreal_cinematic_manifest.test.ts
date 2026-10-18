@@ -30,7 +30,10 @@ test('cinematic spec defines five ordered shots totaling 5 to 15 seconds', () =>
     'control_room_handoff',
   ]
 
-  const matches = [...spec.matchAll(/^\s*['"]([a-z_]+)['"]\s*:\s*\((\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)\)/gm)]
+  const timingBlock = spec.match(/SHOT_TIMINGS[^=]*=\s*\{([\s\S]*?)\n\}/)?.[1]
+  assert.ok(timingBlock, 'SHOT_TIMINGS block should exist')
+
+  const matches = [...timingBlock.matchAll(/^\s*['"]([a-z_]+)['"]\s*:\s*\((\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)\)/gm)]
   const shots = matches.map((match) => ({
     name: match[1],
     start: Number(match[2]),
