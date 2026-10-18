@@ -100,6 +100,7 @@ def _validate_generated_actors(errors: list[str]) -> None:
         f"{GENERATED_ACTOR_PREFIX}Edge_{edge.source}_{edge.target}"
         for edge in EDGES
     }
+    expected_handoff_label = f"{GENERATED_ACTOR_PREFIX}Handoff"
 
     missing_nodes = sorted(expected_node_labels - labels)
     missing_edges = sorted(expected_edge_labels - labels)
@@ -107,9 +108,32 @@ def _validate_generated_actors(errors: list[str]) -> None:
         errors.append(f"Missing generated node actors: {', '.join(missing_nodes)}")
     if missing_edges:
         errors.append(f"Missing generated edge actors: {', '.join(missing_edges)}")
+    if expected_handoff_label not in labels:
+        errors.append(f"Missing generated handoff actor: {expected_handoff_label}")
 
     if any(edge.evidence not in ("observed", "inferred") for edge in EDGES):
         errors.append("Manifest contains an unsupported edge evidence state")
+
+
+def _validate_sequence_structure(errors: list[str]) -> None:
+    ue = _require_unreal()
+    if not _asset_exists(SEQUENCE_PATH):
+        return
+
+    sequence = ue.EditorAssetLibrary.load_asset(SEQUENCE_PATH)
+    if sequence is None:
+        errors.append(f"Unable to load master sequence: {SEQUENCE_PATH}")
+        return
+
+    movie_scene = sequence.get_movie_scene()
+    master_tracks = list(movie_scene.get_master_tracks())
+    has_camera_cut = any(isinstance(track, ue.MovieSceneCameraCutTrack) for track in master_tracks)
+    has_shot_track = any(isinstance(track, ue.MovieSceneCinematicShotTrack) for track in master_tracks)
+
+    if not has_camera_cut:
+        errors.append("Missing master camera cut track")
+    if not has_shot_track:
+        errors.append("Missing cinematic shot track")
 
 
 def _validate_handoff_reference(errors: list[str]) -> None:
@@ -134,6 +158,7 @@ def validate_scene() -> list[str]:
     _validate_timing(errors)
     _validate_render_preset(errors)
     _validate_generated_actors(errors)
+    _validate_sequence_structure(errors)
     _validate_handoff_reference(errors)
     return errors
 
