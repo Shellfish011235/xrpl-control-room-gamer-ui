@@ -103,3 +103,19 @@ test('Unreal validator checks scene contract and reports a missing handoff refer
 
   execFileSync('python3', ['-m', 'py_compile', validatorPath], { stdio: 'pipe' })
 })
+
+test('Unreal packaging keeps generated editor state and rendered video out of source control', () => {
+  const mediaKeep = join(cinematicRoot, 'Media/.gitkeep')
+  const gitignore = readFileSync(join(root, '.gitignore'), 'utf8')
+  const readme = read('README.md')
+
+  assert.equal(existsSync(mediaKeep), true, 'Media/.gitkeep should retain the render output directory')
+  assert.match(gitignore, /demo\/unreal\/xrpl-control-room-cinematic\/Saved\//)
+  assert.match(gitignore, /demo\/unreal\/xrpl-control-room-cinematic\/Intermediate\//)
+  assert.match(gitignore, /demo\/unreal\/xrpl-control-room-cinematic\/DerivedDataCache\//)
+  assert.match(gitignore, /demo\/unreal\/xrpl-control-room-cinematic\/Binaries\//)
+  assert.match(gitignore, /demo\/unreal\/xrpl-control-room-cinematic\/Media\/\*\.mp4/)
+  assert.match(readme, /Movie Render Queue/i)
+  assert.match(readme, /Media\//)
+  assert.match(readme, /1920×1080/)
+})
