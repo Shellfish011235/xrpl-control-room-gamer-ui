@@ -201,11 +201,11 @@
       "reliability": "medium"
     },
     {
-      "id": "src-sologenic-stats",
-      "title": "Sologenic DEX Statistics",
-      "publisher": "Sologenic",
-      "url": "https://sologenic.org",
-      "type": "analytics",
+      "id": "src-tx-ecosystem",
+      "title": "tx Ecosystem",
+      "publisher": "tx",
+      "url": "https://tx.org",
+      "type": "corporate",
       "reliability": "medium"
     },
     {
