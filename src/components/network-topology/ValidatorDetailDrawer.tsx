@@ -1,13 +1,35 @@
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
+import gsap from 'gsap'
+import { getTopologyMotionConfig } from '../../services/topology/topologyMotion'
 import type { TopologyNode } from '../../types/networkTopology'
 
 export function ValidatorDetailDrawer({ node, onClose }: { node: TopologyNode | null; onClose: () => void }) {
+  const panelRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!node || !panelRef.current) return
+
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    const motion = getTopologyMotionConfig(reducedMotion)
+    const panel = panelRef.current
+
+    gsap.killTweensOf(panel)
+    gsap.fromTo(
+      panel,
+      { opacity: motion.enabled ? 0 : 1, x: motion.enabled ? 14 : 0 },
+      { opacity: 1, x: 0, duration: motion.drawerDuration, ease: 'power2.out', clearProps: 'transform,opacity' },
+    )
+
+    return () => gsap.killTweensOf(panel)
+  }, [node?.id])
+
   if (!node) return null
 
   const agreement = node.consensus?.agreement
 
   return (
-    <aside className="rounded-2xl border border-cyber-border/60 bg-cyber-darker/90 p-4 xl:sticky xl:top-4 xl:max-h-[760px] xl:overflow-y-auto">
+    <aside ref={panelRef} className="rounded-2xl border border-cyber-border/60 bg-cyber-darker/90 p-4 xl:sticky xl:top-4 xl:max-h-[760px] xl:overflow-y-auto">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[10px] font-cyber uppercase tracking-[0.16em] text-cyber-muted">{node.kind}</p>
