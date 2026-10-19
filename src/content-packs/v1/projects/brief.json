@@ -17,14 +17,14 @@
       }
     },
     {
-      "id": "proj-sologenic-001",
-      "title": "Sologenic DEX processes $50M weekly volume",
-      "summary": "Leading XRPL decentralized exchange maintains strong trading activity across asset pairs.",
-      "tag": "DEX",
-      "date": "2026-01-12",
-      "sourceIds": ["src-sologenic-stats"],
+      "id": "proj-tx-001",
+      "title": "tx unifies the Sologenic and Coreum ecosystems",
+      "summary": "Following a community-approved consolidation, Sologenic and Coreum joined tx, a unified RWA operating system and marketplace. Legacy SOLO and COREUM tokens are transitioning into the unified TX utility token.",
+      "tag": "RWA",
+      "date": "2026-02-17",
+      "sourceIds": ["src-tx-ecosystem"],
       "related": {
-        "countryIso2": "EE",
+        "countryIso2": "US",
         "hubId": null,
         "corridorId": null
       }

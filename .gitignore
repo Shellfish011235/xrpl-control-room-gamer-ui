@@ -53,3 +53,10 @@ xrpledgeramericas-site/
 .vercel
 .env*.local
 .worktrees/
+
+# Unreal cinematic generated state and renders
+demo/unreal/xrpl-control-room-cinematic/Saved/
+demo/unreal/xrpl-control-room-cinematic/Intermediate/
+demo/unreal/xrpl-control-room-cinematic/DerivedDataCache/
+demo/unreal/xrpl-control-room-cinematic/Binaries/
+demo/unreal/xrpl-control-room-cinematic/Media/*.mp4

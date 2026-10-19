@@ -1,0 +1,11 @@
+{
+  "FileVersion": 3,
+  "EngineAssociation": "",
+  "Category": "XRPL Control Room Demo",
+  "Description": "Presentation-only cinematic opener for XRPL Control Room.",
+  "Plugins": [
+    { "Name": "PythonScriptPlugin", "Enabled": true },
+    { "Name": "SequencerScripting", "Enabled": true },
+    { "Name": "MovieRenderPipeline", "Enabled": true }
+  ]
+}
