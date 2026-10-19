@@ -4,20 +4,24 @@ import { ArrowLeft, Activity, RefreshCw } from 'lucide-react'
 import { useLiveNetworkData } from '../hooks/useLiveNetworkData'
 import { useLiveLedgerStream } from '../hooks/useLiveLedgerStream'
 import { buildTopologyDataset } from '../services/topology/topologyDataAdapter'
+import { filterTopologyDataset, type TopologyFilters as FilterState } from '../services/topology/topologyFilter'
 import { calculateTopologyVisibility } from '../services/topology/topologyVisibility'
 import type { TopologyNode } from '../types/networkTopology'
-import { TopologyCanvas, TopologySummary, ValidatorDetailDrawer } from '../components/network-topology'
+import { TopologyCanvas, TopologyFilters, TopologyLegend, TopologySummary, ValidatorDetailDrawer } from '../components/network-topology'
 
 export default function NetworkTopologyPage() {
   const { validators, nodes, stats, isLoading, error, refetch } = useLiveNetworkData({ refreshInterval: 60_000 })
   const { connected, tps } = useLiveLedgerStream()
   const [selected, setSelected] = useState<TopologyNode | null>(null)
+  const [filters, setFilters] = useState<FilterState>({})
 
   const dataset = useMemo(
     () => buildTopologyDataset(validators, nodes, stats?.lastUpdated),
     [validators, nodes, stats?.lastUpdated],
   )
   const summary = useMemo(() => calculateTopologyVisibility(dataset), [dataset])
+  const filteredDataset = useMemo(() => filterTopologyDataset(dataset, filters), [dataset, filters])
+  const visibleSelected = selected && filteredDataset.nodes.some((node) => node.id === selected.id) ? selected : null
   const handleSelect = useCallback((node: TopologyNode | null) => setSelected(node), [])
 
   return (
@@ -59,6 +63,11 @@ export default function NetworkTopologyPage() {
 
       <TopologySummary summary={summary} />
 
+      <div className="mt-4 space-y-3">
+        <TopologyFilters filters={filters} onChange={setFilters} />
+        <TopologyLegend />
+      </div>
+
       <div className="mt-4 grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
           {isLoading && dataset.nodes.length === 0 ? (
@@ -69,8 +78,12 @@ export default function NetworkTopologyPage() {
             <div className="flex min-h-[520px] items-center justify-center rounded-2xl border border-cyber-border/60 bg-cyber-darker/60 p-8 text-center text-sm text-cyber-muted">
               No live validator topology data is available right now. The page is intentionally not substituting mock connections.
             </div>
+          ) : filteredDataset.nodes.length === 0 ? (
+            <div className="flex min-h-[520px] items-center justify-center rounded-2xl border border-cyber-border/60 bg-cyber-darker/60 p-8 text-center text-sm text-cyber-muted">
+              No topology records match the current filters. Reset the filters to restore the full observed snapshot.
+            </div>
           ) : (
-            <TopologyCanvas dataset={dataset} selectedId={selected?.id ?? null} onSelect={handleSelect} />
+            <TopologyCanvas dataset={filteredDataset} selectedId={visibleSelected?.id ?? null} onSelect={handleSelect} />
           )}
           <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[11px] text-cyber-muted">
             <span><span className="mr-1 text-cyber-glow">●</span> Validator</span>
@@ -79,7 +92,7 @@ export default function NetworkTopologyPage() {
             <span>Canvas is fixed: click nodes to focus; no drag-to-find behavior.</span>
           </div>
         </div>
-        <ValidatorDetailDrawer node={selected} onClose={() => setSelected(null)} />
+        <ValidatorDetailDrawer node={visibleSelected} onClose={() => setSelected(null)} />
       </div>
     </div>
   )

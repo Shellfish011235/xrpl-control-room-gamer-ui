@@ -618,6 +618,12 @@ export default function Network() {
                       <div className="w-3 h-3 rounded-full border-2 border-cyber-green bg-transparent" />
                       <span className="text-[10px] text-cyber-muted">UNL Validator</span>
                     </div>
+                  <Link
+                    to="/network/topology"
+                    className="mt-3 inline-flex items-center gap-1 text-[10px] font-cyber uppercase tracking-wider text-cyber-glow hover:text-cyber-text"
+                  >
+                    Explore topology <ArrowRight size={11} />
+                  </Link>
                   </div>
                 </div>
               )}
