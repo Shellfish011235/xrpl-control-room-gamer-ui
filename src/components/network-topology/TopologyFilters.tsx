@@ -5,7 +5,7 @@ interface TopologyFiltersProps {
   onChange: (filters: FilterState) => void
 }
 
-const selectClass = 'rounded-lg border border-cyber-border/60 bg-cyber-darker px-2.5 py-2 text-xs text-cyber-text outline-none focus:border-cyber-glow/60'
+const selectClass = 'max-w-full rounded-lg border border-cyber-border/60 bg-cyber-darker px-2.5 py-2 text-xs text-cyber-text outline-none focus:border-cyber-glow/60'
 
 export function TopologyFilters({ filters, onChange }: TopologyFiltersProps) {
   return (

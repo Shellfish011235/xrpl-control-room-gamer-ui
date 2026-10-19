@@ -25,14 +25,14 @@ export default function NetworkTopologyPage() {
   const handleSelect = useCallback((node: TopologyNode | null) => setSelected(node), [])
 
   return (
-    <div className="mx-auto w-full max-w-[1800px] px-3 pb-10 sm:px-5 lg:px-6">
+    <div className="mx-auto min-w-0 w-full max-w-[1800px] overflow-x-hidden px-3 pb-10 sm:px-5 lg:px-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <Link to="/network" className="inline-flex items-center gap-1.5 text-xs text-cyber-muted hover:text-cyber-glow">
             <ArrowLeft size={14} /> Back to Network
           </Link>
           <h1 className="mt-2 font-cyber text-2xl text-cyber-text sm:text-3xl">XRPL Consensus Topology</h1>
-          <p className="mt-1 max-w-3xl text-sm text-cyber-muted">
+          <p className="mt-1 max-w-full break-words text-sm text-cyber-muted sm:max-w-3xl">
             Relationship-first view of what is observable about XRPL validators and peers. Unknown connections stay unknown instead of being drawn as facts.
           </p>
         </div>
@@ -46,13 +46,13 @@ export default function NetworkTopologyPage() {
         </button>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-cyber-border/50 bg-cyber-darker/60 px-3 py-2 text-xs text-cyber-muted">
+      <div className="mb-4 min-w-0 max-w-full flex flex-wrap items-center gap-3 rounded-xl border border-cyber-border/50 bg-cyber-darker/60 px-3 py-2 text-xs text-cyber-muted">
         <span className="inline-flex items-center gap-1.5">
           <span className={`h-2 w-2 rounded-full ${connected ? 'bg-cyber-green' : 'bg-cyber-red'}`} />
           Live ledger stream {connected ? 'connected' : 'disconnected'}
         </span>
         <span className="inline-flex items-center gap-1.5"><Activity size={13} /> {tps} tx/s observed</span>
-        <span className="text-cyber-yellow">Geographic origin and hop-by-hop transaction paths are not inferred.</span>
+        <span className="min-w-0 max-w-full break-words whitespace-normal text-cyber-yellow">Geographic origin and hop-by-hop transaction paths are not inferred.</span>
       </div>
 
       {error && (
