@@ -19,6 +19,7 @@ import WalletActionsPanel from '../components/WalletActionsPanel';
 import { AgentHub } from '../components/AgentHub';
 import { Wallet, User, DollarSign, BarChart3, ArrowDownUp, ArrowRightLeft, Sparkles, BookOpen } from 'lucide-react';
 import { ILPIntelligencePanel } from '../components/ilp/ILPIntelligencePanel';
+import { DassieTelemetryPanel } from '../components/ilp/DassieTelemetryPanel';
 import { HiddenAnalyticsPanel } from '../components/analytics/HiddenAnalyticsPanel';
 import { MissionControlPanel } from '../components/control-room/MissionControlPanel';
 import { PlaceholderControlRoomPanel } from '../components/control-room/PlaceholderControlRoomPanel';
@@ -254,7 +255,8 @@ export default function ControlRoomPage() {
               )}
 
               {section === 'payment_rails' && (
-                <motion.div key="payment_rails" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-2xl">
+                <motion.div key="payment_rails" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="max-w-2xl space-y-4">
+                  <DassieTelemetryPanel />
                   <ILPIntelligencePanel />
                 </motion.div>
               )}
